@@ -21,7 +21,7 @@ services:
       retries: 20
 
   backend:
-    image: ghcr.io/s4nxez/NISAR-SAR-Change-Detection-back:latest
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-back:latest
     restart: always
     depends_on:
       mysql:
@@ -37,7 +37,7 @@ services:
       - NisarSar-net
 
   frontend:
-    image: ghcr.io/s4nxez/NISAR-SAR-Change-Detection-front:latest
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-front:latest
     restart: always
     networks:
       - NisarSar-net
