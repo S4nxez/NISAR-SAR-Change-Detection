@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Trade Route Comparator</title>
+	<link rel="icon" type="image/x-icon" href="./assets/images/icon.svg">
+
+    <link rel="stylesheet" href="./styles/styles.css" />
+    <link rel="stylesheet" href="./styles/responsive.css" />
+    <link rel="stylesheet" href="./styles/panel.css" />
+    <link rel="stylesheet" href="./styles/map.css" />
+    <link rel="stylesheet" href="./styles/dashboard.css" />
+
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="./scripts/index.js"></script>
+    <script defer src="./scripts/dashboardChart.js"></script>
+    <script defer src="./scripts/map.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header class="app-header">
+        <h1>Trade Route Analytics</h1>
+        <p>Comparador de costes, tiempo y riesgo en rutas internacionales</p>
+      </header>
+
+      <!-- Dashboard Mockeado -->
+      <div class="dashboard">
+        <canvas id="dashboardChart"></canvas>
+      </div>
+
+      <div class="main">
+        <div id="map"></div>
+        <div class="panel">
+          <div>
+
+          </div>
+
+          <div class="route-filters">
+            <input
+              id="originInput"
+              class="route-input"
+              type="text"
+              placeholder="Origen"
+              autocomplete="off"
+            />
+            <input
+              id="destinationInput"
+              class="route-input"
+              type="text"
+              placeholder="Destino"
+              autocomplete="off"
+            />
+          </div>
+
+          <div id="routes" class="routes-scroll"></div>
+
+          <div class="recommendation">
+            <div class="recommendation-label">Mejor opción</div>
+            <p id="best-route" class="recommendation-value"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: docker.io/library/mysql:8
+    restart: always
+    env_file:
+      - ./server/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: NisarSar
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./data/sql:/docker-entrypoint-initdb.d:Z
+    networks:
+      - NisarSar-net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    image: ghcr.io/s4nxez/NISAR-SAR-Change-Detection-back:latest
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - ./server/.env
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/NisarSar
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_PROFILES_ACTIVE: spring
+    networks:
+      - NisarSar-net
+
+  frontend:
+    image: ghcr.io/s4nxez/NISAR-SAR-Change-Detection-front:latest
+    restart: always
+    networks:
+      - NisarSar-net
+
+  caddy:
+    image: caddy:latest
+    restart: always
+    ports:
+      - "127.0.0.1:8082:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:Z
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - NisarSar-net
+
+volumes:
+  mysql_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  NisarSar-net:
+    external: false

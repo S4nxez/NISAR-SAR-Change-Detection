@@ -1,0 +1,11 @@
+.dashboard {
+  flex: 0 0 180px;
+  max-height: 25vh;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  padding: var(--space);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 5px;
+}

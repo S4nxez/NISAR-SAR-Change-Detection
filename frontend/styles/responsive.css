@@ -1,0 +1,98 @@
+@media (max-width: 992px) {
+  html {
+    font-size: 18px;
+  }
+
+  .main {
+    flex-direction: column;
+  }
+
+  #map {
+    order: 1;
+    width: 100%;
+    max-height: 40vh;
+  }
+
+  .panel {
+    order: 2;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .dashboard {
+    flex: 0 0 auto;
+    min-height: 10vh;
+    font-size: 1rem;
+  }
+
+  .app-header h1 {
+    font-size: 3rem;
+  }
+
+  .panel h2 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .app-header p {
+    font-size: 1.5rem;
+  }
+
+  .route-title {
+    font-size: 1.5rem;
+  }
+
+  .metric {
+    font-size: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .recommendation {
+    font-size: 1.5rem;
+  }
+
+  .container {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 600px) {
+  html {
+    font-size: 19px;
+  }
+
+  .container {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .app-header h1 {
+    font-size: 1.9rem;
+  }
+
+  .app-header p {
+    font-size: 1rem;
+  }
+
+  .dashboard {
+    flex: 0 0 100px;
+    max-height: 12vh;
+  }
+
+  #map {
+    min-height: 120px;
+  }
+
+  .route-card {
+    padding: 10px;
+  }
+
+  .route-title {
+    font-size: 1.05rem;
+  }
+
+  .metric {
+    font-size: 0.95rem;
+  }
+}

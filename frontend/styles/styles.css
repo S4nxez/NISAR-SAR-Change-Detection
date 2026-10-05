@@ -1,0 +1,148 @@
+/* Reset básico */
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-hover: #334155;
+  --panel-deep: #020617;
+  --text: #ffffff;
+  --muted: #94a3b8;
+  --accent: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --space: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  position: relative;
+  font-size: 1rem;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(34, 197, 94, 0.12),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 80% 30%,
+      rgba(59, 130, 246, 0.08),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 50% 90%,
+      rgba(245, 158, 11, 0.06),
+      transparent 50%
+    );
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--space);
+  gap: var(--space);
+}
+
+.app-header {
+  text-align: center;
+  flex-shrink: 0;
+  padding: 10px 0 5px;
+}
+
+.app-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #f8fafc;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.app-header h1::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 2px;
+  margin: 6px auto 0;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  border-radius: 2px;
+}
+
+.app-header p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  gap: var(--space);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.route-card-loading {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.skeleton {
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(255, 255, 255, 0.18) 37%,
+    rgba(255, 255, 255, 0.08) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 18px;
+  max-width: 220px;
+}
+
+.skeleton-text {
+  height: 14px;
+  max-width: 90px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}

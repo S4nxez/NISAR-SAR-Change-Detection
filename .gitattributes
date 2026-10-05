@@ -1,0 +1,2 @@
+Springboot/data/sql/*.sql linguist-detectable=false
+Springboot/data/csv/*.csv linguist-detectable=false

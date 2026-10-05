@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build Images"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.CLIENT_ID }}
+          oauth-secret: ${{ secrets.CLIENT_SECRET }}
+          tags: tag:ci
+          version: 1.42.0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 100.68.170.113 >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          set -euo pipefail
+      
+          set +e
+          ssh -T -n \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=3 \
+            sanxez@100.68.170.113 \
+            "cd /opt/NISAR-SAR-Change-Detection && \
+             podman pull ghcr.io/s4nxez/NISAR-SAR-Change-Detection-back:latest && \
+             podman pull ghcr.io/s4nxez/NISAR-SAR-Change-Detection-front:latest && \
+             podman-compose up -d --force-recreate > /dev/null 2>&1 && \
+             echo DEPLOY_OK"

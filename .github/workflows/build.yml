@@ -1,0 +1,55 @@
+name: Build Images
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend (multi-arch)
+        run: |
+          cd server
+          mvn clean package -DskipTests
+          docker buildx build \
+            -f Containerfile \
+            --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/s4nxez/NISAR-SAR-Change-Detection-back:latest \
+            --push .
+
+      - name: Build frontend (multi-arch)
+        run: |
+          cd frontend
+          docker buildx build \
+            -f Containerfile \
+            --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/s4nxez/NISAR-SAR-Change-Detection-front:latest \
+            --push .
