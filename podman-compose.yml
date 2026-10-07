@@ -46,7 +46,7 @@ services:
     image: caddy:latest
     restart: always
     ports:
-      - "127.0.0.1:8082:80"
+      - "127.0.0.1:8089:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:Z
       - caddy_data:/data
