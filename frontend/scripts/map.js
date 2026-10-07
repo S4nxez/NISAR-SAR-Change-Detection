@@ -20,16 +20,14 @@ async function initMap() {
 
   map.getContainer().style.background = "transparent";
 
-  const res = await fetch(
-    "assets/geo/worldmap.geo.json",
-  );
+  const res = await fetch("assets/geo/worldmap.geo.json");
   const countries = await res.json();
 
   countriesLayer = L.geoJSON(countries, {
     style: {
-      color: "rgba(34, 197, 94, 0.51)", // más tenue
+      color: "rgba(239, 68, 68, 0.51)", // rojo tenue
       weight: 1,
-      fillColor: "#228fc5",
+      fillColor: "#f97316",
       fillOpacity: 0.03, // relleno muy ligero
       opacity: 0.8,
     },
@@ -88,14 +86,14 @@ function drawRoute(route) {
   const curvedCoords = createCurvedLine(route.coords);
 
   const glow = L.polyline(curvedCoords, {
-    color: "#22c55e",
+    color: "#ef4444",
     weight: 8,
-    opacity: 0.15,
+    opacity: 0.18,
     lineCap: "round",
   });
 
   const mainLine = L.polyline(curvedCoords, {
-    color: "#22c556",
+    color: "#f97316",
     weight: 2,
     opacity: 1,
     lineCap: "round",
