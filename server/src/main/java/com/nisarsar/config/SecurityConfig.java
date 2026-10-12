@@ -29,8 +29,7 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req ->
-                        req.requestMatchers(Constants.COUNTRIES_PATH+ "/**").permitAll()
-                                .requestMatchers(Constants.ROUTES_PATH + "**").permitAll()
+                        req.requestMatchers(Constants.SITES+ "/**").permitAll()
                                 .anyRequest()
                                 .authenticated()
                 )

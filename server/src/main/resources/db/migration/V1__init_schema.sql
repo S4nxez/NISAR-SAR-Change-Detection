@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS sar_site (
     );
 
 CREATE TABLE IF NOT EXISTS sar_observation (
-                                               id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                                               site_id VARCHAR(50) NOT NULL,
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    site_id VARCHAR(50) NOT NULL,
     observation_date VARCHAR(20) NOT NULL,
     vv DECIMAL(7,3) NOT NULL,
     vh DECIMAL(7,3) NOT NULL,

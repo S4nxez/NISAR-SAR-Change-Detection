@@ -37,6 +37,13 @@ public class SiteController {
     @GetMapping(Constants.SITES + "/{id}" + Constants.OBSERVATIONS)
     public SiteObservationSeries getObservations(@PathVariable String id) {
         SarSite site = getSite(id);
-        return new SiteObservationSeries(site.id(), siteCatalogService.getCatalog().observationDates(), site.vv(), site.vh());
+
+        return new SiteObservationSeries(
+                null,
+                site.id(),
+                siteCatalogService.getCatalog().observationDates(),
+                site.vv(),
+                site.vh()
+        );
     }
 }
