@@ -1,92 +1,44 @@
-CREATE DATABASE IF NOT EXISTS TradeAnalytics;
-USE TradeAnalytics;
-CREATE TABLE location_kind (
-                               id TINYINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                               code VARCHAR(20) NOT NULL UNIQUE
-);
+CREATE DATABASE IF NOT EXISTS NisarSar;
+USE NisarSar;
 
-INSERT INTO location_kind (code) VALUES
-                                     ('COUNTRY_HUB'),
-                                     ('AIRPORT'),
-                                     ('PORT'),
-                                     ('CITY');
+CREATE TABLE IF NOT EXISTS sar_site (
+                                        id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL,
+    change_level VARCHAR(20) NOT NULL,
+    change_value VARCHAR(20) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    confidence DECIMAL(4,3) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_sar_site_latitude
+    CHECK (latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_sar_site_longitude
+    CHECK (longitude BETWEEN -180 AND 180),
+    CONSTRAINT chk_sar_site_confidence
+    CHECK (confidence BETWEEN 0 AND 1)
+    );
 
-CREATE TABLE transport_type (
-                                id TINYINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                                code VARCHAR(10) NOT NULL UNIQUE
-);
+CREATE TABLE IF NOT EXISTS sar_observation (
+                                               id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+                                               site_id VARCHAR(50) NOT NULL,
+    observation_date VARCHAR(20) NOT NULL,
+    vv DECIMAL(7,3) NOT NULL,
+    vh DECIMAL(7,3) NOT NULL,
+    CONSTRAINT fk_sar_observation_site
+    FOREIGN KEY (site_id) REFERENCES sar_site(id)
+    ON DELETE CASCADE,
+    CONSTRAINT uq_sar_observation_site_date
+    UNIQUE (site_id, observation_date)
+    );
 
-INSERT INTO transport_type (code) VALUES
-                                      ('AIR'),
-                                      ('SEA'),
-                                      ('LAND');
+CREATE INDEX idx_sar_observation_date
+    ON sar_observation(observation_date);
 
-CREATE TABLE tariff_type (
-                             id TINYINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                             code VARCHAR(20) NOT NULL UNIQUE
-);
+CREATE INDEX idx_sar_site_country
+    ON sar_site(country);
 
-INSERT INTO tariff_type (code) VALUES
-                                   ('MFN'),
-                                   ('APPLIED'),
-                                   ('AVERAGE'),
-                                   ('MOCK');
-
-CREATE TABLE country (
-                         id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                         name VARCHAR(100) NOT NULL,
-                         iso2 CHAR(2) NOT NULL UNIQUE,
-                         iso3 CHAR(3) UNIQUE
-);
-
-CREATE TABLE location (
-                          id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                          country_id BIGINT UNSIGNED NOT NULL,
-                          kind_id TINYINT UNSIGNED NOT NULL,
-                          name VARCHAR(100) NOT NULL,
-                          code VARCHAR(20),
-                          latitude DECIMAL(9,6) NOT NULL,
-                          longitude DECIMAL(9,6) NOT NULL,
-                          active BOOLEAN NOT NULL DEFAULT TRUE,
-                          CONSTRAINT fk_location_country
-                              FOREIGN KEY (country_id) REFERENCES country(id),
-                          CONSTRAINT fk_location_kind
-                              FOREIGN KEY (kind_id) REFERENCES location_kind(id),
-                          UNIQUE (country_id, kind_id, code)
-);
-
-CREATE TABLE route_edge (
-                            id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                            origin_location_id BIGINT UNSIGNED NOT NULL,
-                            destination_location_id BIGINT UNSIGNED NOT NULL,
-                            transport_type_id TINYINT UNSIGNED NOT NULL,
-                            distance_km DECIMAL(10,2) NOT NULL,
-                            base_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
-                            estimated_hours DECIMAL(10,2),
-                            active BOOLEAN NOT NULL DEFAULT TRUE,
-                            CONSTRAINT fk_route_origin
-                                FOREIGN KEY (origin_location_id) REFERENCES location(id),
-                            CONSTRAINT fk_route_destination
-                                FOREIGN KEY (destination_location_id) REFERENCES location(id),
-                            CONSTRAINT fk_route_transport
-                                FOREIGN KEY (transport_type_id) REFERENCES transport_type(id),
-                            UNIQUE (origin_location_id, destination_location_id, transport_type_id)
-);
-
-CREATE TABLE tariff (
-                        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                        country_id BIGINT UNSIGNED NOT NULL,
-                        partner_country_id BIGINT UNSIGNED,
-                        hs6_code VARCHAR(6),
-                        rate_pct DECIMAL(6,3) NOT NULL,
-                        tariff_type_id TINYINT UNSIGNED NOT NULL,
-                        source VARCHAR(100),
-                        effective_from DATE,
-                        effective_to DATE,
-                        CONSTRAINT fk_tariff_country
-                            FOREIGN KEY (country_id) REFERENCES country(id),
-                        CONSTRAINT fk_tariff_partner_country
-                            FOREIGN KEY (partner_country_id) REFERENCES country(id),
-                        CONSTRAINT fk_tariff_type
-                            FOREIGN KEY (tariff_type_id) REFERENCES tariff_type(id)
-);
+CREATE INDEX idx_sar_site_change_level
+    ON sar_site(change_level);
