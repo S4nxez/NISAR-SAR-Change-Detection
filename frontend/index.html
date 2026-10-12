@@ -1,73 +1,73 @@
 <!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Trade Route Comparator</title>
-	<link rel="icon" type="image/x-icon" href="./assets/images/icon.svg">
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b25">
+  <meta name="description" content="SAR Observatory — explore satellite radar observations and surface change.">
+  <title>SAR Observatory | Earth Change Explorer</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="./src/styles/main.css">
+  <link rel="stylesheet" href="./src/styles/components.css">
+  <link rel="stylesheet" href="./src/styles/responsive.css">
+  <link rel="stylesheet" href="./src/styles/details.css">
+  <link rel="stylesheet" href="./src/styles/overrides.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="SAR Observatory home"><span class="brand-mark">S</span><span><strong>SAR OBSERVATORY</strong><small>EARTH CHANGE EXPLORER</small></span></a>
+      <div class="mission-status"><span class="status-dot"></span> INTERACTIVE DEMO <span class="status-divider">/</span> SENTINEL-1 SAR</div>
+    </header>
 
-    <link rel="stylesheet" href="./styles/theme.css" />
-    <link rel="stylesheet" href="./styles/styles.css" />
-    <link rel="stylesheet" href="./styles/responsive.css" />
-    <link rel="stylesheet" href="./styles/panel.css" />
-    <link rel="stylesheet" href="./styles/map.css" />
-    <link rel="stylesheet" href="./styles/dashboard.css" />
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">SPACE APPS CHALLENGE · 2026</p><h1>Earth is always<br class="mobile-break"> <span>changing.</span></h1>
+        <p class="intro-copy">Explore radar observations to spot surface changes — through clouds, day or night.</p></div>
+        <div class="intro-note"><span class="note-icon">↗</span><div><strong>Radar, not a photograph</strong><p>Synthetic Aperture Radar measures backscatter to reveal changes in the surface.</p></div></div>
+      </section>
 
-    <!-- Leaflet -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script defer src="./scripts/index.js"></script>
-    <script defer src="./scripts/dashboardChart.js"></script>
-    <script defer src="./scripts/map.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      <header class="app-header">
-        <h1>Trade Route Analytics</h1>
-        <p>Comparador de costes, tiempo y riesgo en rutas internacionales</p>
-      </header>
+      <section class="stats-grid" aria-label="Overview metrics">
+        <article class="stat-card"><span class="stat-label">AREAS MONITORED</span><strong id="stat-areas">04</strong><span class="stat-foot">Example study sites</span></article>
+        <article class="stat-card"><span class="stat-label">CHANGE SIGNALS</span><strong id="stat-signals">12</strong><span class="stat-foot"><i class="dot dot-amber"></i> Illustrative detections</span></article>
+        <article class="stat-card"><span class="stat-label">LATEST OBSERVATION</span><strong class="stat-date">18 <small>SEP 2026</small></strong><span class="stat-foot">Demo timestamp</span></article>
+        <article class="stat-card"><span class="stat-label">DATA SOURCE</span><strong class="stat-source">Sentinel-1</strong><span class="stat-foot">C-band radar · ESA / Copernicus</span></article>
+      </section>
 
-      <!-- Dashboard Mockeado -->
-      <div class="dashboard">
-        <canvas id="dashboardChart"></canvas>
-      </div>
-
-      <div class="main">
-        <div id="map"></div>
-        <div class="panel">
-          <div>
-
-          </div>
-
-          <div class="route-filters">
-            <input
-              id="originInput"
-              class="route-input"
-              type="text"
-              placeholder="Origen"
-              autocomplete="off"
-            />
-            <input
-              id="destinationInput"
-              class="route-input"
-              type="text"
-              placeholder="Destino"
-              autocomplete="off"
-            />
-          </div>
-
-          <div id="routes" class="routes-scroll"></div>
-
-          <div class="recommendation">
-            <div class="recommendation-label">Mejor opción</div>
-            <p id="best-route" class="recommendation-value"></p>
-          </div>
+      <section class="workspace">
+        <div class="map-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2>Change map</h2></div><span class="live-label"><span class="status-dot"></span> STUDY AREAS</span></div>
+          <div class="map-key"><span><i class="key-dot key-high"></i>High change</span><span><i class="key-dot key-medium"></i>Moderate change</span><span><i class="key-dot key-low"></i>Low change</span></div>
+          <div id="map" role="img" aria-label="Map showing example SAR study areas around the world"></div>
+          <div class="map-footer"><span><span class="map-pin">●</span> Select a site on the map or in the list</span><span class="demo-tag">SAMPLE DATA</span></div>
         </div>
-      </div>
-    </div>
-  </body>
+
+        <aside class="site-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">02 / SITE SELECTION</p><h2>Study areas</h2></div><span class="count-pill">04 SITES</span></div>
+          <div id="site-list" class="site-list"></div>
+          <div class="selected-summary" id="selected-summary" aria-live="polite"></div>
+        </aside>
+      </section>
+
+      <section class="analysis-grid">
+        <article class="panel analysis-panel">
+          <div class="panel-heading"><div><p class="eyebrow">03 / TEMPORAL SIGNAL</p><h2>Backscatter trend</h2></div><span class="unit-label">RELATIVE dB</span></div>
+          <p class="section-copy">Illustrative radar response across recent observations for the selected site.</p>
+          <div class="chart-wrap"><canvas id="trend-chart" aria-label="Backscatter trend chart"></canvas></div>
+          <div class="chart-legend"><span><i class="legend-line"></i> VV polarisation</span><span><i class="legend-line legend-blue"></i> VH polarisation</span></div>
+        </article>
+        <article class="panel insight-panel">
+          <div class="panel-heading"><div><p class="eyebrow">04 / CHANGE INTERPRETATION</p><h2>What stands out</h2></div><span class="insight-symbol">⌁</span></div>
+          <div id="insight-content"></div>
+          <div class="method-note"><strong>How to read this</strong><p>Radar changes are signals, not proof of a specific event. Compare acquisitions and validate with contextual data before drawing conclusions.</p></div>
+        </article>
+      </section>
+      <footer class="footer"><span>SAR OBSERVATORY <span class="footer-sep">/</span> SPACE APPS 2026</span><span>Prototype interface · illustrative data only · not an operational alert system</span></footer>
+    </main>
+  </div>
+</body>
 </html>

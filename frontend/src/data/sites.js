@@ -1,0 +1,8 @@
+// Central source of demo observations. Replace with validated SAR-derived data when available.
+export const sites = [
+  { id: "amazonas", name: "Amazonas basin", country: "Brazil", lat: -3.1, lng: -60.0, level: "high", change: "+18%", category: "Vegetation / land cover", description: "A change in radar response may indicate altered vegetation structure or surface moisture.", confidence: 0.82, vv: [-12.4,-12.1,-11.8,-9.7,-9.1,-8.8], vh: [-19.2,-19.4,-18.8,-17.2,-16.9,-16.5] },
+  { id: "delta", name: "Nile Delta", country: "Egypt", lat: 30.9, lng: 31.2, level: "medium", change: "+9%", category: "Agriculture / moisture", description: "Seasonal variation in surface moisture and crop structure can shift radar backscatter.", confidence: 0.71, vv: [-10.7,-10.2,-11.3,-9.9,-9.4,-9.8], vh: [-17.1,-17.4,-17.0,-16.1,-16.5,-16.0] },
+  { id: "valencia", name: "Valencia coast", country: "Spain", lat: 39.5, lng: -0.4, level: "low", change: "+3%", category: "Coastal / urban", description: "A small signal variation; compare with baseline acquisitions before interpreting.", confidence: 0.58, vv: [-8.8,-8.6,-8.9,-8.5,-8.4,-8.6], vh: [-15.4,-15.6,-15.3,-15.2,-15.4,-15.1] },
+  { id: "bengal", name: "Ganges–Brahmaputra", country: "Bangladesh", lat: 23.7, lng: 90.4, level: "high", change: "+21%", category: "Floodplain / water", description: "A marked response shift may be consistent with changing inundation or surface-water extent.", confidence: 0.86, vv: [-9.8,-11.1,-14.2,-15.0,-12.3,-10.7], vh: [-16.4,-17.0,-19.8,-20.4,-18.1,-16.9] }
+];
+export const observationDates = ["Aug 20", "Aug 25", "Aug 30", "Sep 04", "Sep 09", "Sep 14"];
