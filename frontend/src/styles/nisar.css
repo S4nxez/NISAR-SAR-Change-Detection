@@ -1,0 +1,203 @@
+/* Estilos propios de nisar.html; reutiliza las variables y paneles de main/components.css */
+
+.pair-picker {
+display:flex;
+flex-direction:column;
+gap:6px;
+min-width:260px
+}
+
+.pair-picker select {
+background:var(--panel);
+color:var(--text);
+border:1px solid var(--line);
+border-radius:10px;
+padding:10px 12px;
+font:500 13px 'DM Sans',sans-serif
+}
+
+.pair-note {
+border:1px solid #e4b65c66;
+background:#e4b65c14;
+color:#f1d9a6;
+border-radius:12px;
+padding:10px 14px;
+margin:0 0 16px;
+font-size:12.5px
+}
+
+.pair-note strong {
+color:var(--amber);
+letter-spacing:.08em;
+font-size:10px;
+margin-right:8px
+}
+
+.seg {
+display:inline-flex;
+border:1px solid var(--line);
+border-radius:10px;
+overflow:hidden
+}
+
+.seg button {
+background:transparent;
+color:var(--muted);
+border:0;
+padding:6px 12px;
+font-size:12px;
+cursor:pointer
+}
+
+.seg button + button {
+border-left:1px solid var(--line)
+}
+
+.seg button.is-on {
+background:var(--panel-2);
+color:var(--text)
+}
+
+.layer-row {
+display:flex;
+flex-wrap:wrap;
+gap:16px;
+align-items:center;
+margin:12px 0 10px;
+font-size:12px;
+color:var(--muted)
+}
+
+.layer-row label {
+display:flex;
+align-items:center;
+gap:6px;
+cursor:pointer
+}
+
+.layer-row input[type=checkbox] {
+accent-color:var(--amber)
+}
+
+.layer-row .opacity input {
+width:110px;
+accent-color:var(--amber)
+}
+
+.key-swatch {
+width:10px;
+height:10px;
+border-radius:3px;
+display:inline-block
+}
+
+.site-item .zone-dot {
+width:10px;
+height:10px;
+border-radius:50%;
+display:inline-block;
+margin-right:2px
+}
+
+.site-list .site-change b {
+font-variant-numeric:tabular-nums
+}
+
+.chart-duo {
+display:grid;
+grid-template-columns:1fr 1.4fr;
+gap:14px
+}
+
+.crops {
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+margin:12px 0
+}
+
+.crops figure {
+margin:0
+}
+
+.crops .crop {
+position:relative;
+aspect-ratio:1;
+border-radius:10px;
+overflow:hidden;
+background:#0b131a;
+border:1px solid var(--line)
+}
+
+.crops img {
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+object-fit:cover;
+image-rendering:pixelated
+}
+
+.crops figcaption {
+font-size:9px;
+letter-spacing:.12em;
+color:var(--muted);
+margin-top:5px
+}
+
+.zone-facts {
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+margin-bottom:10px
+}
+
+.zone-facts span {
+display:block;
+font-size:9px;
+letter-spacing:.12em;
+color:var(--muted)
+}
+
+.zone-facts strong {
+font:600 17px 'Space Grotesk';
+font-variant-numeric:tabular-nums
+}
+
+.zone-reading {
+color:#c1d0d8;
+font-size:13px;
+margin:0 0 6px
+}
+
+@media (max-width:900px) {
+.pair-picker { min-width:0; width:100% }
+.chart-duo { grid-template-columns:1fr }
+.zone-facts { grid-template-columns:1fr 1fr }
+}
+
+/* mapa mas alto y lista con scroll propio en esta pagina */
+.nisar-page #map {
+height:600px
+}
+
+.nisar-page .site-panel {
+display:flex;
+flex-direction:column;
+max-height:780px
+}
+
+.nisar-page #zone-list {
+overflow-y:auto;
+padding-right:4px;
+align-content:start
+}
+
+@media (max-width:900px) {
+.nisar-page #map { height:420px }
+.nisar-page .site-panel { max-height:520px }
+}
+
+@media (max-width:600px) {
+.nisar-page #stat-dates { font-size:20px; white-space:nowrap }
+}

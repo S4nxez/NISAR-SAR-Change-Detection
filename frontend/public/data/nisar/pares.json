@@ -1,0 +1,28 @@
+{
+ "pares": [
+  {
+   "id": "peru_oct2026_simulado",
+   "titulo": "Amazonía peruana · Marañón y Huallaga",
+   "antes": "2026-10-05",
+   "despues": "2026-10-17",
+   "simulado": true,
+   "ruta": "peru_oct2026_simulado/cambio.json",
+   "centro": [
+    -5.0773,
+    -76.1655
+   ]
+  },
+  {
+   "id": "california_2008_muestra",
+   "titulo": "Antelope Valley, California · muestra 2008",
+   "antes": "2008-10-12",
+   "despues": "2008-11-27",
+   "simulado": false,
+   "ruta": "california_2008_muestra/cambio.json",
+   "centro": [
+    34.8001,
+    -117.9738
+   ]
+  }
+ ]
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b25">
+  <meta name="description" content="SAR Observatory — NISAR L-band change detection between two acquisitions.">
+  <title>NISAR Change Detection | SAR Observatory</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="./src/styles/main.css">
+  <link rel="stylesheet" href="./src/styles/components.css">
+  <link rel="stylesheet" href="./src/styles/responsive.css">
+  <link rel="stylesheet" href="./src/styles/details.css">
+  <link rel="stylesheet" href="./src/styles/overrides.css">
+  <link rel="stylesheet" href="./src/styles/nisar.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script type="module" src="./src/nisar/nisarApp.js"></script>
+</head>
+<body class="nisar-page">
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./index.html" aria-label="SAR Observatory home"><span class="brand-mark">S</span><span><strong>SAR OBSERVATORY</strong><small>EARTH CHANGE EXPLORER</small></span></a>
+      <div class="mission-status"><span class="status-dot"></span> CHANGE DETECTION <span class="status-divider">/</span> NISAR L-BAND</div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">SPACE APPS CHALLENGE · 2026</p><h1>What changed<br class="mobile-break"> <span>between two passes?</span></h1>
+        <p class="intro-copy">Two NISAR radar acquisitions of the same place, compared pixel by pixel at 20 m. Through clouds, day or night.</p></div>
+        <div class="pair-picker">
+          <label for="pair-select" class="stat-label">ACQUISITION PAIR</label>
+          <select id="pair-select" aria-label="Choose an acquisition pair"></select>
+        </div>
+      </section>
+
+      <div id="pair-note" class="pair-note" role="note" hidden></div>
+
+      <section class="stats-grid" aria-label="Pair metrics">
+        <article class="stat-card"><span class="stat-label">AREA ANALYSED</span><strong id="stat-area">—</strong><span class="stat-foot">km² with valid data on both dates</span></article>
+        <article class="stat-card"><span class="stat-label">CHANGED AREA</span><strong id="stat-changed">—</strong><span class="stat-foot" id="stat-changed-foot">km² in change zones</span></article>
+        <article class="stat-card"><span class="stat-label">DATES</span><strong class="stat-date" id="stat-dates">—</strong><span class="stat-foot" id="stat-days">—</span></article>
+        <article class="stat-card"><span class="stat-label">GLOBAL SHIFT</span><strong id="stat-shift">—</strong><span class="stat-foot">dB removed before thresholding</span></article>
+      </section>
+
+      <section class="workspace">
+        <div class="map-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">01 / RADAR IMAGE</p><h2>Change map</h2></div>
+            <div class="seg" role="group" aria-label="Background image">
+              <button type="button" data-base="antes" class="is-on">Before</button><button type="button" data-base="despues">After</button><button type="button" data-base="none">Basemap</button>
+            </div>
+          </div>
+          <div class="layer-row">
+            <label><input type="checkbox" id="toggle-change" checked> Change classes</label>
+            <label><input type="checkbox" id="toggle-diff"> Difference (dB)</label>
+            <label class="opacity">Opacity <input type="range" id="opacity" min="0" max="100" value="85"></label>
+          </div>
+          <div id="map" role="img" aria-label="Map with NISAR radar images and detected change"></div>
+          <div class="map-key" id="class-key"></div>
+          <div class="map-footer"><span><span class="map-pin">●</span> Select a zone on the map or in the list</span><span class="demo-tag" id="data-tag">NISAR GCOV · HH</span></div>
+        </div>
+
+        <aside class="site-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">02 / DETECTIONS</p><h2>Change zones</h2></div><span class="count-pill" id="zone-count">—</span></div>
+          <div id="zone-list" class="site-list"></div>
+        </aside>
+      </section>
+
+      <section class="analysis-grid">
+        <article class="panel analysis-panel">
+          <div class="panel-heading"><div><p class="eyebrow">03 / DISTRIBUTION</p><h2>How much changed</h2></div><span class="unit-label">km² · dB</span></div>
+          <p class="section-copy">Area per change class, and the histogram of backscatter change after removing the global shift. Bars beyond ±threshold are flagged.</p>
+          <div class="chart-duo">
+            <div class="chart-wrap"><canvas id="class-chart" aria-label="Area per change class"></canvas></div>
+            <div class="chart-wrap"><canvas id="hist-chart" aria-label="Histogram of backscatter change"></canvas></div>
+          </div>
+        </article>
+        <article class="panel insight-panel">
+          <div class="panel-heading"><div><p class="eyebrow">04 / ZONE DETAIL</p><h2 id="zone-title">Select a zone</h2></div><span class="insight-symbol">⌁</span></div>
+          <div id="zone-detail"><p class="section-copy">Pick a zone to see the full-resolution (20 m) before / after crops.</p></div>
+          <div class="method-note"><strong>How to read this</strong><p>Radar changes are signals, not proof of a specific event. Smooth water looks dark, forests mid-grey, flooded forest and buildings bright. Validate with optical imagery or local knowledge.</p></div>
+        </article>
+      </section>
+      <footer class="footer"><span>SAR OBSERVATORY <span class="footer-sep">/</span> SPACE APPS 2026</span><span>Prototype · NISAR data: NASA/ISRO via ASF DAAC · not an operational alert system</span></footer>
+    </main>
+  </div>
+</body>
+</html>

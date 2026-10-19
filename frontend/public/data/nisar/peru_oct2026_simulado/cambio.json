@@ -1,0 +1,495 @@
+{
+ "id": "peru_oct2026_simulado",
+ "titulo": "Amazonía peruana · Marañón y Huallaga",
+ "simulado": true,
+ "nota": "La fecha 'después' es SIMULADA: escena real del 5 oct 2026 con cambios conocidos añadidos para probar el sistema. Sustituir por la pasada real del 17 oct.",
+ "generado": "2026-10-19T21:23:22Z",
+ "sensor": "NISAR L-SAR (banda L), producto L2 GCOV, polarizacion HH",
+ "antes": {
+  "fecha": "2026-10-05",
+  "granulo": "NISAR_L2_PR_GCOV_032_083_D_091_2005_SHSH_A_20261005T232338_20261005T232413_P05023_N_F_J_001.h5"
+ },
+ "despues": {
+  "fecha": "2026-10-17",
+  "granulo": "SIMULADO a partir de NISAR_L2_PR_GCOV_032_083_D_091_2005_SHSH_A_20261005T232338_20261005T232413_P05023_N_F_J_001.h5"
+ },
+ "pista": 83,
+ "frame": 91,
+ "direccion": "Descending",
+ "bounds": [
+  [
+   -6.55202,
+   -77.67862
+  ],
+  [
+   -3.6041,
+   -74.65772
+  ]
+ ],
+ "centro": [
+  -5.0773,
+  -76.1655
+ ],
+ "imagenes": {
+  "antes": "antes.webp",
+  "despues": "despues.webp",
+  "cambio": "cambio.png",
+  "diferencia": "diferencia.webp",
+  "resolucion_m": {
+   "fondo": 160.0,
+   "cambio": 80.0
+  },
+  "escala_gris_dB": {
+   "vmin": -10.7,
+   "vmax": -3.0
+  }
+ },
+ "parametros": {
+  "umbral_dB": 3.0,
+  "agua_dB": -15.0,
+  "filtro_px": 5,
+  "area_min_km2": 0.05,
+  "desplazamiento_global_dB": 1.03
+ },
+ "estadisticas": {
+  "area_valida_km2": 60309.9,
+  "por_clase": {
+   "agua_nueva": {
+    "km2": 17.32,
+    "pct": 0.029
+   },
+   "agua_desaparece": {
+    "km2": 4.92,
+    "pct": 0.008
+   },
+   "descenso": {
+    "km2": 11.79,
+    "pct": 0.02
+   },
+   "aumento": {
+    "km2": 5.37,
+    "pct": 0.009
+   }
+  },
+  "zonas_total": 10,
+  "zonas_km2_por_clase": {
+   "agua_nueva": 17.31,
+   "agua_desaparece": 4.95,
+   "descenso": 11.02,
+   "aumento": 5.25
+  },
+  "histograma_cambio": {
+   "bordes_dB": [
+    -15.0,
+    15.0,
+    0.5
+   ],
+   "conteos": [
+    42775,
+    41,
+    55,
+    59,
+    52,
+    52,
+    69,
+    60,
+    70,
+    86,
+    92,
+    76,
+    115,
+    124,
+    115,
+    139,
+    148,
+    190,
+    1552,
+    10289,
+    11901,
+    3038,
+    850,
+    806,
+    932,
+    1203,
+    3715,
+    189892,
+    8942931,
+    62878163,
+    66725805,
+    11536374,
+    388160,
+    7697,
+    931,
+    429,
+    363,
+    420,
+    1162,
+    5445,
+    5258,
+    1009,
+    141,
+    139,
+    120,
+    163,
+    256,
+    656,
+    2134,
+    4023,
+    3066,
+    1172,
+    173,
+    12,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ },
+ "clases": {
+  "agua_nueva": {
+   "nombre": "Agua nueva",
+   "color": "#3d8bff",
+   "lectura": "Superficie que pasa a reflejar como agua lisa: posible inundacion o crecida."
+  },
+  "agua_desaparece": {
+   "nombre": "Agua que desaparece",
+   "color": "#e4b65c",
+   "lectura": "Superficie que deja de ser agua: retirada de una crecida o lago que mengua."
+  },
+  "descenso": {
+   "nombre": "Descenso del eco",
+   "color": "#e47759",
+   "lectura": "Menos retrodispersion: posible tala, cosecha o suelo mas seco."
+  },
+  "aumento": {
+   "nombre": "Aumento del eco",
+   "color": "#68b6a3",
+   "lectura": "Mas retrodispersion: vegetacion que crece, estructuras o suelo mas humedo."
+  }
+ },
+ "zonas": [
+  {
+   "id": "z001",
+   "clase": "agua_nueva",
+   "nombre": "Agua nueva",
+   "lat": -4.99321,
+   "lng": -75.99036,
+   "area_km2": 17.312,
+   "cambio_dB": -17.67,
+   "bounds": [
+    [
+     -5.01998,
+     -76.01248
+    ],
+    [
+     -4.96723,
+     -75.9655
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.0393,
+      -76.03668
+     ],
+     [
+      -4.94682,
+      -75.94418
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z002",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -5.8435,
+   "lng": -75.88867,
+   "area_km2": 6.387,
+   "cambio_dB": -4.84,
+   "bounds": [
+    [
+     -5.85738,
+     -75.90332
+    ],
+    [
+     -5.82704,
+     -75.87365
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.88971,
+      -75.93517
+     ],
+     [
+      -5.79724,
+      -75.84253
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z003",
+   "clase": "aumento",
+   "nombre": "Aumento del eco",
+   "lat": -5.23507,
+   "lng": -76.86188,
+   "area_km2": 5.254,
+   "cambio_dB": 4.89,
+   "bounds": [
+    [
+     -5.24665,
+     -76.87528
+    ],
+    [
+     -5.22214,
+     -76.84635
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.28109,
+      -76.90822
+     ],
+     [
+      -5.18878,
+      -76.81558
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z004",
+   "clase": "agua_desaparece",
+   "nombre": "Agua que desaparece",
+   "lat": -4.43532,
+   "lng": -76.71952,
+   "area_km2": 4.947,
+   "cambio_dB": 9.49,
+   "bounds": [
+    [
+     -4.44915,
+     -76.73326
+    ],
+    [
+     -4.41954,
+     -76.70868
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -4.48144,
+      -76.76577
+     ],
+     [
+      -4.38906,
+      -76.6733
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z005",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -5.9065,
+   "lng": -75.99804,
+   "area_km2": 2.464,
+   "cambio_dB": -4.89,
+   "bounds": [
+    [
+     -5.9151,
+     -76.00531
+    ],
+    [
+     -5.89631,
+     -75.98866
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.95265,
+      -76.04441
+     ],
+     [
+      -5.8602,
+      -75.95174
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z006",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -5.79009,
+   "lng": -75.80317,
+   "area_km2": 1.171,
+   "cambio_dB": -4.76,
+   "bounds": [
+    [
+     -5.79529,
+     -75.80929
+    ],
+    [
+     -5.78229,
+     -75.79772
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.8363,
+      -75.84964
+     ],
+     [
+      -5.74381,
+      -75.75702
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z007",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -5.78281,
+   "lng": -75.78937,
+   "area_km2": 0.813,
+   "cambio_dB": -4.73,
+   "bounds": [
+    [
+     -5.78736,
+     -75.79339
+    ],
+    [
+     -5.77651,
+     -75.7847
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.82891,
+      -75.83572
+     ],
+     [
+      -5.73641,
+      -75.74311
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z008",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -4.97983,
+   "lng": -76.00556,
+   "area_km2": 0.083,
+   "cambio_dB": -7.02,
+   "bounds": [
+    [
+     -4.98454,
+     -76.00593
+    ],
+    [
+     -4.97513,
+     -76.00519
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.02607,
+      -76.05181
+     ],
+     [
+      -4.93359,
+      -75.95932
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z009",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -4.97154,
+   "lng": -75.98932,
+   "area_km2": 0.051,
+   "cambio_dB": -6.89,
+   "bounds": [
+    [
+     -4.97443,
+     -75.99221
+    ],
+    [
+     -4.96865,
+     -75.98642
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.01778,
+      -76.03557
+     ],
+     [
+      -4.92529,
+      -75.94307
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  },
+  {
+   "id": "z010",
+   "clase": "descenso",
+   "nombre": "Descenso del eco",
+   "lat": -4.99181,
+   "lng": -75.97933,
+   "area_km2": 0.051,
+   "cambio_dB": -6.81,
+   "bounds": [
+    [
+     -4.9947,
+     -75.98213
+    ],
+    [
+     -4.98892,
+     -75.97707
+    ]
+   ],
+   "recorte": {
+    "bounds": [
+     [
+      -5.03805,
+      -76.02568
+     ],
+     [
+      -4.94557,
+      -75.93318
+     ]
+    ],
+    "lado_km": 10.2
+   }
+  }
+ ]
+}
