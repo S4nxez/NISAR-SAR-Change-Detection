@@ -43,3 +43,9 @@ build/
 SpringBoot/.idea/modules.xml
 SpringBoot/.idea/modules.xml
 .env
+
+### NISAR (datos pesados, no se versionan) ###
+*.h5
+processing/escenas/
+*_completo/
+__pycache__/
