@@ -4,5 +4,5 @@ import java.util.List;
 
 public record SiteCatalog(
         List<String> observationDates,
-        List<SarSite> sites
+        List<CountrySites> countries
 ) {}

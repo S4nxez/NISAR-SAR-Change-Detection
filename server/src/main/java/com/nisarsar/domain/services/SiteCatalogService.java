@@ -1,5 +1,6 @@
 package com.nisarsar.domain.services;
 
+import com.nisarsar.dao.model.CountrySites;
 import com.nisarsar.dao.model.SarSite;
 import com.nisarsar.dao.model.SiteCatalog;
 import com.nisarsar.dao.model.entities.SarSiteEntity;
@@ -10,8 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -84,6 +87,18 @@ public class SiteCatalogService {
                 })
                 .toList();
 
-        return new SiteCatalog(dates, sites);
+        // Agrupar por país (orden alfabético) y, dentro de cada país, por nombre.
+        List<CountrySites> countries = sites.stream()
+                .collect(Collectors.groupingBy(SarSite::country, TreeMap::new, Collectors.toList()))
+                .entrySet().stream()
+                .map(entry -> new CountrySites(
+                        entry.getKey(),
+                        entry.getValue().stream()
+                                .sorted(Comparator.comparing(SarSite::name))
+                                .toList()
+                ))
+                .toList();
+
+        return new SiteCatalog(dates, countries);
     }
 }

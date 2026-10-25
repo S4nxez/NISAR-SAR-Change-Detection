@@ -58,7 +58,7 @@ padding:14px
 font-size:24px
 }
 #map {
-height:300px
+min-height:340px
 }
 }
 
@@ -141,11 +141,15 @@ border-radius:13px
 font-size:18px
 }
 #map {
-height:270px
+min-height:320px
+}
+.site-panel {
+contain:none
 }
 .site-list {
 gap:6px;
-margin:12px 0
+margin:12px -6px 12px 0;
+max-height:380px
 }
 .site-item {
 padding:11px 9px

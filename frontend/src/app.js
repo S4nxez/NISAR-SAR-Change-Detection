@@ -1,5 +1,5 @@
 import { sites as demoSites, observationDates as demoObservationDates } from "./data/sites.js";
-import { renderSiteList, renderSelectedSummary } from "./components/siteList.js";
+import { groupByCountry, renderSiteList, renderSelectedSummary } from "./components/siteList.js";
 import { renderInsight } from "./components/insightPanel.js";
 import { renderTrendChart } from "./components/trendChart.js";
 import { createMap } from "./services/mapService.js";
@@ -9,18 +9,20 @@ const elements = {
   summary: document.querySelector("#selected-summary"),
   insight: document.querySelector("#insight-content"),
   chart: document.querySelector("#trend-chart"),
-  topbar: document.querySelector(".topbar")
+  topbar: document.querySelector(".topbar"),
+  count: document.querySelector("#site-count")
 };
-let sites = demoSites;
+let countries = groupByCountry(demoSites);
+let sites = countries.flatMap(group => group.sites);
 let observationDates = demoObservationDates;
 let selectedId = sites[0].id;
 let mapControls;
 
-function selectSite(id) {
+function selectSite(id, { reveal = true } = {}) {
   selectedId = id;
   const site = sites.find(item => item.id === id);
   if (!site) return;
-  renderSiteList(elements.list, sites, selectedId, selectSite);
+  renderSiteList(elements.list, countries, selectedId, selectSite, { reveal });
   renderSelectedSummary(elements.summary, site);
   renderInsight(elements.insight, site);
   renderTrendChart(elements.chart, site, observationDates);
@@ -58,8 +60,9 @@ async function init() {
     const response = await fetch(new URL("../api/sites", import.meta.url), { headers: { Accept: "application/json" } });
     if (response.ok) {
       const catalog = await response.json();
-      if (Array.isArray(catalog.sites) && catalog.sites.length > 0) {
-        sites = catalog.sites;
+      if (Array.isArray(catalog.countries) && catalog.countries.length > 0) {
+        countries = catalog.countries;
+        sites = countries.flatMap(group => group.sites);
         observationDates = Array.isArray(catalog.observationDates) ? catalog.observationDates : demoObservationDates;
         selectedId = sites[0].id;
       }
@@ -70,7 +73,8 @@ async function init() {
 
   document.querySelector("#stat-areas").textContent = String(sites.length).padStart(2, "0");
   document.querySelector("#stat-signals").textContent = String(sites.reduce((total, site) => total + (site.level === "high" ? 5 : site.level === "medium" ? 3 : 1), 0)).padStart(2, "0");
-  selectSite(selectedId);
+  elements.count.textContent = `${String(sites.length).padStart(2, "0")} SITES`;
+  selectSite(selectedId, { reveal: false });
   createMap(sites, selectSite).then(controls => {
     mapControls = controls;
     mapControls.selectSite(selectedId);

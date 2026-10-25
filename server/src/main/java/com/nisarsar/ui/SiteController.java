@@ -28,7 +28,8 @@ public class SiteController {
 
     @GetMapping( Constants.SITES+ "/{id}")
     public SarSite getSite(@PathVariable String id) {
-        return siteCatalogService.getCatalog().sites().stream()
+        return siteCatalogService.getCatalog().countries().stream()
+                .flatMap(country -> country.sites().stream())
                 .filter(site -> site.id().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sar site not found" + id));

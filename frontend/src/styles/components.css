@@ -101,8 +101,14 @@ background:var(--amber)
 background:var(--green)
 }
 
+.map-panel {
+display:flex;
+flex-direction:column
+}
+
 #map {
-height:330px;
+flex:1;
+min-height:400px;
 border-radius:11px;
 overflow:hidden;
 background:#14232e;
@@ -160,13 +166,121 @@ font-weight:700
 
 .site-panel {
 display:flex;
-flex-direction:column
+flex-direction:column;
+contain:size
 }
 
 .site-list {
-display:grid;
+position:relative;
+flex:1;
+min-height:0;
+display:flex;
+flex-direction:column;
 gap:7px;
-margin:15px 0 12px
+margin:15px -6px 12px 0;
+padding-right:6px;
+overflow-y:auto;
+overscroll-behavior:contain;
+scrollbar-width:thin;
+scrollbar-color:#ffffff1f transparent
+}
+
+.site-list:hover {
+scrollbar-color:#e4b65c66 transparent
+}
+
+.site-list::-webkit-scrollbar {
+width:6px
+}
+
+.site-list::-webkit-scrollbar-track {
+background:transparent
+}
+
+.site-list::-webkit-scrollbar-thumb {
+background:#ffffff1f;
+border-radius:6px
+}
+
+.site-list:hover::-webkit-scrollbar-thumb {
+background:#e4b65c66
+}
+
+.country-group {
+flex-shrink:0;
+border:1px solid var(--line);
+border-radius:11px;
+background:#ffffff03
+}
+
+.country-summary {
+display:flex;
+align-items:center;
+gap:10px;
+padding:11px 12px;
+cursor:pointer;
+list-style:none;
+border-radius:10px;
+transition:background .15s
+}
+
+.country-summary::-webkit-details-marker {
+display:none
+}
+
+.country-summary:hover {
+background:#ffffff07
+}
+
+.country-summary:focus-visible {
+outline:2px solid var(--amber);
+outline-offset:2px
+}
+
+.country-name {
+flex:1;
+min-width:0;
+display:flex;
+align-items:center;
+gap:9px;
+font:600 13px 'Space Grotesk',sans-serif;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap
+}
+
+.country-summary.has-selected .country-name {
+color:var(--amber)
+}
+
+.country-count {
+font-size:9px;
+letter-spacing:.1em;
+color:var(--muted);
+border:1px solid var(--line);
+padding:3px 7px;
+border-radius:6px
+}
+
+.country-chevron {
+width:7px;
+height:7px;
+margin:0 3px 3px;
+border-right:1.5px solid var(--muted);
+border-bottom:1.5px solid var(--muted);
+transform:rotate(45deg);
+transition:transform .2s ease
+}
+
+.country-group[open] .country-chevron {
+transform:rotate(225deg);
+margin-bottom:-3px
+}
+
+.country-sites {
+display:grid;
+gap:6px;
+padding:0 7px 7px
 }
 
 .site-item {
