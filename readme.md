@@ -1,4 +1,4 @@
-# Trade Margin Analytics
+# NISAR SAR Change Detection - Boilerplate code
 ![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
@@ -8,12 +8,12 @@
 ![Tailscale](https://img.shields.io/badge/Tailscale-242424?style=for-the-badge&logo=tailscale&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-A22846?style=for-the-badge&logo=raspberry-pi&logoColor=white)
 <br>
-![Website](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Ftrade-analytics%2F&up_message=online&down_message=offline&style=for-the-badge&label=Demo)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Ftrade-analytics%2F&up_message=online&down_message=offline&style=for-the-badge&label=Demo)](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Fterra-pulse%2F)
 
-Trade Margin Analytics es una aplicación web orientada a la comparación de rutas comerciales internacionales, permitiendo analizar coste, tiempo y riesgo para tomar decisiones más eficientes.
+Web application with linux infraestructure and sub-programs oriented towards NISAR SAR Nasa Space Apps challenge hackathon, focused on combining the strength of *machine learning* with a user friendly interface.
 
 🌐 **Live demo:**
-https://raspberrypi.tail0a4b52.ts.net/trade-analytics/
+https://raspberrypi.tail0a4b52.ts.net/terra-pulse/
 
 ---
 
@@ -21,35 +21,36 @@ https://raspberrypi.tail0a4b52.ts.net/trade-analytics/
 
 | Layer | Technology |
 |---|---|
-| **Backend** | Java, Spring Boot *(planned)* |
+| **Backend** | Java, Spring Boot |
 | **Frontend** | Vanilla JavaScript, HTML, CSS |
-| **Visualización** | Chart.js, Leaflet |
-| **Infraestructura** | Podman, Caddy |
-| **CI/CD** | GitHub Actions *(planned)* |
+| **Machine learning** | Python (TF), C |
+| **Infrastructure** | Podman, Caddy |
+| **CI/CD** | GitHub Actions |
 | **Networking** | Tailscale |
 | **Server** | Raspberry Pi |
+
 
 ---
 
 ## Features (MVP)
 
-- Visualización de rutas internacionales sobre mapa interactivo
-- Comparación de rutas por:
-  - Coste
-  - Tiempo
-  - Riesgo
-- Sistema de recomendación de mejor ruta basado en score
-- Dashboard con métricas agregadas
+- AI Schemes generator
+- Data visualization 
+- Risk metrics based on NISAR SAR:
+  - Cost
+  - Tieme
+  - Risk
+- Dashboard with relevant information
 
-> ⚠️ Proyecto en fase inicial — funcionalidades sujetas a cambios
+> ⚠️ Project in initial phase, functionalities are changing
 
 ---
 
 ## Deployment
 
-El proyecto está desplegado en una Raspberry Pi utilizando contenedores y acceso público seguro sin necesidad de abrir puertos en el router.
+The project is deployed on a Raspberry Pi using containers, with secure public access provided without the need to open ports on the router.
 
-- **Caddy** como reverse proxy con HTTPS automático
-- **Podman y poodman-compose** para la gestión de contenedores
-- **Tailscale Funnel** para exponer la aplicación públicamente
-- **GitHub Actions** para automatizar el flujo de trabajo
+- **Caddy** as a reverse proxy with automatic HTTPS
+- **Podman and Podman Compose** for container management
+- **Tailscale Funnel** to expose the application publicly
+- **GitHub Actions** to automate the workflow
