@@ -8,7 +8,8 @@ const elements = {
   list: document.querySelector("#site-list"),
   summary: document.querySelector("#selected-summary"),
   insight: document.querySelector("#insight-content"),
-  chart: document.querySelector("#trend-chart")
+  chart: document.querySelector("#trend-chart"),
+  topbar: document.querySelector(".topbar")
 };
 let sites = demoSites;
 let observationDates = demoObservationDates;
@@ -26,9 +27,35 @@ function selectSite(id) {
   mapControls?.selectSite(id);
 }
 
+function bindScrollEffects() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let compact = false;
+  let ticking = false;
+
+  function update() {
+    ticking = false;
+    const y = window.scrollY;
+    // Hysteresis: shrinking the bar shifts the layout, so expand/compact at different offsets to avoid flicker.
+    if (!compact && y > 40) compact = true;
+    else if (compact && y < 4) compact = false;
+    elements.topbar.classList.toggle("is-compact", compact);
+    // Background follows the content at a fraction of its speed (parallax).
+    const shift = reduceMotion.matches ? 0 : -Math.min(y * 0.12, window.innerHeight * 0.4);
+    document.documentElement.style.setProperty("--bg-shift", `${shift}px`);
+  }
+
+  window.addEventListener("scroll", () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(update);
+    }
+  }, { passive: true });
+  update();
+}
+
 async function init() {
   try {
-    const response = await fetch("/api/sites", { headers: { Accept: "application/json" } });
+    const response = await fetch(new URL("../api/sites", import.meta.url), { headers: { Accept: "application/json" } });
     if (response.ok) {
       const catalog = await response.json();
       if (Array.isArray(catalog.sites) && catalog.sites.length > 0) {
@@ -52,4 +79,5 @@ async function init() {
     console.error("Map initialisation failed:", error);
   });
 }
+bindScrollEffects();
 init();

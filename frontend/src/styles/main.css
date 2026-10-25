@@ -23,14 +23,26 @@ box-sizing:border-box
 
 html {
 background:var(--bg);
-scroll-behavior:smooth
+scroll-behavior:smooth;
+scroll-padding-top:72px;
+overflow-x:clip
 }
 
 body {
 margin:0;
-background:radial-gradient(ellipse at 85% 0%,#1a3441 0,transparent 35%),var(--bg);
 color:var(--text);
 font:14px/1.5 'DM Sans',sans-serif
+}
+
+body::before {
+content:"";
+position:fixed;
+inset:0 0 -40vh;
+z-index:-1;
+pointer-events:none;
+background:radial-gradient(ellipse at 85% 0%,#1a3441 0,transparent 45%),radial-gradient(ellipse at 8% 75%,#17303b 0,transparent 32%);
+transform:translate3d(0,var(--bg-shift,0px),0);
+will-change:transform
 }
 
 button {
@@ -44,11 +56,58 @@ padding:0 36px
 }
 
 .topbar {
+position:sticky;
+top:0;
+z-index:1100;
 height:78px;
 display:flex;
 align-items:center;
 justify-content:space-between;
-border-bottom:1px solid #ffffff12
+border-bottom:1px solid #ffffff12;
+transition:height .25s ease
+}
+
+.topbar::before {
+content:"";
+position:absolute;
+inset:0 calc(50% - 50vw);
+z-index:-1;
+background:#101b25d0;
+backdrop-filter:blur(14px);
+-webkit-backdrop-filter:blur(14px);
+box-shadow:var(--shadow);
+opacity:0;
+transition:opacity .25s ease
+}
+
+.topbar.is-compact {
+height:58px
+}
+
+.topbar.is-compact::before {
+opacity:1
+}
+
+.topbar .brand-mark,.topbar .brand small {
+transition:width .25s ease,height .25s ease,font-size .25s ease,border-radius .25s ease,opacity .2s ease,max-height .25s ease,margin .25s ease
+}
+
+.topbar .brand small {
+max-height:16px;
+overflow:hidden
+}
+
+.topbar.is-compact .brand-mark {
+width:30px;
+height:30px;
+font-size:18px;
+border-radius:9px
+}
+
+.topbar.is-compact .brand small {
+max-height:0;
+margin-top:0;
+opacity:0
 }
 
 .brand {

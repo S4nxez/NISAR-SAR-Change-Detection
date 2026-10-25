@@ -69,6 +69,9 @@ padding:0 14px
 .topbar {
 height:66px
 }
+.topbar.is-compact {
+height:52px
+}
 .mission-status {
 font-size:8px;
 gap:6px;
