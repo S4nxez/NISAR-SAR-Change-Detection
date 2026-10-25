@@ -73,7 +73,7 @@ public class SiteCatalogService {
                             site.getCountry(),
                             site.getLatitude().doubleValue(),
                             site.getLongitude().doubleValue(),
-                            site.getChangeLevel(),
+                            site.getChangeLevel().toLowerCase(),
                             site.getChangeValue(),
                             site.getCategory(),
                             site.getDescription(),

@@ -8,7 +8,7 @@
 ![Tailscale](https://img.shields.io/badge/Tailscale-242424?style=for-the-badge&logo=tailscale&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-A22846?style=for-the-badge&logo=raspberry-pi&logoColor=white)
 <br>
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Ftrade-analytics%2F&up_message=online&down_message=offline&style=for-the-badge&label=Demo)](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Fterra-pulse%2F)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Fterra-pulse%2F&up_message=online&down_message=offline&style=for-the-badge&label=Demo)](https://img.shields.io/website?url=https%3A%2F%2Fraspberrypi.tail0a4b52.ts.net%2Fterra-pulse%2F)
 
 Web application with linux infraestructure and sub-programs oriented towards NISAR SAR Nasa Space Apps challenge hackathon, focused on combining the strength of *machine learning* with a user friendly interface.
 
@@ -36,10 +36,10 @@ https://raspberrypi.tail0a4b52.ts.net/terra-pulse/
 
 - AI Schemes generator
 - Data visualization 
-- Risk metrics based on NISAR SAR:
-  - Cost
-  - Tieme
-  - Risk
+- Change detection metrics based on NISAR SAR:
+  - Change level and direction
+  - Detection confidence
+  - VV / VH backscatter time series
 - Dashboard with relevant information
 
 > ⚠️ Project in initial phase, functionalities are changing
