@@ -1,0 +1,12 @@
+[Unit]
+Description=Roadmap agent at night usage windows (Mon-Fri)
+
+[Timer]
+# Two consecutive 5h usage windows: 01:00-06:00 and 06:05-11:05
+OnCalendar=Mon..Fri *-*-* 01:00:00
+OnCalendar=Mon..Fri *-*-* 06:05:00
+# Don't catch up missed runs (e.g. Pi off): they would land in daytime windows
+Persistent=false
+
+[Install]
+WantedBy=timers.target

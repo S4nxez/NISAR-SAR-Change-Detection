@@ -1,0 +1,15 @@
+[Unit]
+Description=Roadmap agent: implement one roadmap item with Claude and open a PR
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=@REPO_DIR@/tools/roadmap-agent/run.sh
+EnvironmentFile=-%h/.config/roadmap-agent.env
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Claude timeout (4h) + margin; the next window starts 5h later
+TimeoutStartSec=4h30min
+# Production runs on this machine: keep the agent at lower priority
+Nice=10
+IOSchedulingClass=idle
