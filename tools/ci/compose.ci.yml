@@ -1,0 +1,18 @@
+# Override for the startup check of the pre-deployment validation stage
+# (validate job in .github/workflows/build.yml), layered on podman-compose.yml:
+#   docker compose -f podman-compose.yml -f tools/ci/compose.ci.yml ...
+# The stack keeps the production wiring (services, env vars, healthcheck, Caddyfile,
+# published port) but runs images built from the commit under validation instead
+# of the published :latest ones. Paths are relative to the repository root.
+services:
+  backend:
+    image: nisarsar-back:ci
+    build:
+      context: ./server
+      dockerfile: Containerfile
+
+  frontend:
+    image: nisarsar-front:ci
+    build:
+      context: ./frontend
+      dockerfile: Containerfile
