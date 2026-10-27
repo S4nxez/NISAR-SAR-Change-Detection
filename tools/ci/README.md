@@ -5,9 +5,20 @@ Files used by the GitHub Actions pipeline in `.github/workflows/`.
 ## Pipeline
 
 ```
-push to main ─> Build Images (build.yml): validate ─> build (multi-arch images pushed to GHCR)
-                                                         └─> Deploy (deploy.yml)
+Weekly merge (weekly-merge.yml, Wed 20:00 UTC): PR develop ─> main (squash) ─┐
+push to main ────────────────────────────────────────────────────────────────┴─> Build Images (build.yml): validate ─> build (multi-arch images pushed to GHCR)
+                                                                                                                         └─> Deploy (deploy.yml)
 ```
+
+Every Wednesday at 20:00 UTC `weekly-merge.yml` releases `develop` into `main` (it does nothing if `develop` has nothing new):
+it opens a pull request, approves it as `github-actions[bot]` and squash merges it (`main` requires 1 approval and a linear history),
+then merges `main` back into `develop` with the `ours` strategy so the next PR starts from the squash commit. The merge is pushed
+with the `RELEASE_TOKEN` secret, so the push event fires Build Images and Deploy as for any other push to `main`. If it fails
+(e.g. conflicts) the PR stays open and the next run reuses it. It can also be run by hand from the Actions tab.
+
+Setup: a fine-grained PAT of the repository owner for this repository with *Contents* and *Pull requests* read and write, stored
+as the `RELEASE_TOKEN` repository secret, and *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*
+enabled (for the approval).
 
 `validate` is the pre-deployment validation stage. `build` needs it and Deploy only runs when the whole Build Images workflow succeeds,
 so if any check fails no image is pushed and the Raspberry Pi keeps running the current version.
