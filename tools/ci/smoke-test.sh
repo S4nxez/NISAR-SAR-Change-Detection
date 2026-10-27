@@ -3,7 +3,8 @@
 #
 # Usage: tools/ci/smoke-test.sh [BASE_URL]
 #   BASE_URL       where Caddy serves the app (default: http://127.0.0.1:8089,
-#                  the port published by podman-compose.yml)
+#                  the port published by podman-compose.yml), or a URL proxied
+#                  to it, path prefix included (e.g. the public Tailscale URL)
 #   SMOKE_TIMEOUT  seconds to wait for the backend to answer (default: 180)
 #
 # Checks:
@@ -14,6 +15,10 @@
 #     references answers 200 (JavaScript modules with a JavaScript MIME type).
 #
 # Exits 1 if any check fails, 2 on usage errors. Needs curl and jq.
+#
+# Used by the startup check of the validate job (build.yml) and, after each
+# deployment, by Deploy (deploy.yml), which runs it on the Raspberry Pi from
+# stdin (ssh ... bash -s): no command may read stdin.
 set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:8089}"
