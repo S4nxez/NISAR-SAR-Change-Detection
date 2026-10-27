@@ -1,7 +1,7 @@
 # Roadmap agent
 
 Unattended Claude Code runs that implement `docs/roadmap-*.md` items and open PRs against `develop`.
-Runs Mon-Fri at 01:00 and 06:05 (two consecutive, otherwise unused 5h usage windows) on the Raspberry Pi.
+Runs Mon-Fri at 01:00 (an otherwise unused 5h usage window) on the Raspberry Pi.
 
 ## How a run works (`run.sh`)
 
