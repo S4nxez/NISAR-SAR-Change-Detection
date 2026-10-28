@@ -15,4 +15,4 @@ Optional: add a "## Context" section with notes specific to this roadmap.
 
 ## Completed
 
-- [x] - <6> [Allow CLI input] — allow cli input to generate schemas, meant to be used in future implementation by website — PR: pending
+- [x] - <6> [Allow CLI input] — allow cli input to generate schemas, meant to be used in future implementation by website — PR: #6
