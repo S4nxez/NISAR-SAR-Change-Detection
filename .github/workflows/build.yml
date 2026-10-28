@@ -35,6 +35,10 @@ jobs:
           done
           exit "$failed"
 
+      # Deploy runs tools/ci/rollback.sh from the deployed commit when a deployment fails
+      - name: Rollback - test rollback.sh
+        run: tools/ci/test-rollback.sh
+
       - name: Model lab - compile
         run: |
           dpkg -s libncurses-dev >/dev/null 2>&1 \
@@ -129,6 +133,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The revision label tells which commit an image comes from, e.g. the known-good images a rollback
+      # restores (tools/ci/rollback.sh status)
       - name: Build backend (multi-arch)
         run: |
           cd server
@@ -136,6 +142,7 @@ jobs:
           docker buildx build \
             -f Containerfile \
             --platform linux/amd64,linux/arm64 \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
             -t ghcr.io/s4nxez/nisar-sar-change-detection-back:latest \
             --push .
 
@@ -145,5 +152,6 @@ jobs:
           docker buildx build \
             -f Containerfile \
             --platform linux/amd64,linux/arm64 \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
             -t ghcr.io/s4nxez/nisar-sar-change-detection-front:latest \
             --push .
