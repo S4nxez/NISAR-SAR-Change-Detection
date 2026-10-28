@@ -2,8 +2,8 @@ name: Weekly merge develop -> main
 
 on:
   schedule:
-    # Wednesdays 20:00 UTC (GitHub may start scheduled runs a few minutes late)
-    - cron: '0 20 * * 3'
+    # Wednesdays 21:00 UTC (GitHub may start scheduled runs a few minutes late)
+    - cron: '0 21 * * 3'
   workflow_dispatch:
 
 concurrency:
