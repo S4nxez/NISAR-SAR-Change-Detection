@@ -14,9 +14,11 @@ implementarlo (la parte Python/TensorFlow queda para una fase posterior).
 sudo apt install build-essential libncurses-dev
 make
 ./fractal_lab
+make test        # pruebas de la línea de comandos (tests/cli.sh)
 ```
 
-Tamaño mínimo de terminal: 60x16 (recomendado 100x30 o más).
+Tamaño mínimo de terminal: 60x16 (recomendado 100x30 o más). Con argumentos
+funciona sin TUI, ver [Línea de comandos](#línea-de-comandos).
 
 ## Cuadrantes
 
@@ -86,14 +88,74 @@ El contenedor elegido es el más pequeño de la tabla de `src/container.c`
 vCPU. Si ninguno basta, se propone un clúster de 8xlarge. Son estimaciones
 orientativas, no medidas reales de TensorFlow.
 
+## Línea de comandos
+
+Sin argumentos `./fractal_lab` abre la TUI. Con argumentos genera el esquema
+sin interfaz y lo escribe en la salida estándar: no necesita terminal, así que
+otro programa (la web, en el futuro) puede invocarlo y leer el resultado.
+
+```sh
+./fractal_lab --text                            # informe con los valores por defecto
+./fractal_lab --depth 4 --exponent=3            # el informe de 'gen' y 'stats'
+./fractal_lab --json --niveles 4 --leaf_mib 64  # el esquema completo en JSON
+./fractal_lab --help                            # campos, alias, rangos y valores por defecto
+```
+
+| Opción | Efecto |
+|--------|--------|
+| `--text` | Informe en texto, el mismo de `gen` y `stats` (por defecto) |
+| `--json` | Esquema completo en JSON |
+| `--<campo> <n>`, `--<campo>=<n>` | Fija un campo del árbol o del perfil, por nombre o alias, con los mismos rangos que `set` |
+| `-h`, `--help` | Ayuda |
+
+Los campos que no se indican toman su valor por defecto y, si una opción se
+repite, vale la última. Con un argumento no válido (opción desconocida, valor
+que no es un entero o fuera de rango) no escribe nada en la salida estándar y
+explica el error en la de error. Códigos de salida: `0` correcto, `1` error al
+escribir la salida, `2` argumentos no válidos.
+
+Salida de `./fractal_lab --json` con los valores por defecto:
+
+```json
+{
+  "params": {"levels": 3, "depth": 3, "exponent": 2},
+  "profile": {"runtime_mib": 512, "leaf_mib": 48, "voter_mib": 6, "disk_pct": 40, "leaf_us": 5000, "voter_us": 200, "target_ms": 250, "headroom_pct": 25},
+  "tree": {"total_levels": 5, "nodes": 121, "leaves": 81, "voters": 40, "saturated": false,
+    "levels": [
+      {"level": 1, "nodes": 1, "role": "voter", "copy": 1, "copy_root": false},
+      {"level": 2, "nodes": 3, "role": "voter", "copy": 1, "copy_root": false},
+      {"level": 3, "nodes": 9, "role": "voter", "copy": 2, "copy_root": true},
+      {"level": 4, "nodes": 27, "role": "voter", "copy": 2, "copy_root": false},
+      {"level": 5, "nodes": 81, "role": "leaf", "copy": 2, "copy_root": false}
+    ]},
+  "resources": {"leaves_mib": 3888, "voters_mib": 240, "runtime_mib": 512,
+    "ram_mib": 4640, "required_mib": 5800, "disk_mib": 1652,
+    "cpu_us": 413000, "path_us": 5800, "vcpus": 2, "latency_us": 103250},
+  "container": {"tier": "medium", "vcpus": 4, "ram_gib": 8, "replicas": 1, "cluster": false}
+}
+```
+
+| Clave | Contenido |
+|-------|-----------|
+| `params`, `profile` | Valor de cada campo del árbol y del perfil de modelo |
+| `tree` | `total_levels`, `nodes`, `leaves` (decisores), `voters` y `saturated`; en `levels`, por cada nivel (desde 1): `nodes`, `role` (`voter` o `leaf`), `copy` (copia fractal a la que pertenece, desde 1) y `copy_root` (raíz de una copia, el `*` del panel) |
+| `resources` | RAM en MiB de los decisores (`leaves_mib`), los votantes (`voters_mib`) y el runtime, total (`ram_mib`) y con margen (`required_mib`); pesos en disco (`disk_mib`); CPU por inferencia (`cpu_us`) y de un camino raíz-hoja (`path_us`) en µs; `vcpus` para la latencia objetivo y latencia estimada (`latency_us`) |
+| `container` | Contenedor recomendado (`tier`, `vcpus`, `ram_gib`); si no cabe en uno, `cluster: true` y `replicas` del mayor |
+
+Los números son enteros sin signo de 64 bits. Los saturados (ver *Modelo del
+árbol*) valen `18446744073709551615` (2^64-1) y `tree.saturated` indica si lo
+están los nodos. Por encima de 2^53 un `Number` de JavaScript pierde precisión.
+
 ## Estructura y normas
 
 ```text
-include/  cabeceras por módulo (tree, cost, field, format, app, ui, view, command)
+include/  cabeceras por módulo (tree, cost, field, format, app, ui, view, command, cli)
 src/      tree*, cost/container   -> cálculo
           fractal_*               -> renderizado del árbol
           ui_*                    -> paneles
           input*, command*        -> teclado y terminal
+          cli*                    -> línea de comandos (sin TUI)
+tests/    cli.sh                  -> pruebas de la línea de comandos (make test)
 ```
 
 Todo el código cumple la Norminette 3 de 42 (`norminette src include`):

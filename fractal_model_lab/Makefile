@@ -16,7 +16,8 @@ SRC			= main.c app.c log.c layout.c field.c format.c \
 			  fractal_span.c fractal_style.c \
 			  input.c input_term.c input_params.c \
 			  command.c command_basic.c command_view.c command_set.c \
-			  report.c
+			  report.c \
+			  cli.c cli_args.c cli_help.c cli_json.c cli_json_tree.c
 
 OBJ			= $(addprefix $(OBJ_DIR)/, $(SRC:.c=.o))
 DEP			= $(OBJ:.o=.d)
@@ -40,6 +41,9 @@ fclean: clean
 
 re: fclean all
 
+test: $(NAME)
+	bash tests/cli.sh $(abspath $(NAME))
+
 -include $(DEP)
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re test

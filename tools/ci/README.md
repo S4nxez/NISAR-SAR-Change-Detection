@@ -16,6 +16,7 @@ so if any check fails no image is pushed and the Raspberry Pi keeps running the 
 |---|---|
 | Frontend - check JavaScript syntax | An ES module under `frontend/` has a syntax error (`node --check`, the frontend has no build step) |
 | Model lab - compile | `fractal_model_lab` does not compile from sources (`-Werror`, so warnings too) |
+| Model lab - command line tests | `make test` fails: the schema `fractal_lab` generates from command line arguments (text or JSON) or its argument validation is wrong (`fractal_model_lab/tests/cli.sh` prints a `[FAIL]` line per failed check) |
 | Backend - compile, run tests and package | `mvn verify` fails: compilation errors or failing tests (every test under `server/src/test` runs) |
 | Startup check - prepare environment | `podman-compose.yml` plus `compose.ci.yml` is not a valid compose configuration |
 | Startup check - build images | A `Containerfile` does not build |

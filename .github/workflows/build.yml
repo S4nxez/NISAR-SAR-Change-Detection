@@ -43,6 +43,13 @@ jobs:
           out="$RUNNER_TEMP/fractal_model_lab"
           make -C fractal_model_lab -j"$(nproc)" OBJ_DIR="$out/obj" NAME="$out/fractal_lab"
 
+      - name: Model lab - command line tests
+        # Schema generated from arguments without the TUI (text and JSON) and argument
+        # validation, on the binary of the previous step (fractal_model_lab/tests/cli.sh)
+        run: |
+          out="$RUNNER_TEMP/fractal_model_lab"
+          make -C fractal_model_lab OBJ_DIR="$out/obj" NAME="$out/fractal_lab" test
+
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
