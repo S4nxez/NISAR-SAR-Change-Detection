@@ -10,11 +10,18 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    # Leaves room for a rollback: after a failed deployment, the run also restores the known-good
+    # version and smoke tests it
+    timeout-minutes: 10
+    # One deployment at a time, rollback included: a run must not roll back, or mark as known-good,
+    # the version another run is deploying. The next run waits (GitHub keeps only the newest waiting).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     permissions:
       contents: read
     steps:
-      # Only for tools/ci/smoke-test.sh, at the commit whose images Build Images pushed
+      # Only for tools/ci/smoke-test.sh and tools/ci/rollback.sh, at the commit whose images Build Images pushed
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -46,6 +53,20 @@ jobs:
             ServerAliveCountMax 3
           EOF
 
+      # Rollback point: if the running version passes the smoke test before it is replaced, tools/ci/rollback.sh
+      # mark tags its images as known-good on the Pi, for a failed deployment to roll back to. Otherwise the
+      # known-good images marked before stay. Never blocks the deployment. See tools/ci/README.md.
+      - name: Rollback - mark the running version as known-good
+        timeout-minutes: 1
+        continue-on-error: true
+        run: |
+          # One attempt (SMOKE_TIMEOUT=0): a running stack answers at once
+          if ! ssh pi "SMOKE_TIMEOUT=0 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh; then
+            echo "::warning title=Rollback::The running version fails the smoke test, it is not marked as known-good: if this deployment fails, it rolls back to the known-good images marked before, if any"
+          elif ! ssh pi "bash -s -- mark" < tools/ci/rollback.sh; then
+            echo "::warning title=Rollback::The running version could not be marked as known-good (see the log): if this deployment fails, it rolls back to the known-good images marked before, if any"
+          fi
+
       - name: Deploy
         id: deploy
         run: |
@@ -66,7 +87,7 @@ jobs:
              echo DEPLOY_OK"
 
       # Post-deployment smoke test: tools/ci/smoke-test.sh from this commit, run on the Pi (bash -s over SSH)
-      # against the deployed stack. A failure does not roll back. See tools/ci/README.md.
+      # against the deployed stack. A failure rolls back (Rollback steps below). See tools/ci/README.md.
       - name: Smoke test - deployed stack
         id: stack
         timeout-minutes: 3
@@ -110,6 +131,28 @@ jobs:
           # caddy and frontend logs record visitors' IP addresses, and this public repository's Actions logs are public
           echo "caddy and frontend logs are not printed (visitors' IP addresses), read them on the Pi:"
           echo "  cd /opt/NISAR-SAR-Change-Detection && podman-compose logs caddy frontend"
+
+      # Rollback: the deployment or a smoke test failed, or the run was cancelled. tools/ci/rollback.sh restore switches
+      # back to the known-good images without pulling or building: only the backend and frontend containers are
+      # recreated, MySQL and its data, Caddy and the other containers on the Pi keep running. After the logs step, as it
+      # removes the containers whose logs that step reads. The run still fails. See tools/ci/README.md.
+      - name: Rollback - restore the known-good version
+        id: restore
+        if: (failure() || cancelled()) && steps.deploy.conclusion != 'skipped'
+        timeout-minutes: 3
+        run: ssh pi "GITHUB_ACTIONS=true bash -s -- restore" < tools/ci/rollback.sh
+
+      - name: Rollback - smoke test
+        if: (failure() || cancelled()) && steps.restore.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          rc=0
+          ssh pi "SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh || rc=$?
+          # 1: failed checks (255 is an SSH error)
+          if [ "$rc" -eq 1 ]; then
+            echo "::error title=Rollback::The known-good version fails the smoke test too ([FAIL] lines in the log): the cause is probably not in the application images (database, Caddy, the Pi), see tools/ci/README.md"
+          fi
+          exit "$rc"
 
       - name: Disconnect Tailscale
         if: always()
