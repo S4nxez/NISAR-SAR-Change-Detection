@@ -1,0 +1,79 @@
+name: Weekly merge develop -> main
+
+on:
+  schedule:
+    # Wednesdays 21:00 UTC (GitHub may start scheduled runs a few minutes late)
+    - cron: '0 21 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-merge
+  cancel-in-progress: false
+
+# main is protected: changes need a pull request with 1 approval and a linear history.
+# The PR is opened and merged with RELEASE_TOKEN (a PAT of the repo owner) and approved by
+# github-actions[bot] with GITHUB_TOKEN, as a PR author can't approve their own PR.
+# The merge is pushed with a PAT, so the push event fires Build Images (validate + build) and Deploy.
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Open release pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git rev-list origin/main..origin/develop)" ]; then
+            echo "develop has nothing new for main"
+            echo "number=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Reuse the PR of a previous run that didn't merge (e.g. conflicts fixed by hand since)
+          number="$(gh pr list --base main --head develop --state open --json number -q '.[0].number')"
+          if [ -z "$number" ]; then
+            url="$(gh pr create --base main --head develop \
+              --title "chore(release): weekly merge develop into main" \
+              --body "Automatic weekly release of \`develop\` into \`main\` (weekly-merge.yml).")"
+            number="${url##*/}"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Approve pull request
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr review "${{ steps.pr.outputs.number }}" --approve --body "Automatic weekly release approval"
+
+      # Squash: main requires a linear history and develop has merge commits
+      - name: Merge pull request
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --squash \
+            --subject "chore(release): weekly merge develop into main (#${{ steps.pr.outputs.number }})"
+
+      # The squash commit isn't in develop's history: record main as merged into develop (keeping
+      # develop's tree, which already holds those changes) so next week's PR starts from it
+      - name: Sync main back into develop
+        if: steps.pr.outputs.number != ''
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main develop
+          git checkout -B develop origin/develop
+          git merge -s ours --no-edit -m "chore(release): sync main into develop" origin/main
+          git push origin develop
