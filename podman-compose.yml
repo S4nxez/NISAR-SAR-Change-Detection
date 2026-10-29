@@ -1,5 +1,7 @@
 version: "3.8"
 
+# Production runs this file with the defaults of NISAR_IMAGE_TAG and NISAR_HTTP_PORT. The develop stack (QA) runs it
+# from its own checkout, whose .env sets NISAR_IMAGE_TAG=develop and NISAR_HTTP_PORT=8090: see tools/ci/README.md
 services:
   mysql:
     image: docker.io/library/mysql:8
@@ -21,7 +23,7 @@ services:
       retries: 20
 
   backend:
-    image: ghcr.io/s4nxez/nisar-sar-change-detection-back:latest
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-back:${NISAR_IMAGE_TAG:-latest}
     # Max 5 reintentos si Spring/Flyway falla al arrancar; el contador se reinicia
     # con cada deploy (--force-recreate). Evita bucles infinitos de arranque.
     restart: on-failure:5
@@ -39,7 +41,7 @@ services:
       - NisarSar-net
 
   frontend:
-    image: ghcr.io/s4nxez/nisar-sar-change-detection-front:latest
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-front:${NISAR_IMAGE_TAG:-latest}
     restart: always
     networks:
       - NisarSar-net
@@ -48,7 +50,7 @@ services:
     image: caddy:latest
     restart: always
     ports:
-      - "127.0.0.1:8089:80"
+      - "127.0.0.1:${NISAR_HTTP_PORT:-8089}:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:Z
       - caddy_data:/data
