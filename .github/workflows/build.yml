@@ -43,7 +43,7 @@ jobs:
         run: |
           dpkg -s libncurses-dev >/dev/null 2>&1 \
             || { sudo apt-get update -qq && sudo apt-get install -y -qq libncurses-dev; }
-          # Build from sources into a scratch dir: the repo tracks prebuilt obj/ files
+          # Build from sources into a scratch dir, outside the checkout
           out="$RUNNER_TEMP/fractal_model_lab"
           make -C fractal_model_lab -j"$(nproc)" OBJ_DIR="$out/obj" NAME="$out/fractal_lab"
 
