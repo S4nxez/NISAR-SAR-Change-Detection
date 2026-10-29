@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 # include <ncurses.h>
 # include "tree.h"
+# include "prune.h"
 
 # define VIEW_LABEL_W 4
 # define VIEW_COUNT_W 7
@@ -23,6 +24,7 @@
 typedef struct s_view
 {
 	WINDOW		*win;
+	t_prune		*prune;
 	t_params	params;
 	int			total;
 	int			first;
@@ -41,7 +43,7 @@ typedef struct s_span
 	int	hits_child;
 }	t_span;
 
-void	view_init(t_view *view, WINDOW *win, t_params params, int first);
+void	view_init(t_view *view, WINDOW *win, t_prune *prune, int first);
 int		view_row(t_view *view, int level);
 int		view_sparse(t_view *view, int level);
 int		view_node_x(t_view *view, int level, t_u64 index);
@@ -60,6 +62,8 @@ int		view_child_tees(t_view *view, int level, t_u64 first, t_span span);
 chtype	view_edge_attr(t_view *view, int y);
 chtype	view_attr(t_params params, int level);
 chtype	view_glyph(t_params params, int level);
-chtype	view_density(t_view *view, int level);
+chtype	view_density(t_view *view, t_u64 nodes);
+chtype	view_node_glyph(t_view *view, int level, t_u64 index);
+chtype	view_dense_glyph(t_view *view, int level, int top, t_u64 group);
 
 #endif

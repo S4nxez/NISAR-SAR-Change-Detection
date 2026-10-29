@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,9 @@ typedef struct s_params
 	int	levels;
 	int	depth;
 	int	exponent;
+	int	random;
+	int	random_pct;
+	int	seed;
 }	t_params;
 
 typedef struct s_tree

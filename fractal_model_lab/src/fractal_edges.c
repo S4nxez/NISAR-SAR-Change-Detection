@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,8 +53,9 @@ static void	dense_edges(t_view *view, int level)
 	while (index < groups)
 	{
 		view_group_span(view, group_level, index, &span);
-		edge_vline(view, (span.first + span.last) / 2,
-			view_row(view, level) + 1, view_row(view, level + 1) - 1);
+		if (prune_state(view->prune, group_level, index) == NODE_ON)
+			edge_vline(view, (span.first + span.last) / 2,
+				view_row(view, level) + 1, view_row(view, level + 1) - 1);
 		index++;
 	}
 }
@@ -74,5 +75,9 @@ void	view_draw_edges(t_view *view, int level)
 	nodes = tree_level_nodes(view->params, level);
 	parent = 0;
 	while (parent < nodes)
-		sparse_edges(view, level, parent++);
+	{
+		if (prune_state(view->prune, level, parent) == NODE_ON)
+			sparse_edges(view, level, parent);
+		parent++;
+	}
 }

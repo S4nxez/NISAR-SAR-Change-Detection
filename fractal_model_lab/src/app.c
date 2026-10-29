@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,7 +34,7 @@ t_params	app_params(t_app *app)
 
 t_tree	app_tree(t_app *app)
 {
-	return (tree_build(app_params(app)));
+	return (prune_tree(app_prune(app)));
 }
 
 static void	curses_start(void)
@@ -64,4 +64,5 @@ void	app_run(t_app *app)
 	}
 	layout_destroy(app);
 	endwin();
+	prune_clear(&app->prune);
 }

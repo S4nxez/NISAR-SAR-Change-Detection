@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,9 @@ const t_field	*field_get(int id)
 	{"levels", "niveles", "Niveles", 1, 12, 3},
 	{"depth", "profundidad", "Profundidad", 1, 12, 3},
 	{"exponent", "exponencial", "Exponencial", 1, 5, 2},
+	{"random", "aleatorio", "Aleatorio", 0, 1, 0},
+	{"random_pct", "apagado_pct", "Apagados (%)", 0, 100, 20},
+	{"seed", "semilla", "Semilla", 0, 9999, 1},
 	{"runtime_mib", "runtime", "Runtime TF (MiB)", 0, 65536, 512},
 	{"leaf_mib", "hoja_mib", "RAM decisor (MiB)", 1, 65536, 48},
 	{"voter_mib", "voto_mib", "RAM votante (MiB)", 1, 65536, 6},
@@ -69,6 +72,9 @@ t_params	field_params(const int *values)
 	params.levels = values[F_LEVELS];
 	params.depth = values[F_DEPTH];
 	params.exponent = values[F_EXPONENT];
+	params.random = values[F_RANDOM];
+	params.random_pct = values[F_RANDOM_PCT];
+	params.seed = values[F_SEED];
 	return (params);
 }
 

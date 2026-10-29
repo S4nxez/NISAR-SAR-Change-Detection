@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,13 +49,36 @@ static void	draw_levels_line(WINDOW *win, t_app *app, int y)
 	level = 0;
 	while (level < total && len < getmaxx(win) - 8)
 	{
-		fmt_count(tree_level_nodes(app_params(app), level), count, FMT_LEN);
+		fmt_count(prune_level_nodes(app_prune(app), level), count, FMT_LEN);
 		len += snprintf(line + len, sizeof(line) - len, " %s", count);
 		level++;
 	}
 	if (level < total)
 		snprintf(line + len, sizeof(line) - len, " ..");
 	ui_text(win, y, 2, line);
+}
+
+static void	draw_random(WINDOW *win, t_prune *prune, int y)
+{
+	char	removed[FMT_LEN];
+	char	nodes[FMT_LEN];
+
+	if (prune->status == PRUNE_OFF)
+		return ;
+	fmt_count(prune->removed, removed, FMT_LEN);
+	fmt_count(prune->nodes, nodes, FMT_LEN);
+	wattron(win, COLOR_PAIR(CP_WARN));
+	if (prune->status == PRUNE_DONE)
+		ui_textf(win, y, "Apagados  %s de %s (%.1f%%)", removed, nodes,
+			100.0 * prune->removed / prune->nodes);
+	else if (prune->status == PRUNE_TOO_BIG)
+	{
+		fmt_count(PRUNE_MAX_NODES, nodes, FMT_LEN);
+		ui_textf(win, y, "Aleatorio sin aplicar: >%s nodos", nodes);
+	}
+	else
+		ui_text(win, y, 2, "Aleatorio sin aplicar: sin memoria");
+	wattroff(win, COLOR_PAIR(CP_WARN));
 }
 
 static void	draw_derived(WINDOW *win, t_app *app, int y)
@@ -80,6 +103,8 @@ static void	draw_derived(WINDOW *win, t_app *app, int y)
 	draw_levels_line(win, app, y + 4);
 	if (tree.saturated)
 		ui_text(win, y + 5, 2, "Aviso: >2^64, valores saturados");
+	else
+		draw_random(win, app_prune(app), y + 5);
 }
 
 void	draw_params(WINDOW *win, t_app *app)
@@ -94,6 +119,6 @@ void	draw_params(WINDOW *win, t_app *app)
 		id++;
 	}
 	draw_derived(win, app, FRACTAL_FIELDS + 2);
-	if (app->focus == PANEL_PARAMS)
+	if (app->focus == PANEL_PARAMS && getmaxy(win) - 2 > FRACTAL_FIELDS + 7)
 		ui_text(win, getmaxy(win) - 2, 2, "-/+ cambia  Enter edita");
 }

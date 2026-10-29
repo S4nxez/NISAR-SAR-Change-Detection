@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ static void	log_tree(t_app *app)
 	app_logf(app, "  -> %d niveles, %s nodos", tree.total_levels, nodes);
 	if (tree.saturated)
 		app_log(app, "aviso: el recuento supera 2^64 (saturado)");
+	report_random(app);
 }
 
 int	field_change(t_app *app, int id, int value)
