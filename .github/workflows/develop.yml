@@ -1,0 +1,48 @@
+name: Develop
+
+# The develop stack, for QA before production: every push to develop goes through the same flow as production, with
+# the same workflows. Build Images (build.yml) validates it and builds its images, tagged develop, then Deploy
+# (deploy.yml) deploys them to the develop stack on the Raspberry Pi, next to production but sharing nothing with it,
+# smoke tests it and rolls it back to develop-known-good if anything fails. The weekly merge then releases develop to
+# main. See tools/ci/README.md
+#
+# The workflows run from the pushed commit, so changes to them are tried on the develop stack before they reach main.
+on:
+  push:
+    branches: [ develop ]
+
+# One run at a time, the newest waiting one next: two runs building and deploying develop at once could deploy the
+# older images last
+concurrency:
+  group: develop
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image-tag: develop
+
+  deploy:
+    needs: images
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+    # Deploy's Tailscale and SSH secrets
+    secrets: inherit
+    with:
+      stack: develop
+      # Its own checkout, set up by hand once (see tools/ci/README.md): its own containers, database and volumes
+      deploy-dir: /opt/NISAR-SAR-Change-Detection-develop
+      image-tag: develop
+      # Production's Caddy is on 8089
+      http-port: 8090
+      # Only checked once the DEVELOP_PUBLIC_URL repository variable is set, e.g.
+      # https://raspberrypi.tail0a4b52.ts.net/terra-pulse-dev once Tailscale Funnel proxies it (see tools/ci/README.md)
+      public-url: ${{ vars.DEVELOP_PUBLIC_URL }}
