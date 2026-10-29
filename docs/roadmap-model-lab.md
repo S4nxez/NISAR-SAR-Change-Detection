@@ -15,4 +15,4 @@ Optional: add a "## Context" section with notes specific to this roadmap.
 
 ## Completed
 
-- [x] - <8> [Add randomness flag]  - Create a flag to add randomness and a percentage of how much nodes / models it should delete, to shut down random points of the schema bruteforcing must include this (generating asymetric schemas). If a node is shut down, the nodes and models below its branch will be disabled too. — PR: pending
+- [x] - <8> [Add randomness flag]  - Create a flag to add randomness and a percentage of how much nodes / models it should delete, to shut down random points of the schema bruteforcing must include this (generating asymetric schemas). If a node is shut down, the nodes and models below its branch will be disabled too. — PR: #11
