@@ -15,4 +15,4 @@ Optional: add a "## Context" section with notes specific to this roadmap.
 
 ## Completed
 
-- [x] - <4> [Fix gitignore] - Remove objects from git repository and add to gitignore — PR: pending
+- [x] - <4> [Fix gitignore] - Remove objects from git repository and add to gitignore — PR: #10
