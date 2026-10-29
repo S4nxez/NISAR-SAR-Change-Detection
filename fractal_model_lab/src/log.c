@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,10 +61,14 @@ void	app_help(t_app *app)
 	app_log(app, "Comandos: help | gen | stats | reset | clear | quit");
 	app_log(app, "  set <campo> <n>  (o '<campo> <n>')");
 	app_log(app, "  campos: levels depth exponent (niveles profundidad");
-	app_log(app, "  exponencial) y los de 'profile'");
-	app_log(app, "  profile [campo n]  perfil de modelo para recursos");
+	app_log(app, "  exponencial), lo pedido: budget (EUR/mes) accuracy");
+	app_log(app, "  precision recall (%), 0 = sin limite; y los de 'profile'");
+	app_log(app, "  profile [campo n]  perfil de modelo: recursos, precios");
+	app_log(app, "  y metricas de cada decisor");
 	app_log(app, "  focus <1-4> | zoom [1-4|off] | scroll <nivel>");
 	app_log(app, "Arbol: L niveles, D hijos por nodo; E aplica el arbol");
 	app_log(app, "  sobre cada hoja E veces: (L-1)*E+1 niveles totales.");
 	app_log(app, "  Hojas (D) = modelos decisores; resto (V) = votantes.");
+	app_log(app, "Pedido: el panel 2 compara cada valor con lo estimado");
+	app_log(app, "  para el esquema (->): verde si cumple, rojo si no.");
 }

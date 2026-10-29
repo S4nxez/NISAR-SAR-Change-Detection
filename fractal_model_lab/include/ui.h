@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define UI_H
 
 # include "app.h"
+# include "metrics.h"
 
 # define CP_VOTER_A 1
 # define CP_VOTER_B 2
@@ -38,6 +39,8 @@ void	ui_textf(WINDOW *win, int y, const char *format, ...);
 void	draw_fractal(WINDOW *win, t_app *app);
 void	draw_params(WINDOW *win, t_app *app);
 void	draw_cost(WINDOW *win, t_app *app);
+void	draw_request(WINDOW *win, int id, int y, t_check check);
+void	draw_budget(WINDOW *win, int y, t_check check);
 void	draw_logs(WINDOW *win, t_app *app);
 void	draw_status(WINDOW *win, t_app *app);
 

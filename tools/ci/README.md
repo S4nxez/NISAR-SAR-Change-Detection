@@ -29,6 +29,7 @@ so if any check fails no image is pushed and the Raspberry Pi keeps running the 
 |---|---|
 | Frontend - check JavaScript syntax | An ES module under `frontend/` has a syntax error (`node --check`, the frontend has no build step) |
 | Rollback - test rollback.sh | `test-rollback.sh` fails: `rollback.sh` no longer marks or restores the known-good images as it should (tested against fake `podman` and `podman-compose`, no container runs) |
+| Model lab - unit tests | `make unit` fails: the budget or metric estimates of `fractal_model_lab` (monthly cost, majority vote model, check of the requested budget and metrics) no longer give the expected values (`fractal_model_lab/tests/unit_tests.c` prints a `[FAIL]` line per failed check) |
 | Model lab - compile | `fractal_model_lab` does not compile from sources (`-Werror`, so warnings too) |
 | Backend - compile, run tests and package | `mvn verify` fails: compilation errors or failing tests (every test under `server/src/test` runs) |
 | Startup check - prepare environment | `podman-compose.yml` plus `compose.ci.yml` is not a valid compose configuration |

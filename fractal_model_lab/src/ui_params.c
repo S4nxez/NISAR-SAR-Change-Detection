@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 static void	draw_field(WINDOW *win, t_app *app, int id, int y)
 {
 	const t_field	*field;
+	const char		*unit;
 	chtype			attr;
 	char			marker;
 
@@ -29,10 +30,16 @@ static void	draw_field(WINDOW *win, t_app *app, int id, int y)
 		attr = A_REVERSE | A_BOLD;
 	else if (app->selected == id)
 		attr = A_BOLD;
+	unit = "%";
+	if (id == F_BUDGET)
+		unit = " ";
 	wattron(win, attr);
-	ui_textf(win, y, "%c %-12s %3d   (%d-%d)",
-		marker, field->label, app->values[id],
-		field->min, field->max);
+	if (id < FRACTAL_FIELDS)
+		ui_textf(win, y, "%c %-12s %3d   (%d-%d)", marker, field->label,
+			app->values[id], field->min, field->max);
+	else
+		ui_textf(win, y, "%c %-12s %3d%s", marker, field->label,
+			app->values[id], unit);
 	wattroff(win, attr);
 }
 
@@ -84,16 +91,20 @@ static void	draw_derived(WINDOW *win, t_app *app, int y)
 
 void	draw_params(WINDOW *win, t_app *app)
 {
-	int	id;
+	t_check	check;
+	int		id;
 
 	ui_frame(win, "[2] PARAMETROS", app->focus == PANEL_PARAMS);
+	check = request_check(app->values);
 	id = 0;
-	while (id < FRACTAL_FIELDS)
+	while (id < PARAM_FIELDS)
 	{
 		draw_field(win, app, id, id + 1);
+		if (id >= FRACTAL_FIELDS)
+			draw_request(win, id, id + 1, check);
 		id++;
 	}
-	draw_derived(win, app, FRACTAL_FIELDS + 2);
-	if (app->focus == PANEL_PARAMS)
+	draw_derived(win, app, PARAM_FIELDS + 2);
+	if (app->focus == PANEL_PARAMS && getmaxy(win) - 2 > PARAM_FIELDS)
 		ui_text(win, getmaxy(win) - 2, 2, "-/+ cambia  Enter edita");
 }

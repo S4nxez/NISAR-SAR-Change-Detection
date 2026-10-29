@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,19 @@ static void	cost_cpu(t_cost *cost, t_tree tree, t_profile profile)
 		cost->vcpus = 1;
 }
 
+static void	cost_month(t_cost *cost, t_profile profile)
+{
+	const t_tier	*tier;
+	t_u64			cents;
+
+	tier = container_tier(cost->tier);
+	if (!tier)
+		tier = container_tier(TIER_COUNT - 1);
+	cents = sat_add(sat_mul((t_u64)tier->vcpus, (t_u64)profile.vcpu_cents),
+			sat_mul((t_u64)tier->ram_gib, (t_u64)profile.gib_cents));
+	cost->month_eur = ceil_div(sat_mul(cents, cost->replicas), 100);
+}
+
 t_cost	cost_estimate(t_tree tree, t_profile profile)
 {
 	t_cost	cost;
@@ -51,5 +64,6 @@ t_cost	cost_estimate(t_tree tree, t_profile profile)
 	cost_memory(&cost, tree, profile);
 	cost_cpu(&cost, tree, profile);
 	cost.tier = container_pick(&cost);
+	cost_month(&cost, profile);
 	return (cost);
 }

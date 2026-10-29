@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,6 +68,7 @@ void	report_generate(t_app *app)
 		tree.total_levels, nodes, leaves);
 	report_resources(app, cost);
 	report_container(app, cost);
+	report_request(app);
 }
 
 void	report_levels(t_app *app)
@@ -99,7 +100,7 @@ void	report_profile(t_app *app)
 	int				id;
 
 	app_log(app, "--- perfil de modelo (profile <campo> <n>) ---");
-	id = FRACTAL_FIELDS;
+	id = PARAM_FIELDS;
 	while (id < FIELD_COUNT)
 	{
 		field = field_get(id);

@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,12 @@ typedef struct s_profile
 	int	voter_us;
 	int	target_ms;
 	int	headroom_pct;
+	int	vcpu_cents;
+	int	gib_cents;
+	int	leaf_recall;
+	int	leaf_spec;
+	int	positive_pct;
+	int	corr_pct;
 }	t_profile;
 
 typedef struct s_tier
@@ -49,6 +55,7 @@ typedef struct s_cost
 	t_u64	path_us;
 	t_u64	vcpus;
 	t_u64	replicas;
+	t_u64	month_eur;
 	int		tier;
 }	t_cost;
 

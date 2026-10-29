@@ -10,16 +10,23 @@ OBJ_DIR		= obj
 
 SRC			= main.c app.c log.c layout.c field.c format.c \
 			  sat_math.c tree.c tree_role.c cost.c container.c \
+			  metrics.c request.c \
 			  ui.c ui_text.c ui_bar.c ui_params.c ui_cost.c ui_logs.c ui_wrap.c \
+			  ui_request.c \
 			  fractal_view.c fractal_layout.c fractal_place.c \
 			  fractal_nodes.c fractal_edges.c \
 			  fractal_span.c fractal_style.c \
 			  input.c input_term.c input_params.c \
 			  command.c command_basic.c command_view.c command_set.c \
-			  report.c
+			  report.c report_request.c
 
 OBJ			= $(addprefix $(OBJ_DIR)/, $(SRC:.c=.o))
 DEP			= $(OBJ:.o=.d)
+
+UNIT		= $(OBJ_DIR)/unit_tests
+UNIT_SRC	= tests/unit_tests.c
+UNIT_OBJ	= $(addprefix $(OBJ_DIR)/, field.o format.o sat_math.o tree.o \
+			  cost.o container.o metrics.o request.o)
 
 all: $(NAME)
 
@@ -32,6 +39,12 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
+unit: $(UNIT)
+	$(UNIT)
+
+$(UNIT): $(UNIT_SRC) $(UNIT_OBJ)
+	$(CC) $(CFLAGS) -Iinclude $(UNIT_SRC) $(UNIT_OBJ) -o $@
+
 clean:
 	rm -rf $(OBJ_DIR)
 
@@ -42,4 +55,4 @@ re: fclean all
 
 -include $(DEP)
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re unit

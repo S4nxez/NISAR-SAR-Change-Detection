@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,8 @@ int	field_change(t_app *app, int id, int value)
 	}
 	app->values[id] = value;
 	app_logf(app, "%s = %d", field->name, value);
+	if (id >= FRACTAL_FIELDS && id < PARAM_FIELDS)
+		report_request_field(app, id);
 	if (id >= FRACTAL_FIELDS)
 		return (1);
 	last = tree_total_levels(app_params(app)) - 1;
@@ -64,9 +66,9 @@ void	params_key(t_app *app, int key)
 
 	value = app->values[app->selected];
 	if (key == KEY_UP)
-		app->selected = (app->selected + FRACTAL_FIELDS - 1) % FRACTAL_FIELDS;
+		app->selected = (app->selected + PARAM_FIELDS - 1) % PARAM_FIELDS;
 	else if (key == KEY_DOWN)
-		app->selected = (app->selected + 1) % FRACTAL_FIELDS;
+		app->selected = (app->selected + 1) % PARAM_FIELDS;
 	else if (key == KEY_LEFT || key == '-')
 		field_change(app, app->selected, value - 1);
 	else if (key == KEY_RIGHT || key == '+' || key == '=')
