@@ -1,8 +1,9 @@
 # Fractal Model Lab
 
 Aplicación TUI en C (`ncursesw`) para diseñar un esquema de IA en forma de
-árbol fractal y estimar por adelantado los recursos que necesitará antes de
-implementarlo (la parte Python/TensorFlow queda para una fase posterior).
+árbol fractal y estimar por adelantado los recursos que necesitará, su coste
+al mes y sus métricas (accuracy, precision y recall) antes de implementarlo
+(la parte Python/TensorFlow queda para una fase posterior).
 
 - Cada **hoja** del árbol es un modelo **decisor** (`D`).
 - Cada **nodo intermedio** es un modelo de **votación** (`V`) que agrega a
@@ -13,6 +14,7 @@ implementarlo (la parte Python/TensorFlow queda para una fase posterior).
 ```sh
 sudo apt install build-essential libncurses-dev
 make
+make unit        # pruebas unitarias del cálculo (tests/unit_tests.c)
 ./fractal_lab
 ```
 
@@ -23,8 +25,8 @@ Tamaño mínimo de terminal: 60x16 (recomendado 100x30 o más).
 | # | Panel | Contenido |
 |---|-------|-----------|
 | 1 | Fractal | Árbol dibujado con conectores de línea (`┌─┴─┐`). Los niveles que no caben nodo a nodo se agrupan por su ancestro visible y se muestran por densidad (`:` `+` `*` `#`). A la derecha, nodos por nivel; `*` marca la raíz de cada copia fractal y el color cambia por copia. |
-| 2 | Parámetros | `niveles`, `profundidad`, `exponencial` y sus derivados: niveles totales, nodos, decisores, votantes y nodos por nivel. |
-| 3 | Recursos | RAM (con desglose y margen), disco de pesos, CPU por inferencia, vCPU para la latencia objetivo, latencia estimada y contenedor recomendado (con su `docker run`), o clúster si no cabe en uno. |
+| 2 | Parámetros | `niveles`, `profundidad`, `exponencial` y sus derivados: niveles totales, nodos, decisores, votantes y nodos por nivel. Lo pedido (presupuesto, accuracy, precision y recall) con lo estimado para el esquema al lado (`->`), en verde si cumple y en rojo si no. |
+| 3 | Recursos | RAM (con desglose y margen), disco de pesos, CPU por inferencia, vCPU para la latencia objetivo, latencia estimada y contenedor recomendado (con su `docker run`), o clúster si no cabe en uno, y su coste al mes frente al presupuesto. |
 | 4 | Terminal / logs | Línea de comandos e historial de mensajes. |
 
 ## Modelo del árbol
@@ -66,7 +68,9 @@ focus <1-4> | zoom [1-4|off] | scroll <nivel>
 ```
 
 Campos del árbol: `levels`/`niveles`, `depth`/`profundidad`,
-`exponent`/`exponencial`.
+`exponent`/`exponencial`. Lo pedido: `budget`/`presupuesto`,
+`accuracy`/`exactitud`, `precision`, `recall`/`sensibilidad` (ver
+[Presupuesto y métricas](#presupuesto-y-métricas)).
 
 ## Estimación de recursos
 
@@ -86,14 +90,77 @@ El contenedor elegido es el más pequeño de la tabla de `src/container.c`
 vCPU. Si ninguno basta, se propone un clúster de 8xlarge. Son estimaciones
 orientativas, no medidas reales de TensorFlow.
 
+## Presupuesto y métricas
+
+Además del árbol, el panel 2 recoge lo que se pide al esquema y, al lado de
+cada valor (`->`), lo que se estima para el esquema actual: en verde si cumple
+y en rojo si no. `gen` lo resume y `set` lo indica al cambiar cada valor.
+
+| Campo | Alias | Por defecto | Se pide |
+|-------|-------|-------------|---------|
+| `budget` | `presupuesto` | 200 | Coste máximo en EUR al mes; `0` = sin límite |
+| `accuracy` | `exactitud` | 90 | Accuracy mínima (%) |
+| `precision` | `precision` | 80 | Precision mínima (%) |
+| `recall` | `sensibilidad` | 80 | Recall mínimo (%) |
+
+Una métrica a `0` no se exige. Se comparan redondeadas a una décima, como se
+muestran: una estimación de 95,96 % se ve como `96.0%` y cumple un 96.
+
+**Coste.** Precio al mes del contenedor recomendado (ver *Estimación de
+recursos*): sus vCPU por `vcpu_cents` más sus GiB por `gib_cents`, por el
+número de réplicas si es un clúster, redondeado al euro hacia arriba. Los
+precios por defecto, 27 EUR por vCPU y 3 EUR por GiB al mes, son del orden de
+un servicio de contenedores bajo demanda (p. ej. AWS Fargate); cámbialos con
+`profile` para otro proveedor. Con los valores por defecto el esquema cabe en
+un contenedor medium (4 vCPU / 8 GiB): 4 × 27 + 8 × 3 = 132 EUR/mes.
+
+**Métricas.** Clasificación binaria (p. ej. cambio / sin cambio). Ante una
+muestra positiva cada decisor vota positivo con probabilidad `leaf_recall`, y
+ante una negativa con `1 - leaf_spec`. Cada votante sigue a la mayoría de sus
+D hijos (con D par, un empate se decide al 50 %), y los errores de modelos
+hermanos no son independientes: con probabilidad `corr_pct` todos votan lo
+mismo. Así, en cada uno de los `(L-1)*E` niveles de votación la probabilidad
+`q` de votar positivo pasa a
+
+```text
+q' = c·q + (1 - c)·(P[X > D/2] + P[X = D/2] / 2)    X ~ Binomial(D, q), c = corr_pct / 100
+```
+
+Con el recall `R` (la `q` de las muestras positivas) y la tasa de falsos
+positivos `F` (la de las negativas) en la raíz, y la proporción de positivos
+`π` (`positive_pct`):
+
+```text
+recall    = R
+accuracy  = π·R + (1 - π)·(1 - F)       (especificidad = 1 - F)
+precision = π·R / (π·R + (1 - π)·F)     (0 si en la práctica nunca predice positivo)
+```
+
+| Campo | Por defecto | Significado |
+|-------|-------------|-------------|
+| `vcpu_cents` / `gib_cents` | 2700 / 300 | Precio al mes de una vCPU / un GiB, en céntimos de euro |
+| `leaf_recall` / `leaf_spec` | 80 / 90 | Recall / especificidad de cada decisor (%) |
+| `positive_pct` | 10 | Muestras positivas en los datos (%, de 1 a 99) |
+| `corr_pct` | 50 | Correlación de errores entre modelos hermanos (%) |
+
+Con estos valores un decisor solo tiene accuracy 89 %, precision 47 % y recall
+80 %, y el esquema `L=3 D=3 E=2` (4 niveles de votación) llega a `98.6%`,
+`90.5%` y `95.8%`. Votar mejora a los decisores mejores que el azar (más del
+50 %) y empeora a los peores; con D = 1 o D = 2 no cambia nada, y cuanta más
+correlación, menos aporta cada nivel (con 0 % es el teorema del jurado de
+Condorcet; con 100 % los votantes no aportan nada). Como el resto, es una
+estimación orientativa: ajusta el perfil a las métricas medidas de un decisor.
+
 ## Estructura y normas
 
 ```text
-include/  cabeceras por módulo (tree, cost, field, format, app, ui, view, command)
+include/  cabeceras por módulo (tree, cost, field, format, app, ui, view, command, metrics)
 src/      tree*, cost/container   -> cálculo
+          metrics, request        -> métricas estimadas y comparación con lo pedido
           fractal_*               -> renderizado del árbol
           ui_*                    -> paneles
           input*, command*        -> teclado y terminal
+tests/    unit_tests.c            -> pruebas unitarias del cálculo (make unit)
 ```
 
 Todo el código cumple la Norminette 3 de 42 (`norminette src include`):

@@ -39,6 +39,13 @@ jobs:
       - name: Rollback - test rollback.sh
         run: tools/ci/test-rollback.sh
 
+      - name: Model lab - unit tests
+        # Budget and metric estimates (fractal_model_lab/tests/unit_tests.c): only the
+        # calculation sources, no ncurses. The compile step below reuses their objects.
+        run: |
+          out="$RUNNER_TEMP/fractal_model_lab"
+          make -C fractal_model_lab OBJ_DIR="$out/obj" NAME="$out/fractal_lab" unit
+
       - name: Model lab - compile
         run: |
           dpkg -s libncurses-dev >/dev/null 2>&1 \

@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,10 @@ typedef enum e_field_id
 	F_LEVELS,
 	F_DEPTH,
 	F_EXPONENT,
+	F_BUDGET,
+	F_ACCURACY,
+	F_PRECISION,
+	F_RECALL,
 	F_RUNTIME_MIB,
 	F_LEAF_MIB,
 	F_VOTER_MIB,
@@ -29,10 +33,17 @@ typedef enum e_field_id
 	F_VOTER_US,
 	F_TARGET_MS,
 	F_HEADROOM_PCT,
+	F_VCPU_CENTS,
+	F_GIB_CENTS,
+	F_LEAF_RECALL,
+	F_LEAF_SPEC,
+	F_POSITIVE_PCT,
+	F_CORR_PCT,
 	FIELD_COUNT
 }	t_field_id;
 
 # define FRACTAL_FIELDS 3
+# define PARAM_FIELDS 7
 
 typedef struct s_field
 {

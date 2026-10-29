@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,13 +74,20 @@ static void	draw_container(WINDOW *win, t_cost cost)
 static void	draw_profile(WINDOW *win, t_profile profile)
 {
 	wattron(win, A_DIM);
-	ui_text(win, 10, 2, "Perfil (comando 'profile'):");
-	ui_textf(win, 11, "  decisor %d MiB, %d us/inferencia",
+	ui_text(win, 11, 2, "Perfil (comando 'profile'):");
+	ui_textf(win, 12, "  decisor %d MiB, %d us/inferencia",
 		profile.leaf_mib, profile.leaf_us);
-	ui_textf(win, 12, "  votante %d MiB, %d us/voto",
+	ui_textf(win, 13, "  votante %d MiB, %d us/voto",
 		profile.voter_mib, profile.voter_us);
-	ui_textf(win, 13, "  runtime TF %d MiB, pesos %d%% RAM",
+	ui_textf(win, 14, "  runtime TF %d MiB, pesos %d%% RAM",
 		profile.runtime_mib, profile.disk_pct);
+	ui_textf(win, 15, "  precio/mes: vCPU %d.%02d EUR, GiB %d.%02d EUR",
+		profile.vcpu_cents / 100, profile.vcpu_cents % 100,
+		profile.gib_cents / 100, profile.gib_cents % 100);
+	ui_textf(win, 16, "  decisor recall %d%%, especificidad %d%%",
+		profile.leaf_recall, profile.leaf_spec);
+	ui_textf(win, 17, "  positivos %d%%, correlacion %d%%",
+		profile.positive_pct, profile.corr_pct);
 	wattroff(win, A_DIM);
 }
 
@@ -97,5 +104,6 @@ void	draw_cost(WINDOW *win, t_app *app)
 	draw_memory(win, tree, cost, profile.headroom_pct);
 	draw_cpu(win, cost, profile.target_ms);
 	draw_container(win, cost);
+	draw_budget(win, 9, request_check(app->values));
 	draw_profile(win, profile);
 }

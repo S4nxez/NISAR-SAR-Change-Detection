@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 02:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ int	cmd_profile(t_app *app, int argc, char **argv)
 		report_profile(app);
 		return (1);
 	}
-	if (argc != 3 || field_find(argv[1]) < FRACTAL_FIELDS)
+	if (argc != 3 || field_find(argv[1]) < PARAM_FIELDS)
 	{
 		app_log(app, "uso: profile <campo_perfil> <valor>");
 		return (0);
