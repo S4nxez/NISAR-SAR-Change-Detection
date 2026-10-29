@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,12 +38,11 @@ chtype	view_glyph(t_params params, int level)
 	return ('V');
 }
 
-chtype	view_density(t_view *view, int level)
+chtype	view_density(t_view *view, t_u64 nodes)
 {
 	t_u64	per_column;
 
-	per_column = tree_level_nodes(view->params, level)
-		/ (t_u64)view->width;
+	per_column = nodes / (t_u64)view->width;
 	if (per_column < 4)
 		return (':');
 	if (per_column < 32)

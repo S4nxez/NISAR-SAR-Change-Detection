@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 # include <ncurses.h>
 # include "field.h"
+# include "prune.h"
 
 # define PANEL_COUNT 4
 # define PANEL_FRACTAL 0
@@ -31,6 +32,7 @@
 typedef struct s_app
 {
 	int		values[FIELD_COUNT];
+	t_prune	prune;
 	WINDOW	*panels[PANEL_COUNT];
 	WINDOW	*status;
 	int		too_small;
@@ -51,6 +53,7 @@ void		app_init(t_app *app);
 void		app_run(t_app *app);
 t_params	app_params(t_app *app);
 t_tree		app_tree(t_app *app);
+t_prune		*app_prune(t_app *app);
 void		app_log(t_app *app, const char *message);
 void		app_logf(t_app *app, const char *format, ...);
 void		app_help(t_app *app);
@@ -67,5 +70,7 @@ void		command_execute(t_app *app, char *line);
 void		report_generate(t_app *app);
 void		report_levels(t_app *app);
 void		report_profile(t_app *app);
+void		report_random(t_app *app);
+void		report_level_count(t_app *app, int level, char *buf, size_t size);
 
 #endif

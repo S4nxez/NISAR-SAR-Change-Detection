@@ -6,7 +6,7 @@
 /*   By: sanxez <desanchezmunoz02@gmail.com>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/25 12:00:00 by sanxez            #+#    #+#             */
-/*   Updated: 2026/10/25 12:00:00 by sanxez           ###   ########.fr       */
+/*   Updated: 2026/10/29 12:00:00 by sanxez           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,7 +58,7 @@ void	report_generate(t_app *app)
 	char		leaves[FMT_LEN];
 
 	params = app_params(app);
-	tree = tree_build(params);
+	tree = app_tree(app);
 	cost = cost_estimate(tree, field_profile(app->values));
 	fmt_count(tree.nodes, nodes, FMT_LEN);
 	fmt_count(tree.leaves, leaves, FMT_LEN);
@@ -66,6 +66,7 @@ void	report_generate(t_app *app)
 		params.levels, params.depth, params.exponent);
 	app_logf(app, "%d niveles, %s nodos, %s decisores",
 		tree.total_levels, nodes, leaves);
+	report_random(app);
 	report_resources(app, cost);
 	report_container(app, cost);
 }
@@ -83,7 +84,7 @@ void	report_levels(t_app *app)
 	level = 0;
 	while (level < total)
 	{
-		fmt_count(tree_level_nodes(params, level), count, FMT_LEN);
+		report_level_count(app, level, count, FMT_LEN);
 		if (tree_is_leaf(params, level))
 			app_logf(app, "N%-2d decisores %s", level + 1, count);
 		else
