@@ -10,8 +10,23 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    # Leaves room for a rollback: after a failed deployment, the run also restores the known-good
+    # version and smoke tests it
+    timeout-minutes: 10
+    # One deployment at a time, rollback included: a run must not roll back, or mark as known-good,
+    # the version another run is deploying. The next run waits (GitHub keeps only the newest waiting).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
     steps:
+      # Only for tools/ci/smoke-test.sh and tools/ci/rollback.sh, at the commit whose images Build Images pushed
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
@@ -26,8 +41,34 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 100.68.170.113 >> ~/.ssh/known_hosts
+          # "ssh pi" in the post-deployment steps: the Raspberry Pi with the same options as Deploy
+          cat >> ~/.ssh/config <<'EOF'
+          Host pi
+            HostName 100.68.170.113
+            User sanxez
+            BatchMode yes
+            StrictHostKeyChecking no
+            ConnectTimeout 10
+            ServerAliveInterval 30
+            ServerAliveCountMax 3
+          EOF
+
+      # Rollback point: if the running version passes the smoke test before it is replaced, tools/ci/rollback.sh
+      # mark tags its images as known-good on the Pi, for a failed deployment to roll back to. Otherwise the
+      # known-good images marked before stay. Never blocks the deployment. See tools/ci/README.md.
+      - name: Rollback - mark the running version as known-good
+        timeout-minutes: 1
+        continue-on-error: true
+        run: |
+          # One attempt (SMOKE_TIMEOUT=0): a running stack answers at once
+          if ! ssh pi "SMOKE_TIMEOUT=0 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh; then
+            echo "::warning title=Rollback::The running version fails the smoke test, it is not marked as known-good: if this deployment fails, it rolls back to the known-good images marked before, if any"
+          elif ! ssh pi "bash -s -- mark" < tools/ci/rollback.sh; then
+            echo "::warning title=Rollback::The running version could not be marked as known-good (see the log): if this deployment fails, it rolls back to the known-good images marked before, if any"
+          fi
 
       - name: Deploy
+        id: deploy
         run: |
           set -euo pipefail
       
@@ -44,6 +85,74 @@ jobs:
              podman pull ghcr.io/s4nxez/nisar-sar-change-detection-front:latest && \
              podman-compose up -d --force-recreate > /dev/null 2>&1 && \
              echo DEPLOY_OK"
+
+      # Post-deployment smoke test: tools/ci/smoke-test.sh from this commit, run on the Pi (bash -s over SSH)
+      # against the deployed stack. A failure rolls back (Rollback steps below). See tools/ci/README.md.
+      - name: Smoke test - deployed stack
+        id: stack
+        timeout-minutes: 3
+        # Through Caddy, on the port podman-compose.yml publishes. The recreated backend answered ~15 s after the
+        # deploy on the Pi; 120 s leaves room for slow migrations within the job timeout.
+        run: ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh
+
+      - name: Smoke test - public URL
+        timeout-minutes: 2
+        env:
+          # Tailscale Funnel proxies this prefix to Caddy: the URLs browsers use, the frontend's API calls included
+          PUBLIC_URL: https://raspberrypi.tail0a4b52.ts.net/terra-pulse
+        run: |
+          rc=0
+          # shellcheck disable=SC2029 # PUBLIC_URL expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=30 bash -s -- $PUBLIC_URL" < tools/ci/smoke-test.sh || rc=$?
+          # 1: failed checks (255 is an SSH error)
+          if [ "$rc" -eq 1 ]; then
+            echo "::error title=Public URL::The deployed stack passed on the Pi but not at $PUBLIC_URL: check Tailscale Funnel (tailscale serve status on the Pi) and that the frontend only uses relative URLs, it is served under /terra-pulse"
+          fi
+          exit "$rc"
+
+      - name: Smoke test - container status and logs
+        # The deployment or the stack check failed (the public URL is only checked once the stack passed)
+        if: (failure() || cancelled()) && steps.deploy.conclusion != 'skipped' && steps.stack.outcome != 'success'
+        run: |
+          # podman-compose in the production checkout, next to podman-compose.yml and its .env
+          # shellcheck disable=SC2029 # the arguments expand on the runner, as intended
+          compose() { ssh -n pi "cd /opt/NISAR-SAR-Change-Detection && podman-compose $* 2>&1"; }
+          compose ps || true
+          logs="$(compose logs backend)" || true
+          # Innermost exception of the backend's first start since the deploy, as in the validate job (build.yml)
+          cause="$(awk '/Starting .*Application/ && ++starts > 1 { exit } /Caused by:/ { cause = $0 } END { print cause }' <<<"$logs")"
+          if [ -n "$cause" ]; then echo "::error title=Backend error::${cause//%/%25}"; fi
+          echo "::group::backend logs"
+          printf '%s\n' "$logs"
+          echo "::endgroup::"
+          echo "::group::mysql logs"
+          compose logs mysql || true
+          echo "::endgroup::"
+          # caddy and frontend logs record visitors' IP addresses, and this public repository's Actions logs are public
+          echo "caddy and frontend logs are not printed (visitors' IP addresses), read them on the Pi:"
+          echo "  cd /opt/NISAR-SAR-Change-Detection && podman-compose logs caddy frontend"
+
+      # Rollback: the deployment or a smoke test failed, or the run was cancelled. tools/ci/rollback.sh restore switches
+      # back to the known-good images without pulling or building: only the backend and frontend containers are
+      # recreated, MySQL and its data, Caddy and the other containers on the Pi keep running. After the logs step, as it
+      # removes the containers whose logs that step reads. The run still fails. See tools/ci/README.md.
+      - name: Rollback - restore the known-good version
+        id: restore
+        if: (failure() || cancelled()) && steps.deploy.conclusion != 'skipped'
+        timeout-minutes: 3
+        run: ssh pi "GITHUB_ACTIONS=true bash -s -- restore" < tools/ci/rollback.sh
+
+      - name: Rollback - smoke test
+        if: (failure() || cancelled()) && steps.restore.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          rc=0
+          ssh pi "SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh || rc=$?
+          # 1: failed checks (255 is an SSH error)
+          if [ "$rc" -eq 1 ]; then
+            echo "::error title=Rollback::The known-good version fails the smoke test too ([FAIL] lines in the log): the cause is probably not in the application images (database, Caddy, the Pi), see tools/ci/README.md"
+          fi
+          exit "$rc"
 
       - name: Disconnect Tailscale
         if: always()
