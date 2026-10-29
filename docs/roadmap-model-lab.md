@@ -15,4 +15,4 @@ Optional: add a "## Context" section with notes specific to this roadmap.
 
 ## Completed
 
-- [x] - <9> [Add parameters: Budget, Accuracy, Precission, Recall ] — Add parameters to generate or request metrics to measure model performance — PR: pending
+- [x] - <9> [Add parameters: Budget, Accuracy, Precission, Recall ] — Add parameters to generate or request metrics to measure model performance — PR: #8
