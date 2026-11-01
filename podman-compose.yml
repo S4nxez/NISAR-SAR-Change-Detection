@@ -44,6 +44,19 @@ services:
     networks:
       - NisarSar-net
 
+  # Servicio de procesado NISAR (processing/servidor.py): recibe las pasadas antes/despues
+  # desde prueba.html, ejecuta el pipeline y sirve los resultados. Caddy le envia
+  # /api/nisar/* y /trabajos/*. Sin NISAR_CLAVE en server/.env no admite subidas.
+  procesado:
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-proc:latest
+    restart: always
+    env_file:
+      - ./server/.env
+    volumes:
+      - nisar_trabajos:/datos
+    networks:
+      - NisarSar-net
+
   caddy:
     image: caddy:latest
     restart: always
@@ -58,6 +71,7 @@ services:
 
 volumes:
   mysql_data:
+  nisar_trabajos:
   caddy_data:
   caddy_config:
 

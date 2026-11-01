@@ -16,6 +16,7 @@ Solo usa la biblioteca estandar de Python mas las dependencias del pipeline
 API
   GET  /api/nisar/estado                    estado del servicio
   POST /api/nisar/subidas?nombre=F.h5       cuerpo = el fichero (.h5 GCOV o escena .zip)
+                                            (con clave: cabecera X-Nisar-Clave en todos los POST)
   GET  /api/nisar/subidas/<id>
   POST /api/nisar/trabajos                  JSON {antes, despues, titulo?, umbral?, agua?, area_min?}
   GET  /api/nisar/trabajos                  lista de trabajos (mas recientes primero)
@@ -23,6 +24,7 @@ API
 """
 import argparse
 import datetime as dt
+import hmac
 import http.server
 import json
 import os
@@ -430,6 +432,9 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
     servicio: Servicio = None
     limite = 4 * 1024 ** 3
     cors = False
+    permitir_subidas = True
+    clave = ""             # si no esta vacia, las peticiones POST deben llevar la cabecera X-Nisar-Clave
+    subidas_activas = threading.BoundedSemaphore(2)
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       ".webp": "image/webp", ".geojson": "application/geo+json", ".md": "text/markdown; charset=utf-8",
                       ".js": "text/javascript", ".json": "application/json", ".gz": "application/octet-stream"}
@@ -489,6 +494,7 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
         s = self.servicio
         if p == "/api/nisar/estado":
             return self._json(200, {"ok": True, "h5py": s.h5py, "ocupado": s.actual, "en_cola": s.cola.qsize(),
+                                    "requiere_clave": bool(self.clave), "subidas": self.permitir_subidas,
                                     "limite_bytes": self.limite, "libre_bytes": shutil.disk_usage(s.datos).free})
         if p == "/api/nisar/trabajos":
             return self._json(200, {"trabajos": [{k: t[k] for k in ("id", "titulo", "estado", "creado", "progreso", "mensaje")}
@@ -519,6 +525,10 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
             longitud = int(self.headers.get("Content-Length") or -1)
         except ValueError:
             longitud = -1
+        if not self.permitir_subidas:
+            return self._json(403, {"error": "Este servidor está abierto a la red sin clave: define NISAR_CLAVE para permitir análisis."})
+        if self.clave and not hmac.compare_digest(self.headers.get("X-Nisar-Clave", ""), self.clave):
+            return self._json(401, {"error": "Clave de acceso incorrecta o ausente."})
         try:
             if p == "/api/nisar/subidas":
                 if longitud <= 0:
@@ -526,7 +536,12 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
                 if longitud > self.limite:
                     return self._json(413, {"error": f"El fichero supera el límite de {self.limite / 1e9:.1f} GB."})
                 nombre = urllib.parse.parse_qs(url.query).get("nombre", ["fichero"])[0]
-                return self._json(201, self._publico(s.recibir(nombre, self.rfile, longitud)))
+                if not self.subidas_activas.acquire(blocking=False):
+                    return self._json(429, {"error": "Ya hay dos subidas en curso. Espera a que terminen."})
+                try:
+                    return self._json(201, self._publico(s.recibir(nombre, self.rfile, longitud)))
+                finally:
+                    self.subidas_activas.release()
             if p == "/api/nisar/trabajos":
                 if not 0 < longitud < 100_000:
                     return self._json(400, {"error": "Cuerpo JSON no válido."})
@@ -541,20 +556,27 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--host", default="127.0.0.1", help="usa 0.0.0.0 para abrirlo a la red (sin autenticacion)")
+    ap.add_argument("--host", default="127.0.0.1", help="0.0.0.0 lo abre a la red; entonces exige --clave o NISAR_CLAVE")
     ap.add_argument("--puerto", type=int, default=8001)
     ap.add_argument("--datos", default=os.path.join(AQUI, "trabajos"), help="carpeta de subidas, escenas y resultados")
     ap.add_argument("--limite-gb", type=float, default=4.0, help="tamano maximo de cada fichero subido")
     ap.add_argument("--conservar-h5", action="store_true", help="no borrar el .h5 subido tras convertirlo")
     ap.add_argument("--cors", action="store_true", help="permitir llamadas desde otra web (Access-Control-Allow-Origin: *)")
+    ap.add_argument("--clave", default=os.environ.get("NISAR_CLAVE", ""),
+                    help="clave que piden las subidas y los analisis (por defecto, la variable NISAR_CLAVE)")
     a = ap.parse_args()
     Manejador.servicio = Servicio(a.datos, conservar_h5=a.conservar_h5)
     Manejador.limite = int(a.limite_gb * 1024 ** 3)
     Manejador.cors = a.cors
+    Manejador.clave = a.clave.strip()
+    # abierto a la red y sin clave: solo se pueden ver resultados, no lanzar analisis
+    Manejador.permitir_subidas = bool(Manejador.clave) or a.host in ("127.0.0.1", "localhost", "::1")
     srv = http.server.ThreadingHTTPServer((a.host, a.puerto), Manejador)
     srv.daemon_threads = True
     print(f"Servicio NISAR en http://{'localhost' if a.host in ('127.0.0.1', '0.0.0.0') else a.host}:{a.puerto}/prueba.html")
-    print(f"Datos en {Manejador.servicio.datos}  ·  h5py {'disponible' if Manejador.servicio.h5py else 'NO instalado'}")
+    print(f"Datos en {Manejador.servicio.datos}  ·  h5py {'disponible' if Manejador.servicio.h5py else 'NO instalado'}"
+          f"  ·  {'con clave' if Manejador.clave else 'sin clave'}"
+          + ("" if Manejador.permitir_subidas else "  ·  SUBIDAS DESACTIVADAS (abierto a la red sin NISAR_CLAVE)"))
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

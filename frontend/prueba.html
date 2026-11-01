@@ -36,16 +36,23 @@
 
       <div id="sin-servidor" class="pr-aviso" hidden>
         <strong>El servicio de procesado no responde.</strong>
-        <p>Esta página necesita <code>processing/servidor.py</code>. Desde la raíz del repo:</p>
+        <div id="sin-servidor-web"><p>En esta web el servicio de procesado (contenedor <code>procesado</code>) no está desplegado o está parado. Mientras tanto puedes abrir uno de los ejemplos incluidos.</p></div>
+        <div id="sin-servidor-local"><p>Esta página necesita <code>processing/servidor.py</code>. Desde la raíz del repo:</p>
         <pre>python -m pip install -r processing/requirements.txt
 python processing/servidor.py</pre>
-        <p>y abre <a href="http://localhost:8001/prueba.html">http://localhost:8001/prueba.html</a>. Mientras tanto puedes abrir uno de los ejemplos incluidos.</p>
+        <p>y abre <a href="http://localhost:8001/prueba.html">http://localhost:8001/prueba.html</a>. Mientras tanto puedes abrir uno de los ejemplos incluidos.</p></div>
       </div>
 
       <!-- 01 · carga -->
       <section class="panel pr-carga" id="carga" aria-labelledby="carga-titulo">
         <div class="panel-heading"><div><p class="eyebrow">01 / DATOS</p><h2 id="carga-titulo">Sube las dos pasadas</h2></div>
           <span class="count-pill" data-tip="Formatos aceptados:&#10;· .h5 = producto NISAR L2 GCOV tal como lo descargas de ASF (~1,5 GB)&#10;· .zip = escena ya convertida con processing/nisar_escena.py (~110 MB, mucho más rápida)">.h5 · .zip</span>
+        </div>
+        <div class="pr-clave" id="clave" hidden>
+          <label for="clave-input">Clave de acceso <span class="pr-info" tabindex="0" data-tip="Este servidor está abierto en Internet y pide una clave para subir datos y lanzar análisis. Pídesela a quien administra la web. Se guarda solo en este navegador.">i</span></label>
+          <input type="password" id="clave-input" autocomplete="off" placeholder="Clave del equipo">
+          <button type="button" class="pr-btn pr-btn-sec" id="clave-guardar">Guardar</button>
+          <span class="pr-mut" id="clave-nota"></span>
         </div>
         <div class="pr-drops">
           <div class="pr-drop" data-slot="antes" tabindex="0" role="button" aria-label="Elegir la pasada de antes">

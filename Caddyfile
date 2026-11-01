@@ -1,4 +1,14 @@
 :80 {
+    # Servicio de procesado NISAR (processing/servidor.py): subidas, analisis y resultados.
+    # Va antes de /api/* para que estas rutas no lleguen al backend Java.
+    handle /api/nisar/* {
+        reverse_proxy procesado:8001
+    }
+
+    handle /trabajos/* {
+        reverse_proxy procesado:8001
+    }
+
     handle /api/* {
         reverse_proxy backend:8080
     }

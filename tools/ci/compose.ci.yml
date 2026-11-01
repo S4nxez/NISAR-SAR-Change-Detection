@@ -16,3 +16,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Containerfile
+
+  procesado:
+    image: nisarsar-proc:ci
+    build:
+      context: .
+      dockerfile: processing/Containerfile

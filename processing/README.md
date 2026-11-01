@@ -53,7 +53,20 @@ Opciones del servidor:
 
 API (JSON): `GET /api/nisar/estado`, `POST /api/nisar/subidas?nombre=F` (cuerpo = el fichero en crudo), `POST /api/nisar/trabajos` (`{antes, despues, umbral, agua, area_min, titulo}`), `GET /api/nisar/trabajos[/<id>]`. Los resultados se sirven en `/trabajos/<id>/`.
 
-`Containerfile` (sin probar todavía) empaqueta el servidor y la web: `podman build -f processing/Containerfile -t nisar-procesado .` y `podman run -p 8001:8001 -v nisar_datos:/datos nisar-procesado`.
+## En la web desplegada (Raspberry Pi)
+
+El servicio va como un contenedor más del stack (`procesado` en `podman-compose.yml`, imagen `ghcr.io/s4nxez/nisar-sar-change-detection-proc`, construida desde `processing/Containerfile` por `build.yml`). Caddy le envía `/api/nisar/*` y `/trabajos/*`; todo lo demás sigue igual. La página queda en `https://raspberrypi.tail0a4b52.ts.net/terra-pulse/prueba.html`.
+
+Como la web es pública (Tailscale Funnel), **el servicio no acepta subidas si no tiene clave**. Pasos manuales en la Pi, una sola vez:
+
+1. Añadir una línea a `server/.env` (no se versiona): `NISAR_CLAVE=<una clave larga>`. La página la pide la primera vez y la recuerda en cada navegador.
+2. Si el paquete `nisar-sar-change-detection-proc` de GHCR se crea privado, hacerlo público (como los de backend y frontend) o la Pi no podrá descargarlo.
+
+Límites conocidos en la Pi:
+
+- Un análisis de escena completa necesita unos 2–3 GB de RAM y tarda bastante más que en un portátil. Los análisis van de uno en uno.
+- Subir un `.h5` de 1,5 GB por Internet es lento: es más rápido convertirlo antes en el PC (`nisar_escena.py`) y subir la escena `.zip` (~110 MB).
+- `tools/ci/rollback.sh` solo restaura backend y frontend; el contenedor `procesado` no entra en el rollback.
 
 ## Instalación
 

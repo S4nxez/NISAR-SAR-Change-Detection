@@ -12,6 +12,8 @@ const ORDEN_CONF = { alta: 3, media: 2, baja: 1 };
 
 const est = {
   servidor: false,
+  requiereClave: false,
+  subidas: true,
   slots: { antes: nuevoSlot(), despues: nuevoSlot() },
   sondeo: null,
   r: null,
@@ -31,6 +33,10 @@ async function comprobarServidor() {
   try {
     const s = await api.estado();
     est.servidor = true;
+    est.requiereClave = Boolean(s.requiere_clave);
+    est.subidas = s.subidas !== false;
+    $("#clave").hidden = !est.requiereClave;
+    if (est.requiereClave) $("#clave-nota").textContent = api.tieneClave() ? "Clave guardada en este navegador." : "Necesaria para subir y analizar.";
     el.classList.remove("is-off");
     txt.textContent = s.ocupado ? "SERVICIO OCUPADO · PROCESANDO" : `SERVICIO LISTO${s.h5py ? "" : " · SIN h5py"}`;
     el.dataset.tip = `Servicio de procesado activo.\nEspacio libre: ${bytes(s.libre_bytes)}\nLímite por fichero: ${bytes(s.limite_bytes)}`
@@ -41,6 +47,9 @@ async function comprobarServidor() {
     el.classList.add("is-off");
     txt.textContent = "SIN SERVICIO DE PROCESADO";
     $("#sin-servidor").hidden = false;
+    const local = ["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname);
+    $("#sin-servidor-web").hidden = local;
+    $("#sin-servidor-local").hidden = !local;
   }
   actualizarAnalizar();
 }
@@ -105,7 +114,13 @@ function elegir(slot, fichero) {
     s.error = "Formato no admitido. Sube el .h5 de NISAR GCOV o una escena .zip.";
   } else if (!est.servidor) {
     s.estado = "error";
-    s.error = "No hay servicio de procesado: arranca processing/servidor.py.";
+    s.error = "No hay servicio de procesado.";
+  } else if (!est.subidas) {
+    s.estado = "error";
+    s.error = "Este servidor no admite subidas (falta configurar NISAR_CLAVE).";
+  } else if (est.requiereClave && !api.tieneClave()) {
+    s.estado = "error";
+    s.error = "Escribe la clave de acceso, pulsa Guardar y vuelve a soltar el fichero.";
   } else {
     subirSlot(slot);
   }
@@ -132,6 +147,7 @@ function subirSlot(slot) {
     if (est.slots[slot] !== s) return;
     s.estado = "error";
     s.error = e.message;
+    if (/clave/i.test(e.message)) { $("#clave").hidden = false; $("#clave-nota").textContent = e.message; }
   }).finally(() => {
     if (est.slots[slot] !== s) return;
     s.xhr = null;
@@ -208,7 +224,9 @@ function actualizarAnalizar(lista = comprobarPar(est.slots.antes.meta, est.slots
   const btn = $("#analizar"), nota = $("#analizar-nota");
   const grave = lista.find((c) => c.grave);
   let msg = "";
-  if (!est.servidor) msg = "Necesitas el servicio de procesado (processing/servidor.py).";
+  if (!est.servidor) msg = "Necesitas el servicio de procesado.";
+  else if (!est.subidas) msg = "Este servidor solo muestra resultados: no admite subidas.";
+  else if (est.requiereClave && !api.tieneClave()) msg = "Escribe la clave de acceso.";
   else if (antes.estado === "vacio" || despues.estado === "vacio") msg = "Sube las dos pasadas para empezar.";
   else if (antes.estado === "subiendo" || despues.estado === "subiendo") msg = "Esperando a que terminen las subidas…";
   else if (antes.estado === "error" || despues.estado === "error") msg = "Hay un fichero con error: cámbialo.";
@@ -619,6 +637,14 @@ function prepararControles() {
   salida("#op-umbral", (v) => `${num(v, 1)} dB`);
   salida("#op-agua", (v) => `${num(v, 1)} dB`);
   $("#analizar").addEventListener("click", analizar);
+  const guardarClave = () => {
+    api.ponerClave($("#clave-input").value);
+    $("#clave-input").value = "";
+    $("#clave-nota").textContent = api.tieneClave() ? "Clave guardada en este navegador." : "Clave borrada.";
+    actualizarAnalizar();
+  };
+  $("#clave-guardar").addEventListener("click", guardarClave);
+  $("#clave-input").addEventListener("keydown", (e) => { if (e.key === "Enter") guardarClave(); });
 }
 
 // ================================================================ rutas

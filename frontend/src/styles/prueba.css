@@ -59,6 +59,8 @@ code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font
 .pr-aviso-ambar strong { color: var(--amber) }
 
 /* ---------- carga */
+.pr-clave { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; font-size: 13px }
+.pr-clave input { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: 500 13px 'DM Sans', sans-serif; min-width: 200px }
 .pr-drops { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; margin-top: 16px }
 .pr-drop {
   position: relative; min-height: 210px; border: 2px dashed #3a5160; border-radius: 14px; padding: 30px 18px 16px;
