@@ -11,8 +11,8 @@ import numpy as np
 AQUI = os.path.dirname(os.path.abspath(__file__))
 PROC = os.path.dirname(AQUI)
 sys.path.insert(0, PROC)
-from nisar_comun import (Escena, db_a_q, filtrar_speckle, guardar_escena,  # noqa: E402
-                         q_a_db, utm_a_latlon)
+from nisar_comun import (Escena, contornos, db_a_q, filtrar_speckle,  # noqa: E402
+                         guardar_escena, q_a_db, utm_a_latlon)
 
 
 class TestComun(unittest.TestCase):
@@ -35,6 +35,25 @@ class TestComun(unittest.TestCase):
         lat, lon = utm_a_latlon(203770 + 10, 9601190 - 10, 32718)
         self.assertAlmostEqual(lat, -3.6043, places=2)
         self.assertAlmostEqual(lon, -77.6663, places=2)
+
+    def test_contorno_con_hueco(self):
+        m = np.zeros((12, 12), bool)
+        m[2:9, 2:9] = True
+        m[4:7, 4:7] = False
+        m[10, 10] = True
+        polis = contornos(m, eps=0.1)
+        self.assertEqual(len(polis), 2)                      # el cuadrado grande y el pixel suelto
+        ext, hueco = polis[0]
+        self.assertEqual(sorted(map(tuple, ext.tolist())), [(2, 2), (2, 9), (9, 2), (9, 9)])
+        self.assertEqual(len(hueco), 4)
+
+
+class TestServidor(unittest.TestCase):
+    def test_metadatos_del_nombre(self):
+        import servidor
+        m = servidor.meta_de_nombre("NISAR_L2_PR_GCOV_032_083_D_091_2005_SHSH_A_20261005T232338_20261005T232413_P05023_N_F_J_001.h5")
+        self.assertEqual((m["pista"], m["frame"], m["direccion"], m["fecha"]), (83, 91, "Descending", "2026-10-05"))
+        self.assertEqual(servidor.meta_de_nombre("otra_cosa.h5"), {})
 
 
 class TestCambioExtremoAExtremo(unittest.TestCase):
@@ -69,6 +88,24 @@ class TestCambioExtremoAExtremo(unittest.TestCase):
                 self.assertTrue(os.path.exists(os.path.join(web, "test", f)))
             with open(os.path.join(web, "pares.json"), encoding="utf-8") as fh:
                 self.assertEqual(json.load(fh)["pares"][0]["id"], "test")
+            # informacion ampliada
+            e = c["estadisticas"]
+            self.assertGreater(e["agua"]["nueva_km2"], 1.0)
+            self.assertAlmostEqual(sum(map(sum, e["coberturas"]["matriz_km2"])), e["area_valida_km2"], delta=1.0)
+            self.assertGreater(e["correlacion"], 0.3)
+            self.assertTrue(c["resumen_texto"])
+            self.assertTrue(all(z.get("contorno") for z in c["zonas"]))
+            v = c["valores"]
+            import gzip
+            with gzip.open(os.path.join(web, "test", v["archivo"])) as fh:
+                self.assertEqual(len(fh.read()), 5 * v["filas"] * v["columnas"])
+            # informes
+            import nisar_informe
+            nisar_informe.generar(os.path.join(web, "test"))
+            for f in ("informe.html", "informe.md", "zonas.geojson", "zonas.csv"):
+                self.assertTrue(os.path.exists(os.path.join(web, "test", f)))
+            with open(os.path.join(web, "test", "zonas.geojson"), encoding="utf-8") as fh:
+                self.assertEqual(len(json.load(fh)["features"]), len(c["zonas"]))
 
 
 if __name__ == "__main__":

@@ -179,3 +179,96 @@ def guardar_escena(carpeta, resumen, mosaico_q, tesela=2048, banda="HHHH", zip_f
         with zipfile.ZipFile(carpeta.rstrip("/\\") + ".zip", "w", zipfile.ZIP_STORED) as z:
             for fn in sorted(os.listdir(carpeta)):
                 z.write(os.path.join(carpeta, fn), fn)
+
+
+# ---------------------------------------------------------------- contornos vectoriales
+def _rdp(p, eps):
+    """Douglas-Peucker sobre una polilinea abierta (n x 2)."""
+    if len(p) < 3:
+        return p
+    a, b = p[0], p[-1]
+    ab = b - a
+    n = np.hypot(*ab)
+    if n == 0:
+        dist = np.hypot(*(p - a).T)
+    else:
+        dist = np.abs(ab[0] * (p[:, 1] - a[1]) - ab[1] * (p[:, 0] - a[0])) / n
+    i = int(dist.argmax())
+    if dist[i] <= eps:
+        return np.array([a, b])
+    return np.vstack([_rdp(p[:i + 1], eps)[:-1], _rdp(p[i:], eps)])
+
+
+def _area(r):
+    x, y = r[:, 1], r[:, 0]
+    return 0.5 * float(np.dot(x, np.roll(y, -1)) - np.dot(np.roll(x, -1), y))
+
+
+def contornos(m, eps=0.6, max_vertices=1500, hueco_min=2.0):
+    """
+    Contorno de una mascara booleana siguiendo los bordes de los pixeles.
+    Devuelve una lista de poligonos [exterior, hueco1, ...]; cada anillo es un array (n x 2) de
+    (fila, columna) en esquinas de pixel, simplificado con Douglas-Peucker (eps en pixeles).
+    """
+    m = np.asarray(m, bool)
+    mp = np.pad(m, 1)
+    c = mp[1:-1, 1:-1]
+    aristas = []
+    # recorrido con el interior a la derecha (filas hacia abajo): exteriores con area > 0
+    for vecino, d0, d1 in ((mp[:-2, 1:-1], (0, 0), (0, 1)),     # arriba
+                           (mp[1:-1, 2:], (0, 1), (1, 1)),      # derecha
+                           (mp[2:, 1:-1], (1, 1), (1, 0)),      # abajo
+                           (mp[1:-1, :-2], (1, 0), (0, 0))):    # izquierda
+        rr, cc = np.nonzero(c & ~vecino)
+        aristas.append(np.stack([rr + d0[0], cc + d0[1], rr + d1[0], cc + d1[1]], 1))
+    e = np.concatenate(aristas)
+    siguiente = {}
+    for a0, a1, b0, b1 in e.tolist():
+        siguiente.setdefault((a0, a1), []).append((b0, b1))
+    anillos = []
+    while siguiente:
+        inicio = next(iter(siguiente))
+        anillo, p = [inicio], inicio
+        while True:
+            lista = siguiente[p]
+            q = lista.pop()
+            if not lista:
+                del siguiente[p]
+            if q == inicio:
+                break
+            anillo.append(q)
+            p = q
+        anillos.append(np.array(anillo, np.float64))
+    out = []
+    for r in anillos:
+        a = _area(r)
+        if a < 0 and -a < hueco_min:
+            continue
+        # quitar puntos colineales y simplificar como polilinea cerrada
+        r = np.vstack([r, r[:1]])
+        s = eps
+        while True:
+            q = _rdp(r, s)
+            if len(q) - 1 <= max_vertices or s > 50:
+                break
+            s *= 1.6
+        if len(q) >= 4:
+            out.append((a, q[:-1]))
+    exteriores = [(a, r, []) for a, r in out if a > 0]
+    for a, r in out:
+        if a > 0:
+            continue
+        y, x = r[0]
+        for _, ext, huecos in exteriores:   # el hueco va con el exterior que contiene su primer vertice
+            ey, ex = ext[:, 0], ext[:, 1]
+            dentro = False
+            j = len(ext) - 1
+            for i in range(len(ext)):
+                if (ey[i] > y) != (ey[j] > y) and x < (ex[j] - ex[i]) * (y - ey[i]) / (ey[j] - ey[i] + 1e-12) + ex[i]:
+                    dentro = not dentro
+                j = i
+            if dentro:
+                huecos.append(r)
+                break
+    exteriores.sort(key=lambda t: -t[0])
+    return [[ext] + huecos for _, ext, huecos in exteriores]

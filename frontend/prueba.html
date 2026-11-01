@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b25">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Laboratorio de pruebas: sube dos pasadas NISAR y explora los cambios.">
+  <title>Laboratorio de cambios NISAR | SAR Observatory</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="./src/styles/main.css">
+  <link rel="stylesheet" href="./src/styles/components.css">
+  <link rel="stylesheet" href="./src/styles/responsive.css">
+  <link rel="stylesheet" href="./src/styles/details.css">
+  <link rel="stylesheet" href="./src/styles/overrides.css">
+  <link rel="stylesheet" href="./src/styles/prueba.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="./src/prueba/pruebaApp.js"></script>
+</head>
+<body class="prueba-page">
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./index.html" aria-label="SAR Observatory"><span class="brand-mark">S</span><span><strong>SAR OBSERVATORY</strong><small>LABORATORIO DE PRUEBAS</small></span></a>
+      <div class="mission-status" id="srv-estado" data-tip="Estado del servicio de procesado (processing/servidor.py)"><span class="status-dot"></span> <span id="srv-texto">COMPROBANDO SERVICIO…</span></div>
+    </header>
+
+    <main>
+      <section class="intro pr-intro">
+        <div>
+          <p class="eyebrow">SPACE APPS CHALLENGE · 2026 · PÁGINA DE PRUEBAS</p>
+          <h1>¿Qué ha cambiado <span>entre dos pasadas?</span></h1>
+          <p class="intro-copy">Arrastra la pasada de antes y la de después del mismo sitio. El servidor convierte los datos NISAR, compara las dos fechas píxel a píxel y te devuelve un mapa interactivo, estadísticas e informes.</p>
+        </div>
+      </section>
+
+      <div id="sin-servidor" class="pr-aviso" hidden>
+        <strong>El servicio de procesado no responde.</strong>
+        <p>Esta página necesita <code>processing/servidor.py</code>. Desde la raíz del repo:</p>
+        <pre>python -m pip install -r processing/requirements.txt
+python processing/servidor.py</pre>
+        <p>y abre <a href="http://localhost:8001/prueba.html">http://localhost:8001/prueba.html</a>. Mientras tanto puedes abrir uno de los ejemplos incluidos.</p>
+      </div>
+
+      <!-- 01 · carga -->
+      <section class="panel pr-carga" id="carga" aria-labelledby="carga-titulo">
+        <div class="panel-heading"><div><p class="eyebrow">01 / DATOS</p><h2 id="carga-titulo">Sube las dos pasadas</h2></div>
+          <span class="count-pill" data-tip="Formatos aceptados:&#10;· .h5 = producto NISAR L2 GCOV tal como lo descargas de ASF (~1,5 GB)&#10;· .zip = escena ya convertida con processing/nisar_escena.py (~110 MB, mucho más rápida)">.h5 · .zip</span>
+        </div>
+        <div class="pr-drops">
+          <div class="pr-drop" data-slot="antes" tabindex="0" role="button" aria-label="Elegir la pasada de antes">
+            <span class="pr-drop-et">ANTES</span>
+            <div class="pr-drop-vacio"><span class="pr-drop-ico">⤓</span><strong>Arrastra aquí la pasada de antes</strong><span>o haz clic para elegir el fichero</span></div>
+            <div class="pr-drop-info" hidden></div>
+            <input type="file" accept=".h5,.zip" hidden>
+          </div>
+          <button type="button" class="pr-swap" id="intercambiar" data-tip="Intercambiar antes y después" aria-label="Intercambiar antes y después">⇄</button>
+          <div class="pr-drop" data-slot="despues" tabindex="0" role="button" aria-label="Elegir la pasada de después">
+            <span class="pr-drop-et">DESPUÉS</span>
+            <div class="pr-drop-vacio"><span class="pr-drop-ico">⤓</span><strong>Arrastra aquí la pasada de después</strong><span>o haz clic para elegir el fichero</span></div>
+            <div class="pr-drop-info" hidden></div>
+            <input type="file" accept=".h5,.zip" hidden>
+          </div>
+        </div>
+        <ul class="pr-checks" id="comprobaciones" aria-live="polite"></ul>
+        <details class="pr-opciones">
+          <summary>Opciones del análisis</summary>
+          <div class="pr-opc-grid">
+            <label>Umbral de cambio <span class="pr-info" tabindex="0" data-tip="Cuánto tiene que subir o bajar el brillo radar (en dB) para marcar un píxel como cambio. Más bajo = más sensible y más ruido. 3 dB = el eco se duplica o se reduce a la mitad.">i</span>
+              <span class="pr-opc-val"><input type="range" id="op-umbral" min="1" max="8" step="0.5" value="3"> <output for="op-umbral">3 dB</output></span></label>
+            <label>Umbral de agua <span class="pr-info" tabindex="0" data-tip="Por debajo de este brillo se considera agua lisa. En banda L el agua en calma suele estar por debajo de −15 dB. En desiertos o con viento hay que ajustarlo.">i</span>
+              <span class="pr-opc-val"><input type="range" id="op-agua" min="-25" max="-8" step="0.5" value="-15"> <output for="op-agua">−15 dB</output></span></label>
+            <label>Área mínima de zona <span class="pr-info" tabindex="0" data-tip="Las manchas de cambio más pequeñas se descartan como ruido. 0,05 km² = 5 hectáreas.">i</span>
+              <span class="pr-opc-val"><select id="op-area"><option value="0.01">0,01 km²</option><option value="0.05" selected>0,05 km²</option><option value="0.1">0,1 km²</option><option value="0.5">0,5 km²</option><option value="1">1 km²</option></select></span></label>
+            <label>Título <span class="pr-info" tabindex="0" data-tip="Nombre del análisis en el historial y en el informe. Si lo dejas vacío se usan las fechas.">i</span>
+              <input type="text" id="op-titulo" maxlength="120" placeholder="p. ej. Amazonía peruana · crecida de octubre"></label>
+          </div>
+        </details>
+        <div class="pr-acciones">
+          <button type="button" class="pr-btn pr-btn-pri" id="analizar" disabled>Analizar cambios</button>
+          <span class="pr-mut" id="analizar-nota">Sube las dos pasadas para empezar.</span>
+        </div>
+        <div class="pr-historial">
+          <div><h3>Análisis anteriores <span class="pr-info" tabindex="0" data-tip="Trabajos guardados por el servidor en processing/trabajos/. Clic para abrirlos.">i</span></h3><ul id="historial" class="pr-lista-mini"><li class="pr-mut">—</li></ul></div>
+          <div><h3>Ejemplos incluidos <span class="pr-info" tabindex="0" data-tip="Pares ya procesados que vienen con el repo (frontend/public/data/nisar). Funcionan sin el servidor.">i</span></h3><ul id="ejemplos" class="pr-lista-mini"><li class="pr-mut">—</li></ul></div>
+        </div>
+      </section>
+
+      <!-- 02 · progreso -->
+      <section class="panel pr-progreso" id="progreso" hidden aria-live="polite">
+        <div class="panel-heading"><div><p class="eyebrow">02 / PROCESADO</p><h2 id="prog-titulo">Procesando…</h2></div><span class="count-pill" id="prog-tiempo">—</span></div>
+        <div class="pr-barra pr-barra-grande"><span id="prog-barra"></span></div>
+        <ol class="pr-pasos" id="prog-pasos"></ol>
+        <p class="pr-error" id="prog-error" hidden></p>
+        <details class="pr-registro"><summary>Registro del proceso</summary><pre id="prog-log"></pre></details>
+      </section>
+
+      <!-- 03 · resultado -->
+      <section id="resultado" hidden>
+        <div class="pr-res-cab">
+          <div><p class="eyebrow" id="res-eyebrow">RESULTADO</p><h2 id="res-titulo">—</h2><p class="pr-mut" id="res-sub"></p></div>
+          <div class="pr-descargas" id="res-descargas"></div>
+        </div>
+        <div id="res-nota" class="pr-aviso pr-aviso-ambar" hidden></div>
+
+        <section class="stats-grid pr-kpis" id="res-kpis" aria-label="Indicadores"></section>
+
+        <article class="panel pr-resumen">
+          <div class="panel-heading"><div><p class="eyebrow">RESUMEN</p><h2>Qué dicen los datos</h2></div><span class="insight-symbol">⌁</span></div>
+          <div id="res-texto"></div>
+        </article>
+
+        <section class="workspace pr-workspace">
+          <div class="map-panel panel">
+            <div class="panel-heading"><div><p class="eyebrow">MAPA</p><h2>Mapa de cambios</h2></div>
+              <div class="pr-seg" role="group" aria-label="Imagen de fondo">
+                <button type="button" data-fondo="antes" class="is-on" data-tip="Imagen radar de la primera fecha">Antes</button><button type="button" data-fondo="despues" data-tip="Imagen radar de la segunda fecha">Después</button><button type="button" data-fondo="comparar" data-tip="Comparador: arrastra la barra para ver antes a la izquierda y después a la derecha">Comparar</button><button type="button" data-fondo="ninguno" data-tip="Solo el mapa base">Sin radar</button>
+              </div>
+            </div>
+            <div class="pr-capas">
+              <label data-tip="Píxeles clasificados como cambio (bloques de 80 m)"><input type="checkbox" data-capa="clases" checked> Clases</label>
+              <label data-tip="Diferencia de brillo en dB: azul = baja, rojo = sube"><input type="checkbox" data-capa="diferencia"> Diferencia</label>
+              <label data-tip="Porcentaje de píxeles con cambio en celdas de 320 m: dónde se concentra el cambio"><input type="checkbox" data-capa="densidad"> Densidad</label>
+              <label data-tip="Contorno de cada zona de cambio (envolvente convexa)"><input type="checkbox" data-capa="zonas" checked> Contornos</label>
+              <label class="pr-op" data-tip="Opacidad de las capas de cambio">Opacidad <input type="range" id="opacidad" min="0" max="100" value="85"></label>
+              <select id="mapa-base" aria-label="Mapa base" data-tip="Mapa base bajo el radar. El satélite óptico sirve para contrastar los cambios.">
+                <option value="oscuro">Mapa oscuro</option><option value="satelite">Satélite (Esri)</option><option value="calles">Calles (OSM)</option>
+              </select>
+              <button type="button" class="pr-btn pr-btn-mini" id="ver-todo" data-tip="Encuadrar toda la escena">⤢</button>
+            </div>
+            <div id="map" role="application" aria-label="Mapa con las imágenes radar y los cambios detectados"></div>
+            <div class="pr-lectura" id="lectura">Pasa el ratón por el mapa para leer el brillo de cada fecha y el cambio. Haz clic para fijar el valor.</div>
+            <div class="pr-leyenda" id="leyenda"></div>
+          </div>
+
+          <aside class="site-panel panel pr-zonas-panel">
+            <div class="panel-heading"><div><p class="eyebrow">ZONAS</p><h2>Zonas de cambio</h2></div><span class="count-pill" id="zonas-cuenta">—</span></div>
+            <div class="pr-filtros">
+              <select id="f-clase" aria-label="Filtrar por clase"><option value="">Todas las clases</option></select>
+              <select id="f-conf" aria-label="Filtrar por confianza"><option value="">Toda confianza</option><option value="alta">Confianza alta</option><option value="media">Media o alta</option></select>
+              <select id="f-orden" aria-label="Ordenar"><option value="area">Mayor área</option><option value="cambio">Mayor cambio</option><option value="id">Por número</option></select>
+            </div>
+            <div id="zonas" class="pr-zonas" role="list"></div>
+            <button type="button" class="pr-btn pr-btn-sec" id="zonas-mas" hidden>Mostrar más</button>
+          </aside>
+        </section>
+
+        <article class="panel pr-detalle" id="detalle" hidden>
+          <div class="panel-heading"><div><p class="eyebrow">FICHA DE ZONA</p><h2 id="det-titulo">—</h2></div><button type="button" class="pr-btn pr-btn-mini" id="det-cerrar" aria-label="Cerrar ficha">✕</button></div>
+          <div class="pr-det-grid">
+            <div id="det-datos"></div>
+            <div id="det-recorte"></div>
+          </div>
+        </article>
+
+        <section class="pr-graficas">
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">CLASES</p><h2>Superficie por tipo de cambio</h2></div><span class="unit-label">km²</span></div>
+            <p class="section-copy">Píxeles a 20 m que superan el umbral. Pasa el ratón por las barras.</p><div id="g-clases" class="pr-g"></div></article>
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">CAMBIO</p><h2>¿Cuánto cambia cada píxel?</h2></div><span class="unit-label">% píxeles · dB</span></div>
+            <p class="section-copy">Histograma del cambio tras quitar el desplazamiento global. Lo que queda fuera de las líneas discontinuas es cambio.</p><div id="g-hist" class="pr-g"></div></article>
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">BRILLO</p><h2>Brillo radar de cada fecha</h2></div><span class="unit-label">% píxeles · dB</span></div>
+            <p class="section-copy">Si la curva de después se desplaza entera, ha cambiado algo general (humedad, calibración). Un bulto nuevo a la izquierda suele ser agua.</p><div id="g-brillo" class="pr-g"></div></article>
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">AGUA</p><h2>Balance de agua</h2></div><span class="unit-label">km²</span></div>
+            <p class="section-copy">Superficie con brillo de agua lisa en cada fecha, y cuánta aparece o desaparece.</p><div id="g-agua" class="pr-g"></div></article>
+          <article class="panel pr-g-ancha"><div class="panel-heading"><div><p class="eyebrow">COBERTURAS</p><h2>¿En qué se convierte cada superficie?</h2></div><span class="unit-label">km²</span></div>
+            <p class="section-copy">Lectura aproximada del brillo radar en cuatro tipos de superficie, antes (filas) y después (columnas). La diagonal es lo que no cambia. No es un mapa de usos del suelo.</p><div id="g-matriz" class="pr-matriz-wrap"></div></article>
+          <article class="panel pr-g-ancha"><div class="panel-heading"><div><p class="eyebrow">ZONAS</p><h2>Tamaño frente a intensidad</h2></div><span class="unit-label">km² · dB</span></div>
+            <p class="section-copy">Cada punto es una zona. Arriba y abajo, cambios más fuertes; a la derecha, más grandes. Clic en un punto para abrir su ficha.</p><div id="g-zonas" class="pr-g"></div></article>
+        </section>
+
+        <article class="panel pr-metodo">
+          <div class="panel-heading"><div><p class="eyebrow">MÉTODO</p><h2>Cómo se ha calculado</h2></div></div>
+          <div class="pr-metodo-grid"><div id="met-texto"></div><table class="pr-tabla" id="met-ficha"></table></div>
+        </article>
+      </section>
+
+      <footer class="footer"><span>SAR OBSERVATORY <span class="footer-sep">/</span> LABORATORIO</span><span>Prototipo · Datos NISAR: NASA/ISRO vía ASF DAAC · no es un sistema de alerta operativo</span></footer>
+    </main>
+  </div>
+</body>
+</html>

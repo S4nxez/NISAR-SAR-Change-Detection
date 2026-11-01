@@ -1,0 +1,18 @@
+# Servicio de procesado NISAR + web de pruebas (sin probar todavía en la Raspberry Pi).
+# Construir desde la raíz del repo:
+#   podman build -f processing/Containerfile -t nisar-procesado .
+#   podman run -p 8001:8001 -v nisar_datos:/datos nisar-procesado
+# Necesita ~3 GB de RAM libres por análisis de una escena NISAR completa.
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY processing/requirements.txt processing/requirements.txt
+RUN pip install --no-cache-dir -r processing/requirements.txt
+
+COPY processing/ processing/
+COPY frontend/ frontend/
+
+EXPOSE 8001
+VOLUME ["/datos"]
+# Escucha en todas las interfaces del contenedor: no tiene autenticación, ponlo detrás de un proxy.
+CMD ["python", "processing/servidor.py", "--host", "0.0.0.0", "--datos", "/datos"]
