@@ -1,4 +1,4 @@
-# Servicio de procesado NISAR + web de pruebas (sin probar todavía en la Raspberry Pi).
+# Servicio de procesado NISAR + web de pruebas. Lo construye y comprueba build.yml (validate) antes de desplegar.
 # Construir desde la raíz del repo:
 #   podman build -f processing/Containerfile -t nisar-procesado .
 #   podman run -p 8001:8001 -v nisar_datos:/datos nisar-procesado
