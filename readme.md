@@ -56,3 +56,5 @@ The project is deployed on a Raspberry Pi using containers, with secure public a
 - **GitHub Actions** to automate the workflow
 
 Every push to `main` is validated before the images are built and deployed (frontend, model lab and backend builds, backend tests and a startup check of the whole stack), every deployment is smoke tested on the Raspberry Pi and through the public URL, and a failed deployment is rolled back to the last known-good images, see [tools/ci](tools/ci/README.md).
+
+Every push to `develop` goes through the same pipeline to a separate develop stack on the Raspberry Pi, with its own database, so changes are QA'd there before the weekly merge releases them to production, see [Develop stack](tools/ci/README.md#develop-stack).

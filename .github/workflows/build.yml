@@ -3,6 +3,14 @@ name: Build Images
 on:
   push:
     branches: [ main ]
+  # Also the build of the develop stack (QA): Develop (develop.yml) calls this workflow on every push to develop, with
+  # image-tag develop. Run on its own, on a push to main, it builds production's images (latest). See tools/ci/README.md
+  workflow_call:
+    inputs:
+      image-tag:
+        description: Tag of the backend and frontend images pushed to GHCR (latest is production's, only main builds it)
+        type: string
+        required: true
 
 jobs:
   # Pre-deployment validation stage: images are only built and pushed (and Deploy
@@ -108,8 +116,26 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # latest on a push to main, the caller's tag when called (develop for Develop)
+      IMAGE_TAG: ${{ inputs.image-tag || 'latest' }}
 
     steps:
+      # Deploy pulls latest into production: no other branch may push it
+      - name: Check the image tag
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error title=Image tag::'$IMAGE_TAG' is not an image tag"
+            exit 1
+          elif [[ "$IMAGE_TAG" == latest && "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "::error title=Image tag::latest is production's tag, only a push to main builds it (this run builds $GITHUB_REF)"
+            exit 1
+          elif [[ "$IMAGE_TAG" == known-good || "$IMAGE_TAG" == *-known-good ]]; then
+            echo "::error title=Image tag::$IMAGE_TAG is a rollback tag of the Pi (tools/ci/rollback.sh), not a build's"
+            exit 1
+          fi
+          echo "Building the images tagged $IMAGE_TAG"
+
       - uses: actions/checkout@v4
 
       - name: Setup Java 21
@@ -143,7 +169,7 @@ jobs:
             -f Containerfile \
             --platform linux/amd64,linux/arm64 \
             --label org.opencontainers.image.revision=${{ github.sha }} \
-            -t ghcr.io/s4nxez/nisar-sar-change-detection-back:latest \
+            -t "ghcr.io/s4nxez/nisar-sar-change-detection-back:$IMAGE_TAG" \
             --push .
 
       - name: Build frontend (multi-arch)
@@ -153,5 +179,5 @@ jobs:
             -f Containerfile \
             --platform linux/amd64,linux/arm64 \
             --label org.opencontainers.image.revision=${{ github.sha }} \
-            -t ghcr.io/s4nxez/nisar-sar-change-detection-front:latest \
+            -t "ghcr.io/s4nxez/nisar-sar-change-detection-front:$IMAGE_TAG" \
             --push .

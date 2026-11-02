@@ -7,7 +7,10 @@
 # the calls rollback.sh makes, with the output of podman 5 and podman-compose 1.3.0 (the versions
 # on the Raspberry Pi): any other call fails the test, so a change in how the script calls podman
 # shows up here. The fake podman-compose reads the images of the services from the repository's
-# podman-compose.yml, as the real one would.
+# podman-compose.yml, as the real one would, resolving ${VAR:-default} as podman-compose 1.3.0 does
+# (the environment, then the .env of the checkout, then the default).
+# Two checkouts run a stack: DEPLOY plays production's (latest, known-good) and DEVELOP the develop
+# stack's (NISAR_IMAGE_TAG=develop, develop-known-good).
 # rollback.sh runs from stdin as in Deploy (bash -s) and the fakes read their stdin: a command
 # reading it before bash has read the whole script would eat the rest of it.
 #
@@ -25,9 +28,12 @@ FRONT=ghcr.io/s4nxez/nisar-sar-change-detection-front
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 DEPLOY="$TMP/deploy"
-mkdir -p "$TMP/bin" "$DEPLOY"
+DEVELOP="$TMP/develop"
+mkdir -p "$TMP/bin" "$DEPLOY" "$DEVELOP"
 cp "$ROOT/podman-compose.yml" "$DEPLOY/"
+cp "$ROOT/podman-compose.yml" "$DEVELOP/"
 DEPLOY="$(cd "$DEPLOY" && pwd -P)"
+DEVELOP="$(cd "$DEVELOP" && pwd -P)"
 
 # --- Fakes. State files: images (id|created|revision), tags (ref id),
 # containers (id|service|image id|state|project working dir), calls (changes made)
@@ -89,10 +95,17 @@ S="$FAKE_STATE"
 dir="$(pwd -P)"
 echo "podman-compose $* (in $dir)" >> "$S/calls"
 services() { awk '/^services:/ { s = 1; next } /^[^ #]/ { s = 0 } s && /^  [a-z]+:/ { sub(/:.*/, ""); print $1 }' podman-compose.yml; }
-# image SERVICE: the image of SERVICE in podman-compose.yml, short names resolved as podman does
+# image SERVICE: the image of SERVICE in podman-compose.yml, ${VAR:-default} resolved as podman-compose
+# does (the environment, then .env, then the default) and short names as podman does
 image() {
-  local ref
+  local ref name value
   ref="$(awk -v s="  $1:" '/^  [^ ]/ { in_s = ($0 == s) } in_s && /^    image:/ { print $2; exit }' podman-compose.yml)"
+  while [[ "$ref" =~ \$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\} ]]; do
+    name="${BASH_REMATCH[1]}"
+    value="${!name:-}"
+    if [[ -z "$value" && -f .env ]]; then value="$(sed -n "s/^$name=//p" .env | tail -n 1)"; fi
+    ref="${ref/"${BASH_REMATCH[0]}"/${value:-${BASH_REMATCH[2]}}}"
+  done
   if [[ "$ref" != */* ]]; then ref="docker.io/library/$ref"; fi
   echo "$ref"
 }
@@ -145,6 +158,23 @@ deployment() {
   cp "$S/tags" "$S/tags.before"
 }
 
+# add_develop VERSION: adds the develop stack to the state, in DEVELOP. Its backend and frontend containers run the
+# develop images of VERSION, :develop points to them and the old ones are develop-known-good if KNOWN_GOOD=1. Its own
+# mysql and caddy containers run too.
+add_develop() {
+  local version="$1"
+  printf '%s\n' "devback-old|2026-10-28 10:00 UTC|3333333cccc" "devfront-old|2026-10-28 10:00 UTC|3333333cccc" \
+    "devback-new|2026-10-29 07:00 UTC|4444444dddd" "devfront-new|2026-10-29 07:00 UTC|4444444dddd" >> "$S/images"
+  printf '%s\n' "$BACK:develop devback-$version" "$FRONT:develop devfront-$version" >> "$S/tags"
+  if [[ "${KNOWN_GOOD:-1}" == 1 ]]; then
+    printf '%s\n' "$BACK:develop-known-good devback-old" "$FRONT:develop-known-good devfront-old" >> "$S/tags"
+  fi
+  printf '%s\n' "d-mysql|mysql|mysql-8|running|$DEVELOP" "d-caddy|caddy|caddy-2|running|$DEVELOP" \
+    "d-back|backend|devback-$version|running|$DEVELOP" "d-front|frontend|devfront-$version|running|$DEVELOP" >> "$S/containers"
+  cp "$S/containers" "$S/containers.before"
+  cp "$S/tags" "$S/tags.before"
+}
+
 set_container() { # set_container ID IMAGE STATE: changes a container, "" IMAGE removes it
   awk -F'|' -v OFS='|' -v c="$1" -v i="$2" -v s="$3" '$1 == c { if (i == "") next; $3 = i; $4 = s } 1' "$S/containers" > "$S/c.new"
   mv "$S/c.new" "$S/containers" && cp "$S/containers" "$S/containers.before"
@@ -155,15 +185,15 @@ set_tag() { # set_tag REF IMAGE: points REF to IMAGE, "" IMAGE removes it
   mv "$S/t.new" "$S/tags" && cp "$S/tags" "$S/tags.before"
 }
 
-# run COMMAND [VAR=value...]: rollback.sh COMMAND ("" for none) from stdin, as Deploy runs it.
-# Sets OUT and RC
+# run COMMAND [VAR=value...]: rollback.sh COMMAND ("" for none) from stdin, as Deploy runs it, on
+# DEPLOY as production's checkout unless the variables say otherwise. Sets OUT and RC
 run() {
   local command=()
   if [[ -n "$1" ]]; then command=("$1"); fi
   shift
   RC=0
-  OUT="$(env -u GITHUB_ACTIONS PATH="$TMP/bin:$PATH" FAKE_STATE="$S" DEPLOY_DIR="$DEPLOY" "$@" \
-    bash -s -- "${command[@]}" < "$SCRIPT" 2>&1)" || RC=$?
+  OUT="$(env -u GITHUB_ACTIONS -u NISAR_IMAGE_TAG -u NISAR_HTTP_PORT PATH="$TMP/bin:$PATH" FAKE_STATE="$S" \
+    PRODUCTION_DIR="$DEPLOY" DEPLOY_DIR="$DEPLOY" "$@" bash -s -- "${command[@]}" < "$SCRIPT" 2>&1)" || RC=$?
 }
 
 # --- Checks
@@ -190,8 +220,15 @@ tag_is() { [[ "$(awk -v r="$1" '$1 == r { print $2 }' "$S/tags")" == "$2" ]]; }
 no_tag() { ! awk -v r="$1" '$1 == r { found = 1 } END { exit !found }' "$S/tags"; }
 called() { grep -qxF -- "$1" "$S/calls"; }
 nothing_changed() { [[ ! -s "$S/calls" ]] && cmp -s "$S/tags" "$S/tags.before" && cmp -s "$S/containers" "$S/containers.before"; }
-# runs SERVICE IMAGE: SERVICE has exactly one container in the deployment, running IMAGE
-runs() { [[ "$(awk -F'|' -v d="$DEPLOY" -v s="$1" '$5 == d && $2 == s { print $3, $4 }' "$S/containers")" == "$2 running" ]]; }
+# runs SERVICE IMAGE [DIR]: SERVICE has exactly one container in the checkout DIR (default: DEPLOY), running IMAGE
+runs() { [[ "$(awk -F'|' -v d="${3:-$DEPLOY}" -v s="$1" '$5 == d && $2 == s { print $3, $4 }' "$S/containers")" == "$2 running" ]]; }
+# tags_untouched REF...: the tags point where they did before the command (or still don't exist)
+tags_untouched() {
+  local ref
+  for ref in "$@"; do
+    [[ "$(awk -v r="$ref" '$1 == r' "$S/tags")" == "$(awk -v r="$ref" '$1 == r' "$S/tags.before")" ]] || return 1
+  done
+}
 # untouched ID...: the containers are as they were before the command
 untouched() {
   local id
@@ -308,11 +345,17 @@ check "restore without a known-good frontend image fails and changes nothing" \
   eval 'rc_is 1 && says "[FAIL] No known-good image for frontend" && nothing_changed'
 deployment new
 cp "$DEPLOY/podman-compose.yml" "$TMP/compose.orig"
-sed -i "s|image: $BACK:latest|image: $BACK:pinned|" "$DEPLOY/podman-compose.yml"
+sed -i "s|image: $BACK:.*|image: $BACK:pinned|" "$DEPLOY/podman-compose.yml"
 run restore
 mv "$TMP/compose.orig" "$DEPLOY/podman-compose.yml"
-check "restore fails when the recreated backend does not run the known-good image (podman-compose.yml not on :latest)" \
+check "restore fails when the recreated backend does not run the known-good image (podman-compose.yml not on the stack's tag)" \
   eval 'rc_is 1 && says "[FAIL] Rollback incomplete, backend runs image pulled-ghcr., not the known-good back-old"'
+deployment new
+printf 'NISAR_IMAGE_TAG=pinned\n' > "$DEPLOY/.env"
+run restore
+rm "$DEPLOY/.env"
+check "restore makes podman-compose run the tag it restores, whatever the .env of the checkout says" \
+  eval 'rc_is 0 && runs backend back-old && runs frontend front-old'
 deployment new
 run restore FAKE_COMPOSE_CONFIG_ERROR="while parsing a block mapping"
 check "restore fails and changes nothing when podman-compose cannot read the compose file" \
@@ -327,6 +370,66 @@ deployment new
 run restore FAKE_RUN_FAILS=frontend
 check "restore fails when podman-compose does not create the frontend container" \
   eval 'rc_is 1 && says "frontend has 0 containers (expected 1)" && says "podman-compose up -d in $DEPLOY recreates them"'
+
+echo "--- develop stack (DEPLOY_DIR=DEVELOP NISAR_IMAGE_TAG=develop), next to production's"
+# shellcheck disable=SC2034 # used by the tests given to check
+PRODUCTION_TAGS=("$BACK:latest" "$FRONT:latest" "$BACK:known-good" "$FRONT:known-good")
+DEV=(DEPLOY_DIR="$DEVELOP" NISAR_IMAGE_TAG=develop)
+deployment old
+add_develop new
+run status "${DEV[@]}"
+check "status of the develop stack shows its containers and its develop and develop-known-good images" \
+  eval 'rc_is 0 && says "Deployment in $DEVELOP" &&
+    says "  container          running, image devback-new, built 2026-10-29 07:00 UTC, commit 4444444" &&
+    says "  develop            image devfront-new" && says "  develop-known-good image devback-old" &&
+    says "restore would switch backend frontend to the known-good images" && nothing_changed'
+run mark "${DEV[@]}"
+check "mark on the develop stack tags the images its containers run as develop-known-good, never production's tags" \
+  eval 'rc_is 0 && tag_is "$BACK:develop-known-good" devback-new && tag_is "$FRONT:develop-known-good" devfront-new &&
+    says "backend: marked develop-known-good, image devback-new" && tags_untouched "${PRODUCTION_TAGS[@]}"'
+
+deployment new
+add_develop new
+run restore "${DEV[@]}" GITHUB_ACTIONS=true
+check "restore of the develop stack: develop points to the develop-known-good images, production's tags are untouched" \
+  eval 'rc_is 0 && tag_is "$BACK:develop" devback-old && tag_is "$FRONT:develop" devfront-old &&
+    tag_is "$BACK:develop-known-good" devback-old && tags_untouched "${PRODUCTION_TAGS[@]}"'
+check "restore of the develop stack: only its backend and frontend are removed and recreated, in its checkout" \
+  eval 'called "podman rm --force d-back d-front" && called "podman-compose up -d (in $DEVELOP)" &&
+    runs backend devback-old "$DEVELOP" && runs frontend devfront-old "$DEVELOP"'
+check "restore of the develop stack: production's containers, the develop mysql and caddy and the other project's are untouched" \
+  untouched c-mysql c-caddy c-back c-front d-mysql d-caddy o-back o-front
+check "restore of the develop stack annotates the rollback on the run summary" \
+  eval 'says "::warning title=Rollback::Rolled back to the known-good images: backend image devback-old, built 2026-10-28 10:00 UTC, commit 3333333"'
+deployment new
+add_develop new
+run restore "${DEV[@]}" FAKE_RUN_FAILS=backend
+check "restore of the develop stack that fails tells how to finish it by hand, with the develop tag" \
+  eval 'rc_is 1 && says "NISAR_IMAGE_TAG=develop podman-compose up -d in $DEVELOP recreates them" && runs backend back-new'
+KNOWN_GOOD=0 deployment new
+KNOWN_GOOD=0 add_develop new
+run restore "${DEV[@]}"
+check "restore of the develop stack without develop-known-good images fails and changes nothing" \
+  eval 'rc_is 1 && says "[FAIL] No known-good image for backend ($BACK:develop-known-good)" && nothing_changed'
+
+# develop_deployment: fresh state, both stacks after a failed deployment
+develop_deployment() { deployment new && add_develop new; }
+develop_deployment
+run restore DEPLOY_DIR="$DEVELOP"
+check "another checkout than production's without NISAR_IMAGE_TAG is a usage error and changes nothing (latest is production's)" \
+  eval 'rc_is 2 && says "is not production" && says "set NISAR_IMAGE_TAG" && nothing_changed'
+develop_deployment
+run mark NISAR_IMAGE_TAG=develop
+check "production's checkout with another stack's NISAR_IMAGE_TAG is a usage error and changes nothing" \
+  eval 'rc_is 2 && says "checkout, which runs latest: NISAR_IMAGE_TAG=develop is another stack" && nothing_changed'
+develop_deployment
+run mark DEPLOY_DIR="$DEVELOP" NISAR_IMAGE_TAG=develop-known-good
+check "a known-good NISAR_IMAGE_TAG is a usage error and changes nothing" \
+  eval 'rc_is 2 && says "is a known-good tag" && nothing_changed'
+develop_deployment
+run restore DEPLOY_DIR="$DEVELOP" NISAR_IMAGE_TAG="dev elop"
+check "a NISAR_IMAGE_TAG that is not an image tag is a usage error and changes nothing" \
+  eval 'rc_is 2 && says "must be an image tag" && nothing_changed'
 
 echo "--- usage"
 deployment new

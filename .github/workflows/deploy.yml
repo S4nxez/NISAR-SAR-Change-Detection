@@ -5,26 +5,84 @@ on:
     workflows: ["Build Images"]
     types:
       - completed
+  # Also the deployment of the develop stack (QA): Develop (develop.yml) calls this workflow after building its images,
+  # with the stack's settings. Run on its own, after Build Images on main, Deploy deploys production. See tools/ci/README.md
+  workflow_call:
+    inputs:
+      stack:
+        description: Name of the stack, for the concurrency group and the messages (production is Deploy's own)
+        type: string
+        required: true
+      deploy-dir:
+        description: Checkout the stack runs from on the Pi, with its podman-compose.yml, .env and server/.env
+        type: string
+        required: true
+      image-tag:
+        description: Tag of the backend and frontend images to deploy (latest and known-good are production's)
+        type: string
+        required: true
+      http-port:
+        description: Port of 127.0.0.1 where the stack's Caddy answers on the Pi (NISAR_HTTP_PORT in podman-compose.yml)
+        type: number
+        required: true
+      public-url:
+        description: URL proxied to the stack's Caddy, path prefix included. Empty, it is not checked
+        type: string
+        required: false
+        default: ''
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run on its own: after a successful Build Images. Called: the caller only calls it once its images are built
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     # Leaves room for a rollback: after a failed deployment, the run also restores the known-good
     # version and smoke tests it
     timeout-minutes: 10
-    # One deployment at a time, rollback included: a run must not roll back, or mark as known-good,
-    # the version another run is deploying. The next run waits (GitHub keeps only the newest waiting).
+    # One deployment of each stack at a time (deploy-production, deploy-develop), rollback included: a run must not roll
+    # back, or mark as known-good, the version another run is deploying. The next run waits (GitHub keeps only the
+    # newest waiting). The stacks share nothing on the Pi but the host, their deployments may overlap.
     concurrency:
-      group: deploy-production
+      group: deploy-${{ inputs.stack || 'production' }}
       cancel-in-progress: false
     permissions:
       contents: read
+    env:
+      # Production's settings when Deploy runs on its own (no inputs), the caller's stack when it is called
+      STACK: ${{ inputs.stack || 'production' }}
+      DEPLOY_DIR: ${{ inputs.deploy-dir || '/opt/NISAR-SAR-Change-Detection' }}
+      IMAGE_TAG: ${{ inputs.image-tag || 'latest' }}
+      HTTP_PORT: ${{ inputs.http-port || 8089 }}
+      # Tailscale Funnel proxies this prefix to production's Caddy: the URLs browsers use, the frontend's API calls included
+      PUBLIC_URL: ${{ github.event_name == 'workflow_run' && 'https://raspberrypi.tail0a4b52.ts.net/terra-pulse' || inputs.public-url }}
     steps:
-      # Only for tools/ci/smoke-test.sh and tools/ci/rollback.sh, at the commit whose images Build Images pushed
+      # The settings end up in commands run on the Pi. A stack other than production must not share anything with it:
+      # its checkout (containers, database), its images (latest, and known-good) or its port
+      - name: Check the stack settings
+        run: |
+          echo "$STACK stack: images $IMAGE_TAG, checkout $DEPLOY_DIR on the Pi, Caddy on 127.0.0.1:$HTTP_PORT, public URL: ${PUBLIC_URL:-none}"
+          failed=0
+          error() { echo "::error title=Deploy settings::$*"; failed=1; }
+          url_re='^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$'
+          [[ "$DEPLOY_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]] || error "deploy-dir must be an absolute path, got '$DEPLOY_DIR'"
+          [[ "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] || error "image-tag must be an image tag, got '$IMAGE_TAG'"
+          if ! [[ "$HTTP_PORT" =~ ^[0-9]{1,5}$ ]] || (( 10#$HTTP_PORT < 1 || 10#$HTTP_PORT > 65535 )); then
+            error "http-port must be a port number, got '$HTTP_PORT'"
+          fi
+          [[ -z "$PUBLIC_URL" || "$PUBLIC_URL" =~ $url_re ]] || error "public-url must be an http(s) URL without query, got '$PUBLIC_URL'"
+          if [ "$STACK" != production ]; then
+            # Production's settings, the defaults above
+            [ "${DEPLOY_DIR%/}" != /opt/NISAR-SAR-Change-Detection ] || error "The $STACK stack can't use production's checkout"
+            [ "$IMAGE_TAG" != latest ] || error "The $STACK stack can't use latest, production's image tag"
+            [ "$HTTP_PORT" != 8089 ] || error "The $STACK stack can't use port 8089, production's"
+          fi
+          exit "$failed"
+
+      # Only for tools/ci/smoke-test.sh and tools/ci/rollback.sh, at the commit whose images were built
+      # (Build Images' when run on its own, the caller's when called)
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
       - name: Connect to Tailscale
@@ -53,6 +111,41 @@ jobs:
             ServerAliveCountMax 3
           EOF
 
+      # Before anything changes: the stack's checkout is set up on the Pi (the develop stack's is set up by hand, see
+      # tools/ci/README.md), and a stack other than production never fills the disk production uses: nothing is pulled
+      # with less than MIN_FREE_MB free
+      - name: Check the stack on the Pi
+        timeout-minutes: 1
+        env:
+          MIN_FREE_MB: 2048
+        run: |
+          rc=0
+          # .env holds the database password (and the develop stack's NISAR_* settings), server/.env is the env_file
+          # of mysql and backend
+          # shellcheck disable=SC2029 # DEPLOY_DIR expands on the runner, as intended
+          ssh -n pi "cd '$DEPLOY_DIR' && test -f podman-compose.yml && test -f .env && test -f server/.env" || rc=$?
+          # 255 is an SSH error
+          if [ "$rc" -eq 255 ]; then
+            exit "$rc"
+          elif [ "$rc" -ne 0 ]; then
+            echo "::error title=Deploy::The $STACK stack is not set up on the Pi: $DEPLOY_DIR needs podman-compose.yml, .env and server/.env, see tools/ci/README.md"
+            exit 1
+          fi
+          if [ "$STACK" != production ]; then
+            # Free space of the filesystem of podman's image store (rootless: ~/.local/share/containers/storage)
+            # shellcheck disable=SC2016 # expands on the Pi, as intended
+            free_mb="$(ssh -n pi 'df --output=avail -m "$(podman info --format "{{.Store.GraphRoot}}")" | tail -n 1')"
+            free_mb="${free_mb//[[:space:]]/}"
+            if ! [[ "$free_mb" =~ ^[0-9]+$ ]]; then
+              echo "::error title=Disk space::Could not read the free disk space on the Pi (got '$free_mb'), the $STACK stack is not deployed"
+              exit 1
+            elif (( free_mb < MIN_FREE_MB )); then
+              echo "::error title=Disk space::Only $free_mb MB free on the Pi, the $STACK stack is not deployed below $MIN_FREE_MB MB to keep room for production: free space on the Pi, e.g. podman image prune removes the images no tag or container uses (see tools/ci/README.md)"
+              exit 1
+            fi
+            echo "$free_mb MB free on the Pi"
+          fi
+
       # Rollback point: if the running version passes the smoke test before it is replaced, tools/ci/rollback.sh
       # mark tags its images as known-good on the Pi, for a failed deployment to roll back to. Otherwise the
       # known-good images marked before stay. Never blocks the deployment. See tools/ci/README.md.
@@ -61,18 +154,22 @@ jobs:
         continue-on-error: true
         run: |
           # One attempt (SMOKE_TIMEOUT=0): a running stack answers at once
-          if ! ssh pi "SMOKE_TIMEOUT=0 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh; then
+          # shellcheck disable=SC2029 # the stack's settings expand on the runner, as intended
+          if ! ssh pi "SMOKE_TIMEOUT=0 bash -s -- http://127.0.0.1:$HTTP_PORT" < tools/ci/smoke-test.sh; then
             echo "::warning title=Rollback::The running version fails the smoke test, it is not marked as known-good: if this deployment fails, it rolls back to the known-good images marked before, if any"
-          elif ! ssh pi "bash -s -- mark" < tools/ci/rollback.sh; then
+          elif ! ssh pi "DEPLOY_DIR=$DEPLOY_DIR NISAR_IMAGE_TAG=$IMAGE_TAG bash -s -- mark" < tools/ci/rollback.sh; then
             echo "::warning title=Rollback::The running version could not be marked as known-good (see the log): if this deployment fails, it rolls back to the known-good images marked before, if any"
           fi
 
+      # The stack's settings are passed to podman-compose (NISAR_IMAGE_TAG, NISAR_HTTP_PORT in podman-compose.yml),
+      # whatever the .env of the checkout says
       - name: Deploy
         id: deploy
         run: |
           set -euo pipefail
       
           set +e
+          # shellcheck disable=SC2029 # the stack's settings expand on the runner, as intended
           ssh -T -n \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=no \
@@ -80,10 +177,10 @@ jobs:
             -o ServerAliveInterval=30 \
             -o ServerAliveCountMax=3 \
             sanxez@100.68.170.113 \
-            "cd /opt/NISAR-SAR-Change-Detection && \
-             podman pull ghcr.io/s4nxez/nisar-sar-change-detection-back:latest && \
-             podman pull ghcr.io/s4nxez/nisar-sar-change-detection-front:latest && \
-             podman-compose up -d --force-recreate > /dev/null 2>&1 && \
+            "cd $DEPLOY_DIR && \
+             podman pull ghcr.io/s4nxez/nisar-sar-change-detection-back:$IMAGE_TAG && \
+             podman pull ghcr.io/s4nxez/nisar-sar-change-detection-front:$IMAGE_TAG && \
+             NISAR_IMAGE_TAG=$IMAGE_TAG NISAR_HTTP_PORT=$HTTP_PORT podman-compose up -d --force-recreate > /dev/null 2>&1 && \
              echo DEPLOY_OK"
 
       # Post-deployment smoke test: tools/ci/smoke-test.sh from this commit, run on the Pi (bash -s over SSH)
@@ -93,20 +190,23 @@ jobs:
         timeout-minutes: 3
         # Through Caddy, on the port podman-compose.yml publishes. The recreated backend answered ~15 s after the
         # deploy on the Pi; 120 s leaves room for slow migrations within the job timeout.
-        run: ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh
+        run: |
+          # shellcheck disable=SC2029 # HTTP_PORT expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:$HTTP_PORT" < tools/ci/smoke-test.sh
 
       - name: Smoke test - public URL
         timeout-minutes: 2
-        env:
-          # Tailscale Funnel proxies this prefix to Caddy: the URLs browsers use, the frontend's API calls included
-          PUBLIC_URL: https://raspberrypi.tail0a4b52.ts.net/terra-pulse
         run: |
+          if [ -z "$PUBLIC_URL" ]; then
+            echo "::notice title=Public URL::The $STACK stack has no public URL to check, it was only checked on the Pi (develop: the DEVELOP_PUBLIC_URL variable, see tools/ci/README.md)"
+            exit 0
+          fi
           rc=0
           # shellcheck disable=SC2029 # PUBLIC_URL expands on the runner, as intended
-          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=30 bash -s -- $PUBLIC_URL" < tools/ci/smoke-test.sh || rc=$?
+          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=30 bash -s -- '$PUBLIC_URL'" < tools/ci/smoke-test.sh || rc=$?
           # 1: failed checks (255 is an SSH error)
           if [ "$rc" -eq 1 ]; then
-            echo "::error title=Public URL::The deployed stack passed on the Pi but not at $PUBLIC_URL: check Tailscale Funnel (tailscale serve status on the Pi) and that the frontend only uses relative URLs, it is served under /terra-pulse"
+            echo "::error title=Public URL::The deployed stack passed on the Pi but not at $PUBLIC_URL: check Tailscale Funnel (tailscale serve status on the Pi) and that the frontend only uses relative URLs, it is served under the URL's path prefix"
           fi
           exit "$rc"
 
@@ -114,9 +214,9 @@ jobs:
         # The deployment or the stack check failed (the public URL is only checked once the stack passed)
         if: (failure() || cancelled()) && steps.deploy.conclusion != 'skipped' && steps.stack.outcome != 'success'
         run: |
-          # podman-compose in the production checkout, next to podman-compose.yml and its .env
+          # podman-compose in the stack's checkout, next to podman-compose.yml and its .env
           # shellcheck disable=SC2029 # the arguments expand on the runner, as intended
-          compose() { ssh -n pi "cd /opt/NISAR-SAR-Change-Detection && podman-compose $* 2>&1"; }
+          compose() { ssh -n pi "cd $DEPLOY_DIR && podman-compose $* 2>&1"; }
           compose ps || true
           logs="$(compose logs backend)" || true
           # Innermost exception of the backend's first start since the deploy, as in the validate job (build.yml)
@@ -130,7 +230,7 @@ jobs:
           echo "::endgroup::"
           # caddy and frontend logs record visitors' IP addresses, and this public repository's Actions logs are public
           echo "caddy and frontend logs are not printed (visitors' IP addresses), read them on the Pi:"
-          echo "  cd /opt/NISAR-SAR-Change-Detection && podman-compose logs caddy frontend"
+          echo "  cd $DEPLOY_DIR && podman-compose logs caddy frontend"
 
       # Rollback: the deployment or a smoke test failed, or the run was cancelled. tools/ci/rollback.sh restore switches
       # back to the known-good images without pulling or building: only the backend and frontend containers are
@@ -140,14 +240,17 @@ jobs:
         id: restore
         if: (failure() || cancelled()) && steps.deploy.conclusion != 'skipped'
         timeout-minutes: 3
-        run: ssh pi "GITHUB_ACTIONS=true bash -s -- restore" < tools/ci/rollback.sh
+        run: |
+          # shellcheck disable=SC2029 # the stack's settings expand on the runner, as intended
+          ssh pi "DEPLOY_DIR=$DEPLOY_DIR NISAR_IMAGE_TAG=$IMAGE_TAG NISAR_HTTP_PORT=$HTTP_PORT GITHUB_ACTIONS=true bash -s -- restore" < tools/ci/rollback.sh
 
       - name: Rollback - smoke test
         if: (failure() || cancelled()) && steps.restore.outcome == 'success'
         timeout-minutes: 3
         run: |
           rc=0
-          ssh pi "SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:8089" < tools/ci/smoke-test.sh || rc=$?
+          # shellcheck disable=SC2029 # HTTP_PORT expands on the runner, as intended
+          ssh pi "SMOKE_TIMEOUT=120 bash -s -- http://127.0.0.1:$HTTP_PORT" < tools/ci/smoke-test.sh || rc=$?
           # 1: failed checks (255 is an SSH error)
           if [ "$rc" -eq 1 ]; then
             echo "::error title=Rollback::The known-good version fails the smoke test too ([FAIL] lines in the log): the cause is probably not in the application images (database, Caddy, the Pi), see tools/ci/README.md"
