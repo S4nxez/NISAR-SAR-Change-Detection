@@ -1,4 +1,23 @@
 :80 {
+    # PR previews, only in the develop stack (NISAR_PR_PREVIEWS=true in its .env, see tools/ci/README.md): /pr-<N>/
+    # goes to the containers tools/ci/preview.sh runs for pull request N on this stack's network, found when the request
+    # comes in, so deploying or removing a preview needs no reload. Without the variable (production) these paths are
+    # the app's, as before.
+    @preview {
+        path_regexp preview ^/pr-([0-9]{1,6})(/.*)?$
+        expression {env.NISAR_PR_PREVIEWS} == "true"
+    }
+    handle @preview {
+        route {
+            # Relative URLs (../api/sites, ./src/...) need the trailing slash. A relative redirect keeps the public prefix
+            @bare path_regexp ^/pr-[0-9]+$
+            redir @bare ./pr-{re.preview.1}/
+            uri strip_prefix /pr-{re.preview.1}
+            reverse_proxy /api/* nisar-pr-{re.preview.1}-backend:8080
+            reverse_proxy nisar-pr-{re.preview.1}-frontend:80
+        }
+    }
+
     handle /api/* {
         reverse_proxy backend:8080
     }

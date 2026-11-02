@@ -11,10 +11,13 @@ push to main ──────────────────────�
                                                                                                                          └─> Deploy (deploy.yml): mark the running version as known-good ─> deploy on the Pi
                                                                                                                                                   ─> post-deployment smoke test ─> rollback if anything failed
 push to develop ─> Develop (develop.yml): the same Build Images (images tagged develop) and Deploy, to the develop stack on the Pi (QA)
+pull request into develop ─> PR preview (preview.yml): the same Build Images (images tagged pr-<N>), then preview.sh runs them next to the
+                             develop stack, at <develop URL>/pr-<N>/, linked in a comment. Closing the pull request removes it
 ```
 
 Every push to `develop` goes through the same pipeline, with the same workflows, to its own stack on the Raspberry Pi: developers QA it there
-before the weekly merge releases it to production. See [Develop stack](#develop-stack).
+before the weekly merge releases it to production. See [Develop stack](#develop-stack). Before that, every pull request into `develop` gets its
+own preview, see [PR previews](#pr-previews).
 
 Every Wednesday at 21:00 UTC `weekly-merge.yml` releases `develop` into `main` (it does nothing if `develop` has nothing new):
 it opens a pull request, approves it as `github-actions[bot]` and squash merges it (`main` requires 1 approval and a linear history),
@@ -192,6 +195,65 @@ tools/ci/smoke-test.sh http://127.0.0.1:8090
 podman-compose logs backend
 ```
 
+## PR previews
+
+Every pull request into `develop` from a branch of this repository gets a preview, to try its changes before they are merged: **PR preview**
+(`preview.yml`) runs on every push to it.
+
+1. **Build Images** (`build.yml`): the same `validate` stage on the pull request merged into `develop` (as GitHub tests pull requests), then
+   the images are pushed tagged `pr-<N>`. If validate fails nothing is deployed.
+2. **Deploy the preview**: `preview.sh deploy <N>`, run on the Pi like the other scripts, starts three containers on the develop stack's network:
+   `nisar-pr-<N>-mysql`, `nisar-pr-<N>-backend` and `nisar-pr-<N>-frontend`. The develop stack's Caddy serves them at `/pr-<N>/`, so the
+   preview is at `<develop URL>/pr-<N>/`, e.g. `https://raspberrypi.tail0a4b52.ts.net/terra-pulse-dev/pr-12/`.
+3. **Smoke test**: the same `smoke-test.sh`, at `http://127.0.0.1:8090/pr-<N>` on the Pi and at the public URL if `DEVELOP_PUBLIC_URL` is set.
+4. **Comment the preview link**: one comment on the pull request, updated on every run, links the preview (or says the deployment failed).
+
+Closing the pull request (merged or not) runs `preview.sh remove <N>`: it removes the three containers, the preview's data and its
+`pr-<N>` images on the Pi, and the comment says so. Reopening it deploys it again. A newer push cancels the run of an older one.
+
+How a preview relates to the other stacks:
+
+- **Develop stack**: a preview reuses its network, its Caddy (with `NISAR_PR_PREVIEWS=true`) and its URL, and nothing else: it is not
+  changed when a preview is deployed or removed, and redeploying develop leaves the previews running (Caddy finds the preview containers by
+  name on every request, with no reload).
+- **Database**: each preview has its own MySQL, empty on every deployment (no volume): Flyway runs the pull request's migrations and demo
+  data from scratch, so a pull request may change its own migrations. It can't share the develop stack's MySQL, the migrations use the
+  `NisarSar` database by name (`USE NisarSar`) and would write into develop's data.
+- **Production**: untouched. `preview.sh` refuses production's checkout, the previews never join production's network, and production's
+  Caddy has `NISAR_PR_PREVIEWS` unset, so `/terra-pulse/pr-<N>/` is the app's path as before.
+- **Resources**: at most 3 previews at once (`MAX_PREVIEWS`), each a MySQL, a backend and an nginx, about 600 MB of RAM. A fourth pull request's
+  preview fails with the list of the running ones, until one is closed. Like develop, nothing is pulled with less than 2 GB free on the Pi.
+- **Forks and Dependabot**: no preview. Their pull requests get no secrets, and a fork's code must not run on the Pi.
+- The `pr-<N>` images stay in GHCR (the workflow's token can't delete package versions): delete them from the package's page if needed.
+
+### Setting up the PR previews
+
+Once, on the Pi, after this pipeline is merged into `develop`. Until then **Deploy the preview** fails, before anything changes on the Pi:
+
+```bash
+cd /opt/NISAR-SAR-Change-Detection-develop
+git pull                                     # Caddyfile and podman-compose.yml with the preview routes
+echo 'NISAR_PR_PREVIEWS=true' >> .env
+podman-compose up -d caddy                   # recreates only the develop stack's Caddy
+```
+
+For public links, publish the develop stack as in [Setting up the develop stack](#setting-up-the-develop-stack): `tailscale funnel --bg
+--set-path /terra-pulse-dev http://127.0.0.1:8090`, and the `DEVELOP_PUBLIC_URL` variable. The previews come with it, under `/pr-<N>/`.
+Without it, the comment gives the URL on the Pi (`ssh -L 8090:127.0.0.1:8090 sanxez@<pi>`, then `http://localhost:8090/pr-<N>/`).
+
+By hand, on the Pi:
+
+```bash
+cd /opt/NISAR-SAR-Change-Detection-develop
+tools/ci/preview.sh list                     # every preview (read-only)
+tools/ci/preview.sh status 12                # its containers and images (read-only)
+tools/ci/preview.sh remove 12                # e.g. a preview left behind
+tools/ci/smoke-test.sh http://127.0.0.1:8090/pr-12
+podman logs nisar-pr-12-backend
+```
+
+With previews running, `podman-compose down` in the develop checkout can't remove the network they use: remove them first.
+
 ## Files
 
 | File | Purpose |
@@ -199,6 +261,8 @@ podman-compose logs backend
 | `smoke-test.sh` | Checks a running stack through Caddy: `GET /api/sites` returns a non-empty catalog read from MySQL, and the page and every local asset it references are served. Usage: `smoke-test.sh [BASE_URL]` (default `http://127.0.0.1:8089`), waits up to `SMOKE_TIMEOUT` seconds (default 180) for the backend. Used by the startup check and the post-deployment smoke test |
 | `rollback.sh` | Rollback of the stack on the Pi to its `known-good` images: `status` (read-only), `mark` (tags the images the backend and frontend containers run as `known-good`), `restore` (switches those containers back to them). `DEPLOY_DIR` and `NISAR_IMAGE_TAG` select the stack, production by default. Used by Deploy and by hand, see [Rollback](#rollback) and [Develop stack](#develop-stack) |
 | `test-rollback.sh` | Tests of `rollback.sh` against fake `podman` and `podman-compose` commands, for production's and the develop stack's checkouts: no container runs, only bash is needed. Run by validate |
+| `preview.sh` | PR previews on the develop stack: `deploy <N>` (its own MySQL, backend and frontend, from scratch), `remove <N>`, `status <N>`, `list`. Used by PR preview and by hand, see [PR previews](#pr-previews) |
+| `pr-comment.sh` | Creates or updates the one comment of `github-actions[bot]` that starts with a marker on a pull request: the preview link |
 | `compose.ci.yml` | Compose override that builds `backend` and `frontend` from the checkout instead of using the published `:latest` images |
 
 ## When validate fails

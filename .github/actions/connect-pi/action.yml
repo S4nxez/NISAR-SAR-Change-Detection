@@ -1,0 +1,46 @@
+name: Connect to the Raspberry Pi
+description: >-
+  Joins the tailnet and sets up "ssh pi", the Raspberry Pi with the options Deploy (deploy.yml) uses. The job must
+  log out of Tailscale at the end (if: always()), as Deploy does.
+
+inputs:
+  oauth-client-id:
+    description: Tailscale OAuth client ID (secrets.CLIENT_ID)
+    required: true
+  oauth-secret:
+    description: Tailscale OAuth secret (secrets.CLIENT_SECRET)
+    required: true
+  ssh-private-key:
+    description: SSH key of the Pi's deploy user (secrets.SSH_PRIVATE_KEY)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Connect to Tailscale
+      uses: tailscale/github-action@v3
+      with:
+        oauth-client-id: ${{ inputs.oauth-client-id }}
+        oauth-secret: ${{ inputs.oauth-secret }}
+        tags: tag:ci
+        version: latest
+
+    - name: Setup SSH
+      shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-private-key }}
+      run: |
+        mkdir -p ~/.ssh
+        printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H 100.68.170.113 >> ~/.ssh/known_hosts
+        cat >> ~/.ssh/config <<'EOF'
+        Host pi
+          HostName 100.68.170.113
+          User sanxez
+          BatchMode yes
+          StrictHostKeyChecking no
+          ConnectTimeout 10
+          ServerAliveInterval 30
+          ServerAliveCountMax 3
+        EOF
