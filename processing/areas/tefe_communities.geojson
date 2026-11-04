@@ -1,0 +1,2527 @@
+{
+ "type": "FeatureCollection",
+ "attribution": "© OpenStreetMap contributors (ODbL)",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302370",
+    "name": "Abacatal",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.460272,
+     -3.217305
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302371",
+    "name": "Acaizau",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.453694,
+     -3.229998
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858839",
+    "name": "Acapu",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.494315,
+     -3.604484
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302372",
+    "name": "Acarazinho",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.613936,
+     -3.179406
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858840",
+    "name": "Agrovila Flora Agrícola",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.76457,
+     -3.454225
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858841",
+    "name": "Agrovila da Emade",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.631086,
+     -3.479355
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984711996",
+    "name": "Alencar",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.810892,
+     -3.132673
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm415524054",
+    "name": "Alvarães",
+    "place": "town",
+    "population": 15866
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.814833,
+     -3.215579
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858842",
+    "name": "Ananas",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.858238,
+     -3.491723
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858843",
+    "name": "Andiroba",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.685528,
+     -3.474404
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833607",
+    "name": "Arraia",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.909072,
+     -3.430635
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833608",
+    "name": "Assunção",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.904092,
+     -3.112975
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858845",
+    "name": "Bacuri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.789991,
+     -3.390497
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3675578758",
+    "name": "Barreirinha",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.559986,
+     -3.676801
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858847",
+    "name": "Barreirinha",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.526692,
+     -3.648779
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833609",
+    "name": "Bau",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.806502,
+     -3.288825
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833610",
+    "name": "Betel",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.086148,
+     -3.49035
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858851",
+    "name": "Boa Vista",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.70269,
+     -3.298148
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm8595241926",
+    "name": "Boa Vontade",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.659913,
+     -3.468842
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858853",
+    "name": "Boara de Cima",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.642408,
+     -3.350558
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm9829129139",
+    "name": "Boara do Meio",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.639326,
+     -3.353599
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858854",
+    "name": "Boarazinho",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.636,
+     -3.35927
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302373",
+    "name": "Boca do Atapi",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.518302,
+     -3.149358
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984711997",
+    "name": "Boca do Mamiraua",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.792745,
+     -3.117463
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302374",
+    "name": "Bom Jardim",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.589385,
+     -3.229582
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986858856",
+    "name": "Bom Jesus",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.616965,
+     -3.416265
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302375",
+    "name": "Caburinim de Baixo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.684379,
+     -3.234966
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302376",
+    "name": "Caburinim de Cima",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.775253,
+     -3.159215
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860558",
+    "name": "Cacai",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.534993,
+     -3.633685
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm416652595",
+    "name": "Caiambé",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.411316,
+     -3.531347
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860560",
+    "name": "Cairara",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.542795,
+     -3.640728
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833613",
+    "name": "Campo do Edmundo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.822431,
+     -3.240557
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860562",
+    "name": "Canaman",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.80751,
+     -3.426036
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833614",
+    "name": "Canaria",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.928063,
+     -3.095961
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833615",
+    "name": "Capucho",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.737135,
+     -3.227142
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302377",
+    "name": "Cardoso",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.531021,
+     -3.155437
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833616",
+    "name": "Caru",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.997692,
+     -3.568358
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833617",
+    "name": "Castanheirinha",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.825152,
+     -3.20629
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984712003",
+    "name": "Coadi",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.998161,
+     -3.070345
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm9755637967",
+    "name": "Comunidade São Francisco do Aratamã",
+    "place": "isolated_dwelling"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.656565,
+     -3.297922
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860565",
+    "name": "Curubaru",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.510709,
+     -3.416161
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833618",
+    "name": "Divino Espito do Catuiri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.903428,
+     -3.412077
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860568",
+    "name": "Divino Estirito Santo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.830727,
+     -3.432309
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833619",
+    "name": "Fazendinha",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.752853,
+     -3.25636
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860569",
+    "name": "Fe Em Deus",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.825487,
+     -3.427415
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860570",
+    "name": "Feliciana",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.477548,
+     -3.59164
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860571",
+    "name": "Felicicidade",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.6167,
+     -3.697634
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833620",
+    "name": "Felicidade",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.02615,
+     -3.495843
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302378",
+    "name": "Filadelfia",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.448447,
+     -3.235361
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984712006",
+    "name": "Fonte da Luz",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.970453,
+     -3.087607
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833621",
+    "name": "Fonte de Luz",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.968785,
+     -3.087205
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860572",
+    "name": "Genipaua",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.455308,
+     -3.495217
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302379",
+    "name": "Girassol",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.449538,
+     -3.21497
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860573",
+    "name": "Gloria",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.660191,
+     -3.331533
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860574",
+    "name": "Igarape Açu",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.492419,
+     -3.625954
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833622",
+    "name": "Igarape Grande",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.869018,
+     -3.203938
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm10300290342",
+    "name": "Igarape do Grilo",
+    "place": "locality"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.778984,
+     -3.298994
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833623",
+    "name": "Igarape do Mari",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.870135,
+     -3.184352
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833624",
+    "name": "Itapiranema",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.824815,
+     -3.34434
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm416757413",
+    "name": "Jaguarí",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.866942,
+     -3.09488
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984712016",
+    "name": "Jaquiri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.878074,
+     -3.094801
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833625",
+    "name": "Jataua",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.078193,
+     -3.489592
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833626",
+    "name": "Jauarituba",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.006015,
+     -3.495895
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833628",
+    "name": "Juruama",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.880392,
+     -3.135865
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302380",
+    "name": "Juruari",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.740664,
+     -3.127577
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860576",
+    "name": "Kokama",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.622913,
+     -3.400829
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833629",
+    "name": "Laranjal",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.777644,
+     -3.23884
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302381",
+    "name": "Liocadio",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.47052,
+     -3.183371
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860578",
+    "name": "Macedo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.433733,
+     -3.527056
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302382",
+    "name": "Mangueal",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.453051,
+     -3.207542
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833630",
+    "name": "Manixi",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.759323,
+     -3.232612
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860579",
+    "name": "Marajo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.462163,
+     -3.581202
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833631",
+    "name": "Marajá",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.830035,
+     -3.179117
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860582",
+    "name": "Maranata",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.73732,
+     -3.433561
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860583",
+    "name": "Maranhao",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.533682,
+     -3.388683
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860586",
+    "name": "Mirini",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.507645,
+     -3.442328
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833632",
+    "name": "Miriti",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.921495,
+     -3.221148
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860587",
+    "name": "Miriti",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.780408,
+     -3.433324
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860588",
+    "name": "Miriti",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.554726,
+     -3.649693
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860589",
+    "name": "Missão",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.656762,
+     -3.373084
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302383",
+    "name": "Monte Sinai",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.553773,
+     -3.167959
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860591",
+    "name": "Moura",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.459655,
+     -3.603438
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860595",
+    "name": "Muquental",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.976785,
+     -3.693755
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860596",
+    "name": "Mutum",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.908782,
+     -3.52417
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833635",
+    "name": "Méria",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.85586,
+     -3.202352
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833634",
+    "name": "Méria II",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.851644,
+     -3.204658
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm416757398",
+    "name": "Nazaré",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.534144,
+     -3.173435
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833636",
+    "name": "Nogueira",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.783162,
+     -3.300002
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860598",
+    "name": "Nossa Senhora Perpetuo Socorro",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.687833,
+     -3.315358
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860600",
+    "name": "Nova Esperança",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.787894,
+     -3.432498
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm8583554431",
+    "name": "Nova Esperança",
+    "place": "isolated_dwelling"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.875166,
+     -3.480048
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860599",
+    "name": "Nova Esperança do Arauiri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.563096,
+     -3.365522
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860601",
+    "name": "Nova Ineja",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.555954,
+     -3.666415
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860602",
+    "name": "Nova Jerusalem",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.806678,
+     -3.41882
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm8632395939",
+    "name": "Novo Porto",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.528538,
+     -3.352858
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833637",
+    "name": "Olaria",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.801766,
+     -3.2137
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860603",
+    "name": "Pacamun",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.647651,
+     -3.73079
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833638",
+    "name": "Parauari",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.83752,
+     -3.162965
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3675578818",
+    "name": "Paraíso",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.436414,
+     -3.589186
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302384",
+    "name": "Pau Rosa",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.761651,
+     -3.062964
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860604",
+    "name": "Pavão",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.636642,
+     -3.491575
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833640",
+    "name": "Perseverança",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.791708,
+     -3.224024
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3675578822",
+    "name": "Piraruaia",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.935363,
+     -3.623853
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860608",
+    "name": "Pixima",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.778762,
+     -3.451377
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302385",
+    "name": "Porto Alegre",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.454076,
+     -3.244578
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302386",
+    "name": "Porto Natal",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.663496,
+     -3.264688
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm416757403",
+    "name": "Porto São Francisco",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.47796,
+     -3.454148
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860610",
+    "name": "Porto Vale",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.66401,
+     -3.361234
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm10300245160",
+    "name": "Porto de Alvaraes",
+    "place": "locality"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.80443,
+     -3.210979
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302387",
+    "name": "Renascer",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.461335,
+     -3.223657
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302388",
+    "name": "Rio Grande",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.728712,
+     -3.197041
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860614",
+    "name": "Santa Clara",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.689293,
+     -3.28839
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860615",
+    "name": "Santa Cruz",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.683626,
+     -3.297953
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833643",
+    "name": "Santa Elena",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.733637,
+     -3.24712
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833644",
+    "name": "Santa Luzia do Catuiri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.901553,
+     -3.40045
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860619",
+    "name": "Santa Maria",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.677253,
+     -3.311404
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302389",
+    "name": "Santa Rosa do Repartimento",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.590845,
+     -3.215803
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302390",
+    "name": "Santa Tereza do Rio Cubua",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.599935,
+     -3.151621
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833646",
+    "name": "Santa Terezinha_",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.745953,
+     -3.260691
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860622",
+    "name": "Santo Isidoro",
+    "place": "village"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.591027,
+     -3.403518
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833647",
+    "name": "Sao Joaquim do Içe",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.703334,
+     -3.268705
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302391",
+    "name": "Sao Raimundo do Rio Cubua",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.591924,
+     -3.083287
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3675584335",
+    "name": "Senipauá",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.452116,
+     -3.497205
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860623",
+    "name": "Seu Ivan",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.793326,
+     -3.433791
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860624",
+    "name": "Sitio Novo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.784215,
+     -3.441935
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860626",
+    "name": "Surucucu",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.490102,
+     -3.489725
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm8583188413",
+    "name": "São Antonio do Ipapucu",
+    "place": "isolated_dwelling"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.792996,
+     -3.382203
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860627",
+    "name": "São Benedito",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.80216,
+     -3.410059
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860629",
+    "name": "São Conrado",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.627244,
+     -3.386614
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm416757401",
+    "name": "São Francisco",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.444105,
+     -3.511668
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3675584336",
+    "name": "São Francisco",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.427815,
+     -3.523771
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302392",
+    "name": "São Francisco",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.621254,
+     -3.281401
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860633",
+    "name": "São Francisco",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.936626,
+     -3.624811
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833648",
+    "name": "São Francisco do Bauana",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.989157,
+     -3.47479
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860632",
+    "name": "São Francisco do Piranhal",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.679698,
+     -3.284106
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833650",
+    "name": "São Jorge",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.737032,
+     -3.2659
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860634",
+    "name": "São Jorge",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.668895,
+     -3.344692
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302393",
+    "name": "São Jose",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.590023,
+     -3.257661
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984712031",
+    "name": "São Jose",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.849178,
+     -3.063362
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833653",
+    "name": "São Jose",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.830482,
+     -3.169413
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860636",
+    "name": "São Jose do Madureira",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.788877,
+     -3.421707
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833652",
+    "name": "São Jose do Tuiuca",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.03895,
+     -3.651337
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302395",
+    "name": "São João",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.596152,
+     -3.176516
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860639",
+    "name": "São João",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.544363,
+     -3.395787
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860637",
+    "name": "São João Curia",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.445114,
+     -3.503785
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302394",
+    "name": "São João do Capivara",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.608952,
+     -3.286642
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833654",
+    "name": "São João do Miriti",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.054923,
+     -3.477442
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833655",
+    "name": "São João do Mulato",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.99627,
+     -3.562318
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860640",
+    "name": "São Luis do Macari",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.595619,
+     -3.33099
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm10654589227",
+    "name": "São Luis do Macari",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.590705,
+     -3.347451
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860641",
+    "name": "São Pedro",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.66194,
+     -3.346865
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984833656",
+    "name": "São Rafael",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.720762,
+     -3.277157
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984835457",
+    "name": "São Raimundo de Baixo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.937024,
+     -3.461015
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860642",
+    "name": "São Raimundo do Sapia",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.980643,
+     -3.72642
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860644",
+    "name": "São Sebastião do Ture",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.845645,
+     -3.436534
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984835459",
+    "name": "São Sebatião do Bauana",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.09543,
+     -3.492738
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984835460",
+    "name": "São Sebatião do Catuiri",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.905928,
+     -3.418022
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860646",
+    "name": "Tauary",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.962142,
+     -3.640463
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984835462",
+    "name": "Tiririca",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -65.05449,
+     -3.492618
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984712038",
+    "name": "Tupa Supe",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.978447,
+     -3.080485
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860648",
+    "name": "Uirapuru",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.440555,
+     -3.552369
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3924302396",
+    "name": "Urcui",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.459302,
+     -3.225785
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860650",
+    "name": "Vila Nova",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.680874,
+     -3.324578
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3984835463",
+    "name": "Vila Sião",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.987907,
+     -3.497335
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860651",
+    "name": "Vila Valente",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.671887,
+     -3.363904
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860652",
+    "name": "Vista Alegre",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.807326,
+     -3.40912
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860653",
+    "name": "Vista Alegre",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.813482,
+     -3.412605
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "osm3986860654",
+    "name": "Ze Belo",
+    "place": "hamlet"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -64.605133,
+     -3.684921
+    ]
+   }
+  }
+ ]
+}
