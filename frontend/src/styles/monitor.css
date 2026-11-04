@@ -1,0 +1,321 @@
+/* River lifeline monitor (monitor.html); builds on main/components/nisar.css */
+
+.monitor-page {
+--connected:#68b6a3;
+--at-risk:#e4b65c;
+--isolated:#e47759;
+--nodata:#6d8491
+}
+
+.date-picker {
+display:flex;
+flex-direction:column;
+gap:6px;
+min-width:300px
+}
+
+.date-row {
+display:flex;
+gap:6px;
+align-items:center
+}
+
+.date-row input[type=date] {
+flex:1;
+background:var(--panel);
+color:var(--text);
+border:1px solid var(--line);
+border-radius:10px;
+padding:9px 10px;
+font:500 13px 'DM Sans',sans-serif;
+color-scheme:dark
+}
+
+.icon-btn {
+width:38px;
+height:38px;
+border-radius:10px;
+border:1px solid var(--line);
+background:var(--panel);
+color:var(--text);
+font:600 16px 'Space Grotesk',sans-serif;
+cursor:pointer
+}
+
+.icon-btn:hover {
+border-color:var(--amber)
+}
+
+.icon-btn.play.is-on {
+background:#e4b65c22;
+border-color:var(--amber);
+color:var(--amber)
+}
+
+.date-help {
+font-size:11.5px;
+color:var(--muted)
+}
+
+.status-card>strong small {
+margin-left:4px
+}
+
+.status-card.s-connected>strong {
+color:var(--connected)
+}
+
+.status-card.s-at_risk>strong {
+color:var(--at-risk)
+}
+
+.status-card.s-isolated>strong {
+color:var(--isolated)
+}
+
+.stat-foot b {
+color:var(--text)
+}
+
+.timeline-panel {
+padding:18px 20px 14px;
+margin-bottom:16px
+}
+
+.timeline {
+position:relative;
+height:64px;
+margin:6px 4px 0
+}
+
+.timeline .tl-axis {
+position:absolute;
+left:0;
+right:0;
+top:26px;
+height:2px;
+background:var(--line)
+}
+
+.timeline .tl-month {
+position:absolute;
+top:36px;
+font:500 10px 'Space Grotesk';
+color:var(--faint);
+transform:translateX(-50%);
+white-space:nowrap
+}
+
+.timeline .tl-month::before {
+content:"";
+position:absolute;
+left:50%;
+top:-12px;
+width:1px;
+height:8px;
+background:var(--line)
+}
+
+.timeline .tl-pass {
+position:absolute;
+top:18px;
+width:18px;
+height:18px;
+margin-left:-9px;
+border-radius:50%;
+border:2px solid #101b25;
+cursor:pointer;
+padding:0
+}
+
+.timeline .tl-pass.partial {
+background:transparent;
+border:2px solid var(--faint);
+width:12px;
+height:12px;
+margin-left:-6px;
+top:21px
+}
+
+.timeline .tl-pass.is-selected {
+outline:2px solid var(--text);
+outline-offset:2px
+}
+
+.timeline .tl-pass:focus-visible {
+outline:2px solid var(--amber);
+outline-offset:2px
+}
+
+.timeline-key {
+display:flex;
+flex-wrap:wrap;
+gap:6px 18px;
+font-size:11px;
+color:var(--muted)
+}
+
+.tl-dot {
+display:inline-block;
+width:10px;
+height:10px;
+border-radius:50%;
+margin-right:6px;
+vertical-align:-1px;
+background:linear-gradient(90deg,var(--connected),var(--at-risk),var(--isolated))
+}
+
+.tl-dot.partial {
+background:transparent;
+border:2px solid var(--faint)
+}
+
+.list-tools {
+display:grid;
+gap:8px;
+padding:0 2px 10px
+}
+
+.list-tools input[type=search] {
+background:var(--panel);
+color:var(--text);
+border:1px solid var(--line);
+border-radius:10px;
+padding:9px 12px;
+font:500 13px 'DM Sans',sans-serif
+}
+
+.chips, .exports {
+display:flex;
+flex-wrap:wrap;
+gap:6px
+}
+
+.chip, .exports button {
+border:1px solid var(--line);
+background:transparent;
+color:var(--muted);
+border-radius:999px;
+padding:5px 11px;
+font:600 11px 'DM Sans',sans-serif;
+cursor:pointer
+}
+
+.chip.is-on {
+border-color:var(--amber);
+color:var(--amber);
+background:#e4b65c12
+}
+
+.exports button:hover {
+color:var(--text);
+border-color:var(--text)
+}
+
+.key-swatch.round {
+border-radius:50%
+}
+
+.status-dot-s {
+width:11px;
+height:11px;
+border-radius:50%;
+flex:none;
+background:var(--nodata)
+}
+
+.st-connected { background:var(--connected) }
+.st-at_risk { background:var(--at-risk) }
+.st-isolated { background:var(--isolated) }
+
+.site-item .site-change {
+text-align:right;
+flex:none
+}
+
+.site-item .was {
+display:block;
+font-size:10.5px;
+color:var(--amber)
+}
+
+.monitor-page .chart-wrap.tall {
+height:280px
+}
+
+.detail-facts {
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+margin:4px 0 12px
+}
+
+.detail-facts span {
+display:block;
+font-size:9px;
+letter-spacing:.12em;
+color:var(--muted);
+font-weight:700
+}
+
+.detail-facts strong {
+font:600 15px 'Space Grotesk'
+}
+
+.history {
+display:flex;
+gap:3px;
+align-items:flex-end;
+height:46px;
+margin:6px 0 4px
+}
+
+.history i {
+flex:1;
+min-width:3px;
+border-radius:2px 2px 0 0;
+background:var(--nodata)
+}
+
+.history i.is-current {
+outline:1px solid var(--text)
+}
+
+.history-axis {
+display:flex;
+justify-content:space-between;
+font-size:10px;
+color:var(--faint);
+margin-bottom:10px
+}
+
+.badge {
+display:inline-block;
+border-radius:999px;
+padding:2px 9px;
+font:700 10px 'DM Sans',sans-serif;
+letter-spacing:.06em;
+color:#101b25
+}
+
+.leaflet-tooltip.community-tip {
+background:#101b25ee;
+color:var(--text);
+border:1px solid var(--line);
+font:500 12px 'DM Sans',sans-serif
+}
+
+.hub-icon {
+width:16px;
+height:16px;
+background:#fff;
+border:3px solid #101b25;
+transform:rotate(45deg);
+box-shadow:0 0 0 2px #fff8
+}
+
+@media (max-width:760px) {
+  .date-picker { min-width:0; width:100% }
+  .timeline { height:72px }
+  .monitor-page .chart-wrap.tall { height:240px }
+}
