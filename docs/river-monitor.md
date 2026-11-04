@@ -113,6 +113,10 @@ The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and
 
 ## Output
 
+`catalog.json` also carries the official river level next to the hub (ANA telemetry station set
+in the area file as `gauge`), refreshed on every `update`: the page draws it behind the pass log
+so the radar result can be read against the river.
+
 `frontend/public/data/monitor/<area>/catalog.json` plus, per pass, `radar.webp`, `water.png`
 (channels narrower than the safe width in amber), `change.png` and `water.npz` (packed water
 mask used for the change layer and `reevaluate`).

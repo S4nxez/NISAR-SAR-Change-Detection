@@ -9,7 +9,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 from river_monitor import (STATUS, assign_access, classify_communities, connectivity,  # noqa: E402
-                           parse_name, water_mask)
+                           parse_gauge, parse_name, water_mask)
 
 PX = 20.0
 WIDTHS = [40, 60, 100, 200, 400]
@@ -139,6 +139,14 @@ class TestAccess(unittest.TestCase):
 
 
 class TestCatalog(unittest.TestCase):
+    def test_parse_gauge_takes_the_daily_median_and_skips_empty_levels(self):
+        rows = "".join(f"<DadosHidrometereologicos><DataHora>{d}</DataHora><Nivel>{n}</Nivel></DadosHidrometereologicos>"
+                       for d, n in [("2026-10-23 07:00:00", "800.00"), ("2026-10-23 08:00:00", "802.00"),
+                                    ("2026-10-23 09:00:00", "900.00"), ("2026-10-24 07:00:00", ""),
+                                    ("2026-10-25 07:00:00", "790.00")])
+        xml = f'<DataSet xmlns="http://MRCS/"><diffgram><DocumentElement>{rows}</DocumentElement></diffgram></DataSet>'
+        self.assertEqual(parse_gauge(xml.encode()), {"2026-10-23": 802.0, "2026-10-25": 790.0})
+
     def test_parse_name(self):
         g = parse_name("NISAR_L2_PR_GCOV_033_161_A_176_2005_DHDH_A_20261023T100258_20261023T100332_P05023_N_F_J_001.h5")
         self.assertEqual((g["track"], g["direction"], g["frame"], g["mode"], g["pol"]), (161, "A", 176, "2005", "DHDH"))

@@ -1,5 +1,5 @@
-// River lifeline monitor. Reads the static files written by processing/river_monitor.py:
-//   public/data/monitor/<area>/catalog.json              area, communities and one entry per pass
+// River Lifeline. Reads the static files written by processing/river_monitor.py:
+//   public/data/monitor/<area>/catalog.json              area, communities, river gauge, one entry per pass
 //   public/data/monitor/<area>/passes/<id>/radar.webp    HH backscatter preview
 //   public/data/monitor/<area>/passes/<id>/water.png     water mask (narrow channels in amber)
 //   public/data/monitor/<area>/passes/<id>/change.png    water lost / gained since the previous pass of the same track
@@ -7,26 +7,35 @@
 const AREA = new URLSearchParams(location.search).get("area") || "tefe";
 const DATA = `./public/data/monitor/${AREA}/`;
 const REFRESH_MS = 10 * 60 * 1000;
+const REPEAT_DAYS = 12; // NISAR repeat cycle: the same track comes back every 12 days
 const CODE = { 0: "no_data", 1: "connected", 2: "at_risk", 3: "isolated" };
 const LABEL = { connected: "Connected", at_risk: "At risk", isolated: "Isolated", no_data: "No data",
-  inland: "Inland", unresolved: "Not resolved" };
-const COLOR = { connected: "#68b6a3", at_risk: "#e4b65c", isolated: "#e47759", no_data: "#6d8491",
-  inland: "#4b5d68", unresolved: "#6d8491" };
+  inland: "Not river-dependent", unresolved: "Not resolvable" };
+const COLOR = { connected: "#7dd3b0", at_risk: "#f2b544", isolated: "#ff6b5b" };
 const SEVERITY = { isolated: 3, at_risk: 2, connected: 1, no_data: 0 };
-const fmt = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+const SVGNS = "http://www.w3.org/2000/svg";
+
+const num = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const shortFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const state = { cat: null, passes: [], evaluated: [], pass: null, prev: null, selected: null, filter: "all",
-  query: "", base: "radar", layers: {}, markers: {}, chart: null, playing: null, day: null };
+  query: "", base: "radar", layers: {}, markers: {}, playing: null, day: null, gauge: new Map(), drawn: false };
 let map, markerLayer, otherLayer;
 
 // ---------------------------------------------------------------- helpers
 const day = iso => new Date(iso + "T00:00:00Z");
-const fmtDay = iso => dayFmt.format(day(iso));
+const iso = d => d.toISOString().slice(0, 10);
+const fmtDay = d => dayFmt.format(day(d));
+const fmtShort = d => shortFmt.format(day(d));
 const daysBetween = (a, b) => Math.round((day(b) - day(a)) / 86400000);
 const passUrl = (p, f) => `${DATA}passes/${p.id}/${f}`;
+const hubName = () => state.cat.area.hub.name;
+const monitored = () => state.cat.communities.filter(c => c.class === "monitored");
+const arrow = p => (p.direction === "ascending" ? "↑" : "↓");
 
 // Isolation seen on a single pass is not confirmed yet (wind or rain can spoil one image):
 // it is shown and counted as at risk until the next pass with data agrees.
@@ -47,37 +56,65 @@ function widthLabel(b) {
   return next ? `${b}–${next} m` : `≥ ${b} m`;
 }
 
+function gaugeOn(d) {
+  for (let k = 0; k <= 3; k++) {
+    for (const s of k ? [-k, k] : [0]) {
+      const v = state.gauge.get(iso(new Date(day(d).getTime() + s * 86400000)));
+      if (v !== undefined) return v;
+    }
+  }
+  return null;
+}
+
 function previousEvaluated(pass) {
   const i = state.evaluated.indexOf(pass);
   return i > 0 ? state.evaluated[i - 1] : null;
 }
 
-function passForDay(iso) {
-  const ev = state.evaluated.filter(p => p.date <= iso);
+function passForDay(d) {
+  const ev = state.evaluated.filter(p => p.date <= d);
   return ev.length ? ev[ev.length - 1] : state.evaluated[0] || state.passes[state.passes.length - 1];
 }
 
+function nextPasses() {
+  const today = iso(new Date());
+  const out = [];
+  // only tracks whose passes cover the whole area; a pass due today may not be published yet
+  for (const track of new Set(state.evaluated.map(p => p.track))) {
+    const seq = state.passes.filter(p => p.track === track);
+    const last = seq[seq.length - 1];
+    let t = day(last.date).getTime() + REPEAT_DAYS * 86400000;
+    while (iso(new Date(t)) < today) t += REPEAT_DAYS * 86400000;
+    out.push({ date: iso(new Date(t)), track, direction: last.direction });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 // ---------------------------------------------------------------- map
+function glyphIcon(status, selected) {
+  const size = status === "connected" || status === "at_risk" || status === "isolated" ? 14 : 9;
+  return L.divIcon({ className: "", iconSize: [size, size],
+    html: `<div class="mk ${status}${selected ? " is-selected" : ""}"></div>` });
+}
+
 function initMap() {
-  map = L.map("map", { zoomControl: true, scrollWheelZoom: true, preferCanvas: true });
-  // OpenStreetMap standard tiles need no API key (CARTO's now do); monitor.css darkens them.
+  map = L.map("map", { zoomControl: true, scrollWheelZoom: true, attributionControl: true, zoomSnap: 0.25 });
+  // OpenStreetMap standard tiles need no API key; monitor.css darkens them.
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors · NISAR: NASA/ISRO, ASF DAAC", maxZoom: 18, className: "basemap-dark"
+    attribution: "© OpenStreetMap contributors · NISAR: NASA/ISRO, ASF DAAC", maxZoom: 18, className: "basemap-dark"
   }).addTo(map);
   map.createPane("radar").style.zIndex = 330;
   map.createPane("water").style.zIndex = 340;
   map.createPane("change").style.zIndex = 350;
   otherLayer = L.layerGroup();
   markerLayer = L.layerGroup().addTo(map);
-  map.fitBounds(state.cat.grid.bounds);
+  map.fitBounds(state.cat.grid.bounds, { paddingTopLeft: [innerWidth > 900 ? 150 : 0, 0] });
 
-  const { hub, river } = state.cat.area;
-  const hubAt = hub.access || hub;
-  L.marker([hubAt.lat, hubAt.lon], { icon: L.divIcon({ className: "", html: '<div class="hub-icon"></div>', iconSize: [16, 16] }), zIndexOffset: 1000 })
-    .bindTooltip(`<strong>${esc(hub.name)}</strong> · hub town`, { className: "community-tip" }).addTo(map);
-  L.circleMarker([river.lat, river.lon], { radius: 5, color: "#fff", weight: 2, fillColor: "#72b8d0", fillOpacity: 1 })
-    .bindTooltip(esc(river.name), { className: "community-tip" }).addTo(map);
-
+  const { hub } = state.cat.area;
+  const at = hub.access || hub;
+  L.marker([at.lat, at.lon], { icon: L.divIcon({ className: "", html: '<div class="hub-mk"></div>', iconSize: [16, 16] }),
+    zIndexOffset: 1000, keyboard: false })
+    .bindTooltip(`<strong>${esc(hub.name)}</strong><br>Hub town: routes are traced to here`, { className: "tip" }).addTo(map);
   placeMarkers();
 }
 
@@ -89,8 +126,8 @@ function placeMarkers() {
   for (const c of state.cat.communities) {
     let m = state.markers[c.id];
     if (!m) {
-      m = L.circleMarker([c.lat, c.lon], { radius: 6, weight: 1.5, color: "#101b25", fillOpacity: 0.95 })
-        .bindTooltip("", { className: "community-tip" })
+      m = L.marker([c.lat, c.lon], { icon: glyphIcon("no_data"), keyboard: false })
+        .bindTooltip("", { className: "tip" })
         .on("click", () => selectCommunity(c.id, false));
       state.markers[c.id] = m;
     }
@@ -99,9 +136,8 @@ function placeMarkers() {
 }
 
 function setOverlay(key, url, pane, opacity, on) {
-  const bounds = state.cat.grid.bounds;
   if (state.layers[key]) { state.layers[key].remove(); state.layers[key] = null; }
-  if (on && url) state.layers[key] = L.imageOverlay(url, bounds, { pane, opacity, interactive: false }).addTo(map);
+  if (on && url) state.layers[key] = L.imageOverlay(url, state.cat.grid.bounds, { pane, opacity, interactive: false }).addTo(map);
 }
 
 function refreshLayers() {
@@ -111,180 +147,297 @@ function refreshLayers() {
   setOverlay("water", passUrl(p, p.files.water), "water", op, $("#toggle-water").checked);
   setOverlay("change", p.files.change && passUrl(p, p.files.change), "change", 1, $("#toggle-change").checked);
   if ($("#toggle-other").checked) otherLayer.addTo(map); else otherLayer.remove();
-  const key = [`<span><i class="key-swatch" style="background:#3d8bff"></i>Water, channel ≥ ${state.cat.area.safe_width_m} m</span>`,
-    `<span><i class="key-swatch" style="background:#ffb020"></i>Narrower channel</span>`];
-  if ($("#toggle-change").checked) key.push('<span><i class="key-swatch" style="background:#e47759"></i>Water lost</span>',
-    '<span><i class="key-swatch" style="background:#68d6e6"></i>Water gained</span>');
-  key.push(...["connected", "at_risk", "isolated"].map(s => `<span><i class="key-swatch round" style="background:${COLOR[s]}"></i>${LABEL[s]}</span>`));
+  const key = [];
+  if ($("#toggle-water").checked) key.push(`<span><i class="swatch" style="background:#3d8bff"></i>Water</span>`,
+    `<span><i class="swatch" style="background:#ffb020"></i>Channel &lt; ${state.cat.area.safe_width_m} m</span>`);
+  if ($("#toggle-change").checked) key.push(`<span><i class="swatch" style="background:#e47759"></i>Water lost</span>`,
+    `<span><i class="swatch" style="background:#68d6e6"></i>Water gained</span>`);
+  key.push(...["connected", "at_risk", "isolated"].map(s => `<span><i class="glyph ${s}"></i>${LABEL[s]}</span>`));
   $("#map-key").innerHTML = key.join("");
 }
 
 function refreshMarkers() {
   for (const c of state.cat.communities) {
     const s = statusOf(state.pass, c);
-    const m = state.markers[c.id];
     const r = state.pass.status?.[c.id];
-    m.setStyle({ fillColor: COLOR[s], radius: c.id === state.selected ? 9 : c.class === "monitored" ? 6 : 4,
-      color: c.id === state.selected ? "#fff" : "#101b25" });
+    const m = state.markers[c.id];
+    m.setIcon(glyphIcon(s, c.id === state.selected));
+    m.setZIndexOffset(SEVERITY[s] ? SEVERITY[s] * 100 : 0);
     m.setTooltipContent(`<strong>${esc(c.name)}</strong> · ${LABEL[s]}` +
-      (c.class === "monitored" && r && r[0] ? `<br>route: ${widthLabel(r[1])} · water ${fmt.format(r[2])} m away` : ""));
+      (c.class === "monitored" && r && r[0] ? `<br>Narrowest point ${widthLabel(r[1])} · water ${num.format(r[2])} m away` : ""));
   }
 }
 
-// ---------------------------------------------------------------- timeline
-function renderTimeline() {
-  const el = $("#timeline");
-  const ps = state.passes;
-  if (!ps.length) return;
-  const t0 = day(ps[0].date).getTime(), t1 = Math.max(day(ps[ps.length - 1].date).getTime(), t0 + 86400000);
-  const x = iso => 1 + 98 * (day(iso).getTime() - t0) / (t1 - t0);
-  const parts = ['<div class="tl-axis"></div>'];
-  const m = new Date(t0); m.setUTCDate(1);
-  while (m.getTime() <= t1) {
-    if (m.getTime() >= t0) parts.push(`<span class="tl-month" style="left:${x(m.toISOString().slice(0, 10))}%">${m.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })} ${String(m.getUTCFullYear()).slice(2)}</span>`);
-    m.setUTCMonth(m.getUTCMonth() + 1);
+// ---------------------------------------------------------------- headline and plate
+function renderHeadline() {
+  const p = state.pass;
+  const total = monitored().length;
+  const meta = [fmtDay(p.date), `${total} communities watched`];
+  if (state.day && state.day !== p.date) meta.push(`latest pass before ${fmtShort(state.day)}, ${daysBetween(p.date, state.day)} days earlier`);
+  $("#headline-meta").textContent = meta.join(" · ");
+  if (!p.evaluated || !p.counts) {
+    $("#headline-text").textContent = "This pass covers only part of the area.";
+    $("#headline-sub").textContent = `The radar image is shown, but communities are not evaluated (${Math.round(p.coverage * 100)} % covered). Pick a full pass in the log below.`;
+    return;
   }
-  const worst = Math.max(1, ...state.evaluated.map(p => p.counts.isolated));
-  for (const p of ps) {
-    const ev = p.evaluated && p.counts;
-    let color = "";
-    if (ev) {
-      const t = p.counts.isolated / worst;
-      color = p.counts.isolated === 0 ? COLOR.connected : t < 0.67 ? COLOR.at_risk : COLOR.isolated;
-    }
-    parts.push(`<button type="button" role="option" class="tl-pass ${ev ? "ev" : "partial"} ${p === state.pass ? "is-selected" : ""}"
-      style="left:${x(p.date)}%;${ev ? `background:${color}` : ""}" data-id="${p.id}"
-      aria-label="${fmtDay(p.date)}, track ${p.track} ${p.direction}${ev ? "" : ", partial coverage"}"
-      title="${fmtDay(p.date)} · track ${p.track} ${p.direction}${ev ? ` · isolated ${p.counts.isolated}` : " · partial coverage"}"></button>`);
-  }
-  el.innerHTML = parts.join("");
-  el.querySelectorAll(".tl-pass").forEach(b => b.addEventListener("click", () => selectPass(b.dataset.id, true)));
-  $("#pass-count").textContent = `${state.evaluated.length} evaluated / ${ps.length} passes`;
+  const n = p.counts.isolated, risk = p.counts.at_risk;
+  const count = `<span class="count" style="color:${n ? COLOR.isolated : COLOR.connected}">${n}</span>`;
+  $("#headline-text").innerHTML = n === 0
+    ? `${count} communities have lost their water route to ${esc(hubName())}.`
+    : `${count} ${n === 1 ? "community has" : "communities have"} lost the water route to ${esc(hubName())}.`;
+  const fresh = p.unconfirmed?.length || 0;
+  const bits = [];
+  if (risk) bits.push(`${risk} more can only reach it through channels narrower than ${state.cat.area.safe_width_m} m${fresh ? `, ${fresh} of them with no route on this pass for the first time` : ""}.`);
+  else bits.push(`Every other watched community has a route at least ${state.cat.area.safe_width_m} m wide.`);
+  $("#headline-sub").textContent = bits.join(" ");
 }
 
-// ---------------------------------------------------------------- stats, list, detail
-function renderStats() {
-  const p = state.pass, prev = state.prev;
-  const total = state.cat.communities.filter(c => c.class === "monitored").length;
-  for (const s of ["connected", "at_risk", "isolated"]) {
-    const n = p.counts ? p.counts[s] : null;
-    $(`#stat-${s}`).innerHTML = n === null ? "—" : `${n}<small>/ ${total}</small>`;
-    const d = p.counts && prev?.counts ? n - prev.counts[s] : null;
-    const base = { connected: `water route ≥ ${state.cat.area.safe_width_m} m wide`, at_risk: `route narrower than ${state.cat.area.safe_width_m} m`, isolated: "no water route to the hub" }[s];
-    $(`#stat-${s}-foot`).innerHTML = d ? `<b>${d > 0 ? "+" : ""}${d}</b> since ${fmtDay(prev.date)}` : base;
-  }
-  const { hub, river } = state.cat.area;
-  $("#link-label").textContent = `${hub.name.toUpperCase()} ↔ MAIN RIVER`;
-  const link = p.hub_link;
-  const ls = link ? CODE[link[0]] : "no_data";
-  $("#stat-link").innerHTML = link ? `<span style="color:${COLOR[ls]}">${widthLabel(link[1])}</span>` : "—";
-  $("#stat-link-foot").textContent = link ? `${LABEL[ls]} · narrowest point to the ${river.name}` : "not evaluated on this pass";
+function renderPlate() {
+  const p = state.pass;
+  const parts = [`<b>NISAR</b>`, "L-band HH", `Track ${p.track} ${arrow(p)} ${p.direction}`, `${fmtDay(p.date)} ${p.time_utc} UTC`,
+    `${state.cat.grid.pixel_m} m grid`, `${Math.round(p.coverage * 100)} % of the area`];
+  if (p.beta) parts.push("beta product");
+  $("#plate").innerHTML = parts.join(" · ");
 }
 
+// ---------------------------------------------------------------- roster
 function rows() {
   const p = state.pass, prev = state.prev;
-  return state.cat.communities.filter(c => c.class === "monitored").map(c => {
+  return monitored().map(c => {
     const s = statusOf(p, c), was = prev ? statusOf(prev, c) : null;
     return { c, s, r: p.status?.[c.id], was: was && was !== s && s !== "no_data" && was !== "no_data" ? was : null };
   });
 }
 
-function renderList() {
+function renderRoster() {
   const q = state.query.trim().toLowerCase();
-  let list = rows().filter(x => (!q || x.c.name.toLowerCase().includes(q)) &&
+  const all = rows();
+  const list = all.filter(x => (!q || x.c.name.toLowerCase().includes(q)) &&
     (state.filter === "all" || (state.filter === "changed" ? x.was : x.s === state.filter)));
   list.sort((a, b) => SEVERITY[b.s] - SEVERITY[a.s] || (a.r?.[1] ?? -1) - (b.r?.[1] ?? -1) || a.c.name.localeCompare(b.c.name));
   const el = $("#community-list");
-  el.innerHTML = list.length ? "" : '<p class="section-copy">No community matches.</p>';
+  el.innerHTML = list.length ? "" : `<li class="empty">No community matches this filter on ${fmtShort(state.pass.date)}.</li>`;
   for (const { c, s, r, was } of list) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = `site-item ${state.selected === c.id ? "is-selected" : ""}`;
-    b.dataset.id = c.id;
-    b.innerHTML = `<span class="status-dot-s st-${s}"></span>
-      <span class="site-main"><strong>${esc(c.name)}</strong><small>${esc(c.place)}${c.population ? " · " + c.population.toLocaleString("en-GB") + " people" : ""}</small></span>
-      <span class="site-change"><b>${r && r[0] ? widthLabel(r[1]) : "—"}</b>${unconfirmed(state.pass, c) ? '<span class="was">route lost, to confirm</span>' :
-        was ? `<span class="was">was ${LABEL[was].toLowerCase()}</span>` : ""}</span>`;
-    b.addEventListener("click", () => selectCommunity(c.id, true));
-    el.appendChild(b);
+    const li = document.createElement("li");
+    const note = unconfirmed(state.pass, c) ? "<em>route lost, to confirm</em>" : was ? `<em>was ${LABEL[was].toLowerCase()}</em>` : "";
+    li.innerHTML = `<button type="button" class="${state.selected === c.id ? "is-selected" : ""}" data-id="${c.id}">
+      <i class="glyph ${s}" aria-label="${LABEL[s]}"></i>
+      <span class="who"><strong>${esc(c.name)}</strong><small>${esc(c.place)}${c.population ? ` · ${c.population.toLocaleString("en-GB")} people` : ""}</small></span>
+      <span class="route"><b>${r && r[0] ? widthLabel(r[1]) : "—"}</b>${note}</span></button>`;
+    li.firstElementChild.addEventListener("click", () => selectCommunity(c.id, true));
+    el.appendChild(li);
   }
-  const cls = state.cat.community_classes || {};
-  $("#community-count").textContent = `${list.length} shown`;
-  $("#community-count").title = `${cls.monitored || 0} monitored · ${cls.unresolved || 0} not resolved · ${cls.inland || 0} inland`;
+  $("#roster-count").textContent = `${list.length} of ${all.length}`;
 }
 
-function renderDetail() {
+// ---------------------------------------------------------------- pass log (signature)
+function svg(tag, attrs = {}, parent) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+function renderSwath() {
+  const el = $("#swath");
+  el.innerHTML = "";
+  const W = Math.max(320, el.clientWidth || 900), H = el.clientHeight || 240;
+  el.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const L0 = 6, R0 = W - 54, top = 26, base = H - 30;
+  const ps = state.passes;
+  const ghosts = nextPasses();
+  const today = iso(new Date());
+  const t0 = day(ps[0].date).getTime() - 10 * 86400000;
+  const tEnd = Math.max(day(ps[ps.length - 1].date).getTime(), day(today).getTime(), ...ghosts.map(g => day(g.date).getTime())) + 6 * 86400000;
+  const X = d => L0 + (R0 - L0) * (day(d).getTime() - t0) / (tEnd - t0);
+
+  // axis: months
+  const axis = svg("g", { class: "axis" }, el);
+  svg("line", { x1: L0, x2: R0, y1: base, y2: base }, axis);
+  const m = new Date(t0); m.setUTCDate(1); m.setUTCMonth(m.getUTCMonth() + 1);
+  while (m.getTime() <= tEnd) {
+    const x = X(iso(m));
+    svg("line", { x1: x, x2: x, y1: base, y2: base + 5 }, axis);
+    const t = svg("text", { x, y: base + 18, "text-anchor": "middle" }, axis);
+    t.textContent = m.toLocaleString("en-GB", { month: "short", timeZone: "UTC" }) + (m.getUTCMonth() === 0 ? ` ${m.getUTCFullYear()}` : "");
+    m.setUTCMonth(m.getUTCMonth() + 1);
+  }
+
+  // long gaps between passes are a fact of the record, not missing rendering
+  for (let i = 1; i < ps.length; i++) {
+    if (daysBetween(ps[i - 1].date, ps[i].date) > 60) {
+      const t = svg("text", { x: (X(ps[i - 1].date) + X(ps[i].date)) / 2, y: base - 8, "text-anchor": "middle" }, axis);
+      t.textContent = "no NISAR data published";
+    }
+  }
+
+  // river gauge
+  const gs = (state.cat.gauge?.series || []).filter(([d]) => day(d).getTime() >= t0 && day(d).getTime() <= tEnd);
+  if (gs.length > 1) {
+    const vals = gs.map(([, v]) => v);
+    const lo = Math.floor((Math.min(...vals) - 60) / 100) * 100, hi = Math.ceil((Math.max(...vals) + 60) / 100) * 100;
+    const Y = v => base - (base - top) * (v - lo) / (hi - lo);
+    let path = "", prevT = null;
+    for (const [d, v] of gs) {
+      const gap = prevT !== null && day(d).getTime() - prevT > 5 * 86400000;
+      path += `${!path || gap ? "M" : "L"}${X(d).toFixed(1)},${Y(v).toFixed(1)}`;
+      prevT = day(d).getTime();
+    }
+    svg("path", { d: path, class: "gauge-line" }, el);
+    for (const v of [lo, (lo + hi) / 2, hi]) {
+      const t = svg("text", { x: R0 + 8, y: Y(v) + 3, class: "gauge-tick" }, el);
+      t.textContent = `${Math.round(v)}`;
+    }
+    const lbl = svg("text", { x: R0 + 8, y: top - 10, class: "gauge-label" }, el);
+    lbl.textContent = "cm";
+  }
+
+  // today and the next passes the 12-day cycle puts over the area
+  const xt = X(today);
+  svg("line", { x1: xt, x2: xt, y1: top - 6, y2: base, class: "today" }, el);
+  const tt = svg("text", { x: xt + 4, y: top - 10, class: "gauge-tick" }, el); tt.textContent = "today";
+
+  const minGap = Math.min(...ps.slice(1).map((p, i) => X(p.date) - X(ps[i].date)).filter(v => v > 0), 40);
+  const w = Math.max(4, Math.min(12, minGap * 0.62));
+  const lean = w * 0.9, h = Math.min(130, base - top - 34), yb = base - 2, yt = yb - h;
+  const shape = (x, dir, ya, yz) => {          // parallelogram slice between heights ya (lower) and yz (upper)
+    const s = dir === "ascending" ? lean : -lean;
+    const off = y => s * (yb - y) / h;
+    return `${x - w / 2 + off(ya)},${ya} ${x + w / 2 + off(ya)},${ya} ${x + w / 2 + off(yz)},${yz} ${x - w / 2 + off(yz)},${yz}`;
+  };
+
+  for (const g of ghosts) {
+    const ghost = svg("polygon", { points: shape(X(g.date), g.direction, yb, yt), class: "ghost" }, el);
+    svg("title", {}, ghost).textContent = `Expected pass ${fmtDay(g.date)} · track ${g.track} ${g.direction}`;
+  }
+
+  const seen = new Map();
+  ps.forEach((p, i) => {
+    const dup = seen.get(p.date) || 0;
+    seen.set(p.date, dup + 1);
+    const x = X(p.date) + dup * (w + 2);
+    const g = svg("g", { class: `strip${p.evaluated && p.counts ? "" : " partial"}${p === state.pass ? " is-selected" : ""}`,
+      tabindex: "0", role: "button", "data-id": p.id }, el);
+    const ev = p.evaluated && p.counts;
+    if (ev) {
+      const tot = p.counts.connected + p.counts.at_risk + p.counts.isolated || 1;
+      let y = yb;
+      for (const s of ["isolated", "at_risk", "connected"]) {   // what matters sits on the baseline
+        const hh = h * p.counts[s] / tot;
+        if (hh > 0) svg("polygon", { points: shape(x, p.direction, y, y - hh), class: `seg-${s}` }, g);
+        y -= hh;
+      }
+    }
+    svg("polygon", { points: shape(x, p.direction, yb, yt), class: "shell" }, g);
+    const lvl = gaugeOn(p.date);
+    const title = svg("title", {}, g);
+    title.textContent = `${fmtDay(p.date)} · track ${p.track} ${p.direction}` +
+      (ev ? ` · isolated ${p.counts.isolated}, at risk ${p.counts.at_risk}, connected ${p.counts.connected}` : " · partial coverage, image only") +
+      (lvl !== null ? ` · river ${Math.round(lvl)} cm` : "");
+    g.setAttribute("aria-label", title.textContent);
+    // one-off "downlink" reveal on first draw; skipped when motion is reduced or the page is hidden
+    // (hidden pages pause animations, which would leave the strips invisible)
+    if (!state.drawn && !reducedMotion && document.visibilityState === "visible") {
+      g.classList.add("strip-in");
+      g.style.animationDelay = `${i * 40}ms`;
+      g.addEventListener("animationend", () => { g.classList.remove("strip-in"); g.style.animationDelay = ""; }, { once: true });
+    }
+    g.addEventListener("click", () => selectPass(p.id, true));
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPass(p.id, true); } });
+  });
+  if (!state.drawn) {   // never leave strips hidden if the animation did not run (throttled or frozen page)
+    setTimeout(() => el.querySelectorAll(".strip-in").forEach(g => { g.classList.remove("strip-in"); g.style.animationDelay = ""; }),
+      600 + ps.length * 40 + 500);
+  }
+  state.drawn = true;
+  markSelectedStrip();
+
+  const ng = ghosts[0];
+  $("#next-pass-note").innerHTML = ng ? `Next pass over the area<br><b>${fmtDay(ng.date)}</b> · track ${ng.track} ${ng.direction === "ascending" ? "↑" : "↓"}` +
+    (ng.date === today ? "<br>acquired today, published within days" : "") : "";
+}
+
+function markSelectedStrip() {
+  const el = $("#swath");
+  el.querySelector(".sel-label")?.remove();
+  el.querySelectorAll(".strip").forEach(g => g.classList.toggle("is-selected", g.dataset.id === state.pass?.id));
+  const g = el.querySelector(".strip.is-selected");
+  if (!g) return;
+  const b = g.getBBox();
+  const W = el.viewBox.baseVal.width;
+  const t = svg("text", { x: Math.min(b.x + b.width / 2, W - 80), y: b.y - 8, "text-anchor": "middle", class: "sel-label" }, el);
+  t.textContent = fmtShort(state.pass.date).toUpperCase();
+}
+
+// ---------------------------------------------------------------- ledger and dossier
+function delta(d, unit = "") {
+  if (d === null || d === undefined || Number.isNaN(d)) return "";
+  if (Math.round(d * 10) === 0) return "no change";
+  return `<b>${d > 0 ? "+" : "−"}${num.format(Math.abs(d))}${unit}</b>`;
+}
+
+function renderLedger() {
+  const p = state.pass, prev = state.prev;
+  const total = monitored().length;
+  const since = prev ? ` since ${fmtShort(prev.date)}` : "";
+  const out = [];
+  const row = (label, value, note) => out.push(`<div class="row"><dt>${label}</dt><dd>${value}</dd><dd class="delta">${note || "&nbsp;"}</dd></div>`);
+  if (p.counts) {
+    for (const s of ["isolated", "at_risk", "connected"]) {
+      const d = prev?.counts ? p.counts[s] - prev.counts[s] : null;
+      row(`<i class="glyph ${s}"></i>${LABEL[s]}`, `${p.counts[s]} <small>/ ${total}</small>`, d === null ? "" : `${delta(d)}${since}`);
+    }
+    const link = p.hub_link;
+    row(`Route ${esc(hubName())} ↔ ${esc(state.cat.area.river.name)}`, link ? widthLabel(link[1]) : "—", "narrowest point of the town's own route");
+  } else {
+    row("Communities", "—", "pass covers part of the area: not evaluated");
+  }
+  const ch = p.change ? `${delta(-p.change.lost_km2, " km²")} lost, ${delta(p.change.gained_km2, " km²")} gained since the last pass of this track` : "";
+  row("Water in view", `${num.format(p.water_km2)} <small>km²</small>`, ch);
+  const lvl = gaugeOn(p.date);
+  if (lvl !== null) {
+    const pl = prev ? gaugeOn(prev.date) : null;
+    row(`River at ${esc(state.cat.gauge.name)}`, `${Math.round(lvl)} <small>cm</small>`, pl !== null ? `${delta(lvl - pl, " cm")}${since}` : "");
+  }
+  $("#ledger").innerHTML = out.join("");
+}
+
+function renderDossier() {
   const c = state.cat.communities.find(x => x.id === state.selected);
   if (!c) return;
   const p = state.pass, s = statusOf(p, c), r = p.status?.[c.id];
-  $("#detail-title").textContent = c.name;
+  $("#dossier-title").textContent = "Community";
   if (c.class !== "monitored") {
-    $("#detail").innerHTML = `<p class="section-copy"><span class="badge" style="background:${COLOR[c.class]};color:#edf4f7">${LABEL[c.class]}</span></p>
-      <p class="section-copy">${c.class === "inland" ? "No water within " + state.cat.area.access_radius_m + " m on any pass: this place does not depend on the river, so it is not monitored." :
-        "There is water nearby, but no pass shows a water route to the hub that the radar can resolve at 20 m (very narrow streams). Its status would be a guess, so it is left out of the counts."}</p>`;
+    $("#dossier").innerHTML = `<p class="name">${esc(c.name)}</p>
+      <p class="status-line"><i class="glyph ${c.class}"></i>${LABEL[c.class]}</p>
+      <p class="quiet" style="margin-top:10px">${c.class === "inland"
+        ? `No water within ${state.cat.area.access_radius_m} m on any pass: this place does not depend on the river, so it is not monitored.`
+        : "No pass shows a water route to the hub that the radar can resolve at 20 m: the streams here are too narrow. Its status would be a guess, so it is left out of the counts."}</p>`;
     return;
   }
   const hist = state.evaluated.map(q => ({ q, s: statusOf(q, c), r: q.status?.[c.id] }));
   const levels = [null, 0, ...state.cat.area.widths_m];
   const bars = hist.map(({ q, s, r }) => {
-    const h = r && r[0] ? 12 + 88 * Math.max(0, levels.indexOf(r[1])) / (levels.length - 1) : 8;
-    return `<i class="${q === p ? "is-current" : ""}" style="height:${h}%;background:${COLOR[s]}" title="${fmtDay(q.date)} · ${LABEL[s]} · ${r && r[0] ? widthLabel(r[1]) : "—"}"></i>`;
+    const hpc = r && r[0] ? 16 + 84 * Math.max(0, levels.indexOf(r[1])) / (levels.length - 1) : 10;
+    return `<i class="${s}${q.direction === "descending" ? " d" : ""}${q === p ? " is-current" : ""}" style="height:${hpc}%"
+      title="${fmtDay(q.date)} · ${LABEL[s]} · ${r && r[0] ? widthLabel(r[1]) : "—"}"></i>`;
   }).join("");
   const lastOk = [...hist].reverse().find(h => h.q.date <= p.date && (h.s === "connected" || h.s === "at_risk"));
-  $("#detail").innerHTML = `
-    <p class="section-copy"><span class="badge" style="background:${COLOR[s]}">${LABEL[s].toUpperCase()}</span> on ${fmtDay(p.date)}${unconfirmed(p, c) ?
-      " · no water route on this pass; isolation is confirmed if the next pass agrees" : ""}</p>
-    <div class="detail-facts">
-      <div><span>NARROWEST POINT OF THE ROUTE</span><strong>${r && r[0] ? widthLabel(r[1]) : "—"}</strong></div>
-      <div><span>NEAREST WATER</span><strong>${r && r[0] ? fmt.format(r[2]) + " m" : "—"}</strong></div>
-      <div><span>TYPE</span><strong>${esc(c.place)}</strong></div>
-      <div><span>MEASURED FROM</span><strong>${c.access ? esc(c.access_source) : "the place itself"}</strong></div>
-      <div><span>LAST LINKED TO ${esc(state.cat.area.hub.name.toUpperCase())}</span><strong>${lastOk ? fmtDay(lastOk.q.date) : "—"}</strong></div>
+  const fact = (k, v) => `<div><span>${k}</span><strong>${v}</strong></div>`;
+  $("#dossier").innerHTML = `
+    <p class="name">${esc(c.name)}</p>
+    <p class="status-line"><i class="glyph ${s}"></i>${LABEL[s]} on ${fmtDay(p.date)}</p>
+    ${unconfirmed(p, c) ? `<p class="quiet">No water route on this pass. It counts as isolated if the next pass agrees.</p>` : ""}
+    <div class="facts">
+      ${fact("Narrowest point of the route", r && r[0] ? widthLabel(r[1]) : "—")}
+      ${fact("Nearest water", r && r[0] ? `${num.format(r[2])} m` : "—")}
+      ${fact(`Last linked to ${esc(hubName())}`, lastOk ? fmtDay(lastOk.q.date) : "—")}
+      ${fact("Measured from", c.access ? esc(c.access_source) : "the place itself")}
+      ${fact("Type", `${esc(c.place)}${c.population ? ` · ${c.population.toLocaleString("en-GB")} people` : ""}`)}
     </div>
-    <span class="stat-label">ROUTE WIDTH ON EVERY EVALUATED PASS</span>
+    <p class="history-title">Route width on every evaluated pass</p>
     <div class="history">${bars}</div>
     <div class="history-axis"><span>${hist.length ? fmtDay(hist[0].q.date) : ""}</span><span>${hist.length ? fmtDay(hist[hist.length - 1].q.date) : ""}</span></div>`;
-}
-
-function renderNote() {
-  const p = state.pass;
-  const bits = [`<strong>${fmtDay(p.date)}</strong> · NISAR track ${p.track} ${p.direction} · ${p.time_utc} UTC`];
-  if (state.day && state.day !== p.date) bits.push(`latest observation before ${fmtDay(state.day)} (${daysBetween(p.date, state.day)} days earlier)`);
-  if (!p.evaluated) bits.push(`only ${Math.round(p.coverage * 100)} % of the area is covered: water image only, communities not evaluated`);
-  if (p.beta) bits.push("beta product");
-  const note = $("#pass-note");
-  note.innerHTML = bits.join(" · ");
-  note.hidden = false;
-  $("#date-help").textContent = `${state.passes.length} passes from ${fmtDay(state.passes[0].date)} to ${fmtDay(state.passes[state.passes.length - 1].date)}`;
-  $("#map-title").textContent = `River map · ${fmtDay(p.date)}`;
-  const ch = p.change ? ` · since ${fmtDay(state.passes.find(q => q.id === p.change.since)?.date || p.date)}: −${fmt.format(p.change.lost_km2)} / +${fmt.format(p.change.gained_km2)} km² water` : "";
-  $("#map-foot").textContent = `Water ${fmt.format(p.water_km2)} km² · narrow channels ${fmt.format(p.narrow_km2)} km²${ch}`;
-}
-
-// ---------------------------------------------------------------- chart
-function renderChart() {
-  const ev = state.evaluated;
-  const data = {
-    labels: ev.map(p => fmtDay(p.date)),
-    datasets: [
-      ...["isolated", "at_risk", "connected"].map(s => ({ type: "bar", label: LABEL[s], data: ev.map(p => p.counts[s]),
-        backgroundColor: COLOR[s], stack: "c", yAxisID: "y", borderRadius: 3 })),
-      { type: "line", label: "Water (km²)", data: ev.map(p => p.water_km2), borderColor: "#72b8d0", backgroundColor: "#72b8d0",
-        yAxisID: "y2", tension: 0.25, pointRadius: 2 }
-    ]
-  };
-  const opts = {
-    responsive: true, maintainAspectRatio: false, animation: false,
-    plugins: { legend: { labels: { color: "#93a7b3", boxWidth: 10, font: { size: 11 } } } },
-    scales: {
-      x: { stacked: true, ticks: { color: "#6d8491", maxRotation: 0, autoSkipPadding: 12, font: { size: 10 } }, grid: { display: false } },
-      y: { stacked: true, ticks: { color: "#6d8491", font: { size: 10 } }, grid: { color: "#2a3c48" }, title: { display: true, text: "communities", color: "#6d8491" } },
-      y2: { position: "right", ticks: { color: "#72b8d0", font: { size: 10 } }, grid: { display: false }, title: { display: true, text: "water km²", color: "#72b8d0" } }
-    },
-    onClick: (_, els) => { if (els.length) selectPass(ev[els[0].index].id, true); }
-  };
-  if (state.chart) state.chart.destroy();
-  if (window.Chart) state.chart = new Chart($("#trend-chart"), { data, options: opts });
 }
 
 // ---------------------------------------------------------------- selection
@@ -296,21 +449,22 @@ function selectPass(id, fromUser) {
   if (fromUser) { state.day = p.date; $("#date-input").value = p.date; }
   refreshLayers();
   refreshMarkers();
-  renderStats();
-  renderNote();
-  renderList();
-  renderDetail();
-  document.querySelectorAll(".tl-pass").forEach(b => b.classList.toggle("is-selected", b.dataset.id === id));
+  renderHeadline();
+  renderPlate();
+  renderRoster();
+  renderLedger();
+  renderDossier();
+  markSelectedStrip();
   writeHash();
 }
 
 function selectCommunity(id, fly) {
   state.selected = id;
   const c = state.cat.communities.find(x => x.id === id);
-  if (c && fly) map.flyTo([c.lat, c.lon], Math.max(map.getZoom(), 12), { duration: 0.6 });
+  if (c && fly) map.flyTo([c.lat, c.lon], Math.max(map.getZoom(), 12), { duration: reducedMotion ? 0 : 0.6 });
   refreshMarkers();
-  renderList();
-  renderDetail();
+  renderRoster();
+  renderDossier();
   writeHash();
 }
 
@@ -330,9 +484,13 @@ function step(dir) {
 
 function togglePlay() {
   const btn = $("#play");
-  if (state.playing) { clearInterval(state.playing); state.playing = null; btn.classList.remove("is-on"); btn.textContent = "▶"; return; }
+  if (state.playing) {
+    clearInterval(state.playing); state.playing = null;
+    btn.setAttribute("aria-pressed", "false"); btn.textContent = "Play record";
+    return;
+  }
   if (state.evaluated.indexOf(state.pass) === state.evaluated.length - 1) selectPass(state.evaluated[0].id, true);
-  btn.classList.add("is-on"); btn.textContent = "❚❚";
+  btn.setAttribute("aria-pressed", "true"); btn.textContent = "Pause";
   state.playing = setInterval(() => {
     if (state.evaluated.indexOf(state.pass) >= state.evaluated.length - 1) return togglePlay();
     step(1);
@@ -349,11 +507,11 @@ function download(name, text, type) {
 }
 
 function exportCsv() {
-  const head = ["community", "place", "lat", "lon", "status", "route_narrowest_m", "nearest_water_m", "pass_date", "track"];
+  const head = ["community", "place", "lat", "lon", "status", "route_narrowest", "nearest_water_m", "measured_from", "pass_date", "track"];
   const lines = [head.join(",")];
   for (const { c, s, r } of rows()) {
     lines.push([`"${c.name.replace(/"/g, '""')}"`, c.place, c.lat, c.lon, s, r && r[0] ? widthLabel(r[1]) : "", r && r[0] ? r[2] : "",
-      state.pass.date, state.pass.track].join(","));
+      `"${c.access ? c.access_source : "place"}"`, state.pass.date, state.pass.track].join(","));
   }
   download(`communities_${AREA}_${state.pass.date}.csv`, lines.join("\n"), "text/csv");
 }
@@ -361,7 +519,8 @@ function exportCsv() {
 function exportGeojson() {
   const features = rows().map(({ c, s, r }) => ({ type: "Feature", geometry: { type: "Point", coordinates: [c.lon, c.lat] },
     properties: { name: c.name, place: c.place, status: s, route_narrowest: r && r[0] ? widthLabel(r[1]) : null,
-      nearest_water_m: r && r[0] ? r[2] : null, pass_date: state.pass.date, track: state.pass.track } }));
+      nearest_water_m: r && r[0] ? r[2] : null, measured_from: c.access ? c.access_source : "place",
+      pass_date: state.pass.date, track: state.pass.track } }));
   download(`communities_${AREA}_${state.pass.date}.geojson`, JSON.stringify({ type: "FeatureCollection", features }, null, 1), "application/geo+json");
 }
 
@@ -375,12 +534,16 @@ async function loadCatalog() {
 function applyCatalog(cat) {
   state.cat = cat;
   state.passes = cat.passes.filter(p => p.shown !== false);
-  state.evaluated = cat.passes.filter(p => p.evaluated && p.counts);
-  $("#area-eyebrow").textContent = `${cat.area.name.toUpperCase()} · ${cat.area.country.toUpperCase()}`;
-  $("#footer-sources").textContent = `Radar: ${cat.sources.radar} · Places: ${cat.sources.places} · last search for new passes ${cat.last_search ? cat.last_search.replace("T", " ").replace("Z", " UTC") : "—"} · prototype, not an official alert system`;
+  state.evaluated = state.passes.filter(p => p.evaluated && p.counts);
+  state.gauge = new Map((cat.gauge?.series || []).map(([d, v]) => [d, v]));
+  $("#mast-mission").textContent = `NISAR L-band radar · ${cat.area.name}`;
+  $("#gauge-name").textContent = cat.gauge?.name || "the town gauge";
+  $("#foot-sources").textContent = `Radar: ${cat.sources.radar} · Places: ${cat.sources.places}` +
+    (cat.gauge ? ` · River level: ${cat.gauge.source}` : "");
+  $("#foot-search").textContent = cat.last_search ? `Last check for new passes: ${cat.last_search.replace("T", " ").replace("Z", " UTC")}` : "";
   const di = $("#date-input");
-  di.min = cat.passes[0].date;
-  di.max = new Date().toISOString().slice(0, 10);
+  di.min = state.passes[0].date;
+  di.max = iso(new Date());
 }
 
 function bindUi() {
@@ -393,20 +556,29 @@ function bindUi() {
   $("#prev-pass").addEventListener("click", () => step(-1));
   $("#next-pass").addEventListener("click", () => step(1));
   $("#play").addEventListener("click", togglePlay);
-  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".layers-base button").forEach(b => b.addEventListener("click", () => {
     state.base = b.dataset.base;
-    document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("is-on", x === b));
+    document.querySelectorAll(".layers-base button").forEach(x => x.classList.toggle("is-on", x === b));
     refreshLayers();
   }));
   ["#toggle-water", "#toggle-change", "#toggle-other", "#opacity"].forEach(s => $(s).addEventListener("input", refreshLayers));
-  $("#search").addEventListener("input", e => { state.query = e.target.value; renderList(); });
-  document.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+  $("#search").addEventListener("input", e => { state.query = e.target.value; renderRoster(); });
+  document.querySelectorAll(".filter").forEach(b => b.addEventListener("click", () => {
     state.filter = b.dataset.filter;
-    document.querySelectorAll(".chip").forEach(x => x.classList.toggle("is-on", x === b));
-    renderList();
+    document.querySelectorAll(".filter").forEach(x => x.classList.toggle("is-on", x === b));
+    renderRoster();
   }));
   $("#export-csv").addEventListener("click", exportCsv);
   $("#export-geojson").addEventListener("click", exportGeojson);
+  let t;
+  addEventListener("resize", () => { clearTimeout(t); t = setTimeout(renderSwath, 150); });
+}
+
+function showNotice(html) {
+  const n = document.createElement("div");
+  n.className = "notice";
+  n.innerHTML = html;
+  document.querySelector(".scene-map").appendChild(n);
 }
 
 async function boot() {
@@ -414,34 +586,33 @@ async function boot() {
   try {
     cat = await loadCatalog();
   } catch {
-    const note = $("#pass-note");
-    note.innerHTML = `<strong>NO DATA YET</strong> Run <code>python processing/river_monitor.py communities</code> and <code>python processing/river_monitor.py update</code> to build public/data/monitor/${esc(AREA)}/catalog.json.`;
-    note.hidden = false;
+    $("#headline-meta").textContent = "No record yet";
+    $("#headline-text").textContent = "The pass record has not been built.";
+    showNotice(`Run <code>python processing/river_monitor.py communities</code> and <code>python processing/river_monitor.py update</code>, then reload this page.`);
     return;
   }
   if (!cat.passes?.length) return;
   applyCatalog(cat);
   initMap();
   bindUi();
-  renderTimeline();
-  renderChart();
   const h = new URLSearchParams(location.hash.slice(1));
   state.selected = h.get("c");
-  state.day = h.get("d") || state.evaluated[state.evaluated.length - 1]?.date || cat.passes[cat.passes.length - 1].date;
+  state.day = h.get("d") || state.evaluated[state.evaluated.length - 1]?.date || state.passes[state.passes.length - 1].date;
   $("#date-input").value = state.day;
-  selectPass(passForDay(state.day).id, false);
+  state.pass = passForDay(state.day);
+  renderSwath();
+  selectPass(state.pass.id, false);
 
   // The watcher (river_monitor.py watch) keeps adding passes; pick them up without a reload.
   setInterval(async () => {
     try {
       const fresh = await loadCatalog();
-      if (fresh.passes.length === state.passes.length && fresh.last_search === state.cat.last_search) return;
+      if (fresh.passes.length === state.cat.passes.length && fresh.last_search === state.cat.last_search) return;
       const atLatest = state.pass === state.evaluated[state.evaluated.length - 1];
       const keep = state.pass.id;
       applyCatalog(fresh);
       placeMarkers();
-      renderTimeline();
-      renderChart();
+      renderSwath();
       const latest = state.evaluated[state.evaluated.length - 1];
       selectPass(atLatest && latest ? latest.id : keep, atLatest);
     } catch { /* keep the current view if the refresh fails */ }

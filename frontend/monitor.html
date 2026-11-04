@@ -3,104 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101b25">
-  <meta name="description" content="River lifeline monitor — which riverside communities are being cut off by the drought, from NISAR radar passes.">
-  <title>River Lifeline Monitor | SAR Observatory</title>
-  <link rel="preconnect" href="https://unpkg.com">
+  <meta name="theme-color" content="#0b1222">
+  <meta name="description" content="River Lifeline — which riverside communities around Lake Tefé still have a water route to town, checked on every NISAR radar pass.">
+  <title>River Lifeline · NISAR over Lake Tefé</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Martian+Mono:wght@400;600&family=Saira+Stencil+One&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="./src/styles/main.css">
-  <link rel="stylesheet" href="./src/styles/components.css">
-  <link rel="stylesheet" href="./src/styles/responsive.css">
-  <link rel="stylesheet" href="./src/styles/details.css">
-  <link rel="stylesheet" href="./src/styles/overrides.css">
   <link rel="stylesheet" href="./src/styles/monitor.css">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script type="module" src="./src/monitor/monitorApp.js"></script>
 </head>
-<body class="monitor-page">
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="./index.html" aria-label="SAR Observatory home"><span class="brand-mark">S</span><span><strong>SAR OBSERVATORY</strong><small>EARTH CHANGE EXPLORER</small></span></a>
-      <div class="mission-status"><span class="status-dot"></span> RIVER LIFELINE MONITOR <span class="status-divider">/</span> NISAR L-BAND</div>
-    </header>
+<body>
+  <a class="skip" href="#roster">Skip to the community list</a>
 
-    <main>
-      <section class="intro">
-        <div><p class="eyebrow" id="area-eyebrow">SPACE APPS CHALLENGE · 2026</p><h1>Which communities<br class="mobile-break"> <span>is the river cutting off?</span></h1>
-        <p class="intro-copy">Riverside villages in the Amazon depend on water to reach food, medicine and doctors. Every NISAR pass, through clouds and smoke, we check whether each one still has a water route to its hub town.</p></div>
-        <div class="date-picker">
-          <label for="date-input" class="stat-label">SITUATION ON</label>
-          <div class="date-row">
-            <button type="button" class="icon-btn" id="prev-pass" aria-label="Previous observation">‹</button>
-            <input type="date" id="date-input" aria-label="Choose a day">
-            <button type="button" class="icon-btn" id="next-pass" aria-label="Next observation">›</button>
-            <button type="button" class="icon-btn play" id="play" aria-label="Play the record">▶</button>
-          </div>
-          <span class="date-help" id="date-help">—</span>
-        </div>
-      </section>
+  <header class="mast">
+    <div class="mast-id">
+      <span class="wordmark">River Lifeline</span>
+      <span class="mast-mission" id="mast-mission">NISAR L-band radar · Lake Tefé, Middle Solimões</span>
+    </div>
+    <div class="clock" role="group" aria-label="Choose the day to show">
+      <label class="clock-label" for="date-input">Situation on</label>
+      <button type="button" class="clock-step" id="prev-pass" aria-label="Previous pass">&lsaquo;</button>
+      <input type="date" id="date-input">
+      <button type="button" class="clock-step" id="next-pass" aria-label="Next pass">&rsaquo;</button>
+      <button type="button" class="clock-play" id="play" aria-pressed="false">Play record</button>
+    </div>
+  </header>
 
-      <div id="pass-note" class="pair-note" role="status" hidden></div>
+  <main>
+    <section class="scene" aria-label="Radar map of the area">
+      <div class="scene-map">
+        <div id="map" role="application" aria-label="Map: radar image, detected water and communities"></div>
 
-      <section class="stats-grid" aria-label="Status of the monitored communities">
-        <article class="stat-card status-card s-connected"><span class="stat-label">CONNECTED</span><strong id="stat-connected">—</strong><span class="stat-foot" id="stat-connected-foot">water route ≥ 60 m wide</span></article>
-        <article class="stat-card status-card s-at_risk"><span class="stat-label">AT RISK</span><strong id="stat-at_risk">—</strong><span class="stat-foot" id="stat-at_risk-foot">route narrower than 60 m</span></article>
-        <article class="stat-card status-card s-isolated"><span class="stat-label">ISOLATED</span><strong id="stat-isolated">—</strong><span class="stat-foot" id="stat-isolated-foot">no water route to the hub</span></article>
-        <article class="stat-card"><span class="stat-label" id="link-label">HUB ↔ MAIN RIVER</span><strong id="stat-link">—</strong><span class="stat-foot" id="stat-link-foot">narrowest point of the route</span></article>
-      </section>
-
-      <section class="panel timeline-panel" aria-label="Observation timeline">
-        <div class="panel-heading"><div><p class="eyebrow">01 / RECORD</p><h2>Every NISAR pass</h2></div><span class="count-pill" id="pass-count">—</span></div>
-        <div id="timeline" class="timeline" role="listbox" aria-label="Passes by date"></div>
-        <div class="timeline-key"><span><i class="tl-dot ev"></i>Evaluated pass: green none isolated, amber some, red close to the worst pass on record</span><span><i class="tl-dot partial"></i>Partial coverage: image only</span></div>
-      </section>
-
-      <section class="workspace">
-        <div class="map-panel panel">
-          <div class="panel-heading"><div><p class="eyebrow">02 / RADAR AND WATER</p><h2 id="map-title">River map</h2></div>
-            <div class="seg" role="group" aria-label="Background">
-              <button type="button" data-base="radar" class="is-on">Radar</button><button type="button" data-base="none">Basemap</button>
-            </div>
-          </div>
-          <div class="layer-row">
-            <label><input type="checkbox" id="toggle-water" checked> Water</label>
-            <label><input type="checkbox" id="toggle-change"> Change since previous pass</label>
-            <label><input type="checkbox" id="toggle-other"> Inland &amp; unresolved places</label>
-            <label class="opacity">Opacity <input type="range" id="opacity" min="0" max="100" value="70"></label>
-          </div>
-          <div id="map" role="img" aria-label="Map with the NISAR radar image, detected water and community status"></div>
-          <div class="map-key" id="map-key"></div>
-          <div class="map-footer"><span id="map-foot">—</span><span class="demo-tag">NISAR GCOV · HH · 20 m</span></div>
+        <div class="headline" id="headline" aria-live="polite">
+          <p class="headline-meta" id="headline-meta">Loading the record…</p>
+          <h1 id="headline-text">&nbsp;</h1>
+          <p class="headline-sub" id="headline-sub"></p>
         </div>
 
-        <aside class="site-panel panel">
-          <div class="panel-heading"><div><p class="eyebrow">03 / COMMUNITIES</p><h2>Who is cut off</h2></div><span class="count-pill" id="community-count">—</span></div>
-          <div class="list-tools">
-            <input type="search" id="search" placeholder="Search a community" aria-label="Search a community">
-            <div class="chips" role="group" aria-label="Filter by status">
-              <button type="button" class="chip is-on" data-filter="all">All</button><button type="button" class="chip" data-filter="isolated">Isolated</button><button type="button" class="chip" data-filter="at_risk">At risk</button><button type="button" class="chip" data-filter="changed">Changed</button>
-            </div>
-            <div class="exports"><button type="button" id="export-csv">CSV</button><button type="button" id="export-geojson">GeoJSON</button></div>
+        <fieldset class="layers">
+          <legend class="sr-only">Map layers</legend>
+          <div class="layers-base" role="group" aria-label="Background">
+            <button type="button" data-base="radar" class="is-on">Radar</button>
+            <button type="button" data-base="none">Basemap</button>
           </div>
-          <div id="community-list" class="site-list"></div>
-        </aside>
-      </section>
+          <label><input type="checkbox" id="toggle-water" checked> Water</label>
+          <label><input type="checkbox" id="toggle-change"> Change since last pass</label>
+          <label><input type="checkbox" id="toggle-other"> Places not monitored</label>
+          <label class="layers-opacity">Water opacity <input type="range" id="opacity" min="0" max="100" value="70"></label>
+        </fieldset>
 
-      <section class="analysis-grid">
-        <article class="panel analysis-panel">
-          <div class="panel-heading"><div><p class="eyebrow">04 / EVOLUTION</p><h2>How the drought is advancing</h2></div><span class="unit-label">communities · km²</span></div>
-          <p class="section-copy">Monitored communities by status on every evaluated pass, and the area of water detected. Click a bar to open that pass.</p>
-          <div class="chart-wrap tall"><canvas id="trend-chart" aria-label="Communities by status and water area over time"></canvas></div>
-        </article>
-        <article class="panel insight-panel">
-          <div class="panel-heading"><div><p class="eyebrow">05 / COMMUNITY</p><h2 id="detail-title">Select a community</h2></div><span class="insight-symbol">⌁</span></div>
-          <div id="detail"><p class="section-copy">Pick a community on the map or in the list to see its water route over the whole record.</p></div>
-          <div class="method-note"><strong>How it works</strong><p>Smooth water reflects the radar away and looks dark. On every pass we map the water at 20 m and look for a continuous water path from each community to the hub town, measuring its narrowest point. Radar does not measure depth: a route can exist and still be too shallow for boats, so narrow routes are flagged as at risk. Places that never show a resolvable water link are left out of the counts.</p></div>
-        </article>
-      </section>
-      <footer class="footer"><span>SAR OBSERVATORY <span class="footer-sep">/</span> SPACE APPS 2026</span><span id="footer-sources">Prototype · not an official alert system</span></footer>
-    </main>
-  </div>
+        <p class="plate" id="plate"></p>
+        <div class="map-key" id="map-key"></div>
+      </div>
+
+      <aside class="roster" id="roster" aria-labelledby="roster-title">
+        <div class="roster-head">
+          <h2 id="roster-title">Communities</h2>
+          <span class="roster-count" id="roster-count"></span>
+        </div>
+        <input type="search" id="search" placeholder="Find a community" aria-label="Find a community">
+        <div class="filters" role="group" aria-label="Show">
+          <button type="button" class="filter is-on" data-filter="all">All</button>
+          <button type="button" class="filter" data-filter="isolated">Isolated</button>
+          <button type="button" class="filter" data-filter="at_risk">At risk</button>
+          <button type="button" class="filter" data-filter="changed">Changed</button>
+        </div>
+        <ol class="roster-list" id="community-list"></ol>
+        <div class="roster-foot">
+          <span>Download this day</span>
+          <button type="button" id="export-csv">CSV</button>
+          <button type="button" id="export-geojson">GeoJSON</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="log" aria-labelledby="log-title">
+      <div class="log-head">
+        <div>
+          <h2 id="log-title">Pass log</h2>
+          <p>Every NISAR pass over the area. Each strip leans the way the satellite was flying and is split by how many communities were connected, at risk or isolated. The line is the official river level at <span id="gauge-name">the town gauge</span>.</p>
+        </div>
+        <p class="next-pass" id="next-pass-note"></p>
+      </div>
+      <div class="swath-wrap"><svg id="swath" role="group" aria-label="Pass log: one strip per NISAR pass"></svg></div>
+      <ul class="log-key">
+        <li><i class="k k-isolated"></i>Isolated</li>
+        <li><i class="k k-at_risk"></i>At risk</li>
+        <li><i class="k k-connected"></i>Connected</li>
+        <li><i class="k k-partial"></i>Pass covers part of the area: image only</li>
+        <li><i class="k k-gauge"></i>River level (cm)</li>
+      </ul>
+    </section>
+
+    <section class="desk">
+      <div class="ledger" aria-labelledby="ledger-title">
+        <h2 id="ledger-title">On this pass</h2>
+        <dl id="ledger"></dl>
+      </div>
+      <div class="dossier" aria-live="polite">
+        <h2 id="dossier-title">Pick a community</h2>
+        <div id="dossier">
+          <p class="quiet">Select a community on the map or in the list to see its water route on every pass.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="method" aria-labelledby="method-title">
+      <h2 id="method-title">How the radar decides</h2>
+      <div class="method-cols">
+        <p>Calm water reflects the radar pulse away from the satellite and shows up dark. On every pass we map that water at 20&nbsp;m, look for a continuous water path from each community's landing to Tefé, and measure the narrowest point of that path.</p>
+        <p>A community counts as isolated only when two passes in a row show no water route. Places that never show a route the radar can resolve, and places away from any water, are left out of the counts.</p>
+        <p>The radar sees water, not depth. A channel can still be there and be too shallow for boats, which is why routes narrower than 60&nbsp;m are flagged as at risk. Check against river gauges and local reports before acting.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="foot-sources">Radar: NISAR L2 GCOV (NASA/ISRO), ASF DAAC · Places: © OpenStreetMap contributors</span>
+    <span id="foot-search"></span>
+    <span>Prototype for NASA Space Apps 2026 · not an official alert system</span>
+  </footer>
 </body>
 </html>
