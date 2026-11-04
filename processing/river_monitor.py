@@ -58,6 +58,7 @@ AREAS = os.path.join(HERE, "areas")
 OUT_ROOT = os.path.join(ROOT, "frontend", "public", "data", "monitor")
 
 ASF_SEARCH = "https://api.daac.asf.alaska.edu/services/search/param"
+ANA_TELEMETRY = "http://telemetriaws1.ana.gov.br/ServiceANA.asmx/DadosHidrometeorologicos"
 OVERPASS_MIRRORS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
 USER_AGENT = "nisar-river-monitor/0.1 (NASA Space Apps 2026 prototype)"
 GRID = "science/LSAR/GCOV/grids"
@@ -598,6 +599,45 @@ def classify_communities(area, cat):
                                 for k in ("monitored", "unresolved", "inland", "no_data")}
 
 
+def parse_gauge(xml_bytes):
+    """ANA DadosHidrometeorologicos XML -> {date: daily median level (cm)}."""
+    import xml.etree.ElementTree as ET
+    days, when = {}, None
+    for _, el in ET.iterparse(io.BytesIO(xml_bytes)):
+        tag = el.tag.rsplit("}", 1)[-1]
+        if tag == "DataHora":
+            when = (el.text or "").strip()[:10]
+        elif tag == "Nivel" and when and (el.text or "").strip():
+            days.setdefault(when, []).append(float(el.text))
+        elif tag == "DadosHidrometereologicos":
+            el.clear()
+    return {d: float(np.median(v)) for d, v in sorted(days.items())}
+
+
+def refresh_gauge(area, cat):
+    """
+    Official river level next to the hub (ANA telemetry), shown with the passes so the
+    record can be read against the river: the radar result should follow it.
+    """
+    g = area.get("gauge")
+    if not g or not cat["passes"]:
+        return
+    start = dt.date.fromisoformat(min(p["date"] for p in cat["passes"])) - dt.timedelta(days=15)
+    params = {"codEstacao": g["ana_code"], "dataInicio": start.strftime("%d/%m/%Y"),
+              "dataFim": dt.date.today().strftime("%d/%m/%Y")}
+    try:
+        r = requests.get(ANA_TELEMETRY, params=params, timeout=300, headers={"User-Agent": USER_AGENT})
+        r.raise_for_status()
+        series = parse_gauge(r.content)
+    except (requests.RequestException, ValueError) as e:
+        log(f"river gauge not updated ({e}); keeping the previous series")
+        return
+    if series:
+        cat["gauge"] = {"name": g["name"], "source": f"ANA telemetry, station {g['ana_code']}", "unit": "cm",
+                        "series": [[d, round(v, 1)] for d, v in series.items()]}
+        log(f"river gauge {g['name']}: {len(series)} days")
+
+
 def refresh_changes(area, cat):
     """change.png for every pass against the previous pass of the same track."""
     out_dir = os.path.join(OUT_ROOT, area["id"])
@@ -774,6 +814,7 @@ def cmd_update(area, workers=2, limit=None, redo=False):
                 save_catalog(area, cat)
     refresh_changes(area, cat)
     classify_communities(area, cat)
+    refresh_gauge(area, cat)
     save_catalog(area, cat)
     log(f"Catalog: {os.path.relpath(catalog_path(area), ROOT)} ({len(cat['passes'])} passes); "
         f"communities {cat['community_classes']}")
