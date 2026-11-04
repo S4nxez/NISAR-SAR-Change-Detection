@@ -60,8 +60,9 @@ function passForDay(iso) {
 // ---------------------------------------------------------------- map
 function initMap() {
   map = L.map("map", { zoomControl: true, scrollWheelZoom: true, preferCanvas: true });
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: "&copy; OpenStreetMap &copy; CARTO · NISAR: NASA/ISRO, ASF DAAC", subdomains: "abcd", maxZoom: 18
+  // OpenStreetMap standard tiles need no API key (CARTO's now do); monitor.css darkens them.
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors · NISAR: NASA/ISRO, ASF DAAC", maxZoom: 18, className: "basemap-dark"
   }).addTo(map);
   map.createPane("radar").style.zIndex = 330;
   map.createPane("water").style.zIndex = 340;
