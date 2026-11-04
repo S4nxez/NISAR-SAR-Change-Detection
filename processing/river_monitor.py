@@ -51,9 +51,6 @@ import requests
 from PIL import Image
 from scipy import ndimage
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from nisar_comun import filtrar_speckle, lineal_a_db, reducir  # noqa: E402
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 AREAS = os.path.join(HERE, "areas")
@@ -72,6 +69,42 @@ BLOCK = 4 * 1024 * 1024
 
 def log(msg):
     print(time.strftime("%H:%M:%S"), msg, flush=True)
+
+
+# ---------------------------------------------------------------- radar helpers
+def linear_to_db(a):
+    with np.errstate(divide="ignore", invalid="ignore"):
+        db = 10.0 * np.log10(np.asarray(a, dtype=np.float32))
+    db[~np.isfinite(db)] = np.nan
+    return db
+
+
+def box_sum(a, k):
+    """Sum over a k x k window (k odd) with cumulative sums; windows are clipped at the edges."""
+    r = k // 2
+    p = np.pad(a.astype(np.float64), ((r + 1, r), (r + 1, r)), mode="constant")
+    s = p.cumsum(0).cumsum(1)
+    return s[k:, k:] - s[:-k, k:] - s[k:, :-k] + s[:-k, :-k]
+
+
+def speckle_filter(db, k):
+    """Mean in linear power over a k x k window, ignoring NaN. Returns dB."""
+    ok = np.isfinite(db)
+    lin = np.where(ok, np.power(10.0, np.where(ok, db, 0) / 10.0), 0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        out = 10.0 * np.log10(box_sum(lin, k) / box_sum(ok.astype(np.float64), k))
+    out[~ok] = np.nan
+    return out.astype(np.float32)
+
+
+def block_mean(a, f):
+    """Mean over f x f blocks, ignoring NaN."""
+    h, w = a.shape[0] // f * f, a.shape[1] // f * f
+    b = a[:h, :w].reshape(h // f, f, w // f, f)
+    with np.errstate(invalid="ignore"):
+        cnt = np.isfinite(b).sum(axis=(1, 3))
+        s = np.nansum(b, axis=(1, 3))
+        return np.where(cnt > 0, s / np.maximum(cnt, 1), np.nan).astype(np.float32)
 
 
 # ---------------------------------------------------------------- area and grid
@@ -268,7 +301,7 @@ def read_pass(area, ps, token):
         read_mb += rf.bytes / 1e6
         spacing = abs(dx)
         k = max(3, int(round(area.get("speckle_m", 100.0) / abs(dx))) | 1)
-        db = filtrar_speckle(lineal_a_db(hh), k)
+        db = speckle_filter(linear_to_db(hh), k)
         del hh
         for a in range(0, ny, 256):
             b = min(ny, a + 256)
@@ -387,7 +420,7 @@ def connectivity(water, valid, px_m, hub, targets, widths, access_m, safe_m):
 
 # ---------------------------------------------------------------- rendering
 def save_radar(db, path):
-    small = reducir(db, 2)
+    small = block_mean(db, 2)
     ok = np.isfinite(small)
     g = (np.clip((np.nan_to_num(small, nan=-25.0) + 25.0) / 25.0, 0, 1) * 255).astype(np.uint8)
     Image.fromarray(np.dstack([g, ok.astype(np.uint8) * 255]), "LA").convert("RGBA").save(path, "WEBP", quality=78)
