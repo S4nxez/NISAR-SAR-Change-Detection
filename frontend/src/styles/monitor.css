@@ -1,10 +1,110 @@
-/* River lifeline monitor (monitor.html); builds on main/components/nisar.css */
+/* River lifeline monitor (monitor.html); builds on the tokens and panels of main/components.css */
 
 .monitor-page {
 --connected:#68b6a3;
 --at-risk:#e4b65c;
 --isolated:#e47759;
 --nodata:#6d8491
+}
+
+.monitor-page #map {
+flex:none;
+height:600px
+}
+
+.monitor-page .site-panel {
+display:flex;
+flex-direction:column;
+max-height:780px
+}
+
+.monitor-page .basemap-dark {
+filter:invert(1) hue-rotate(180deg) brightness(.75) contrast(.9) saturate(.35)
+}
+
+.monitor-page #community-list {
+overflow-y:auto;
+padding-right:4px;
+align-content:start
+}
+
+.pair-note {
+border:1px solid #e4b65c66;
+background:#e4b65c14;
+color:#f1d9a6;
+border-radius:12px;
+padding:10px 14px;
+margin:0 0 16px;
+font-size:12.5px
+}
+
+.pair-note strong {
+color:var(--amber);
+letter-spacing:.08em;
+font-size:10px;
+margin-right:8px
+}
+
+.seg {
+display:inline-flex;
+border:1px solid var(--line);
+border-radius:10px;
+overflow:hidden
+}
+
+.seg button {
+background:transparent;
+color:var(--muted);
+border:0;
+padding:6px 12px;
+font-size:12px;
+cursor:pointer
+}
+
+.seg button + button {
+border-left:1px solid var(--line)
+}
+
+.seg button.is-on {
+background:var(--panel-2);
+color:var(--text)
+}
+
+.layer-row {
+display:flex;
+flex-wrap:wrap;
+gap:16px;
+align-items:center;
+margin:12px 0 10px;
+font-size:12px;
+color:var(--muted)
+}
+
+.layer-row label {
+display:flex;
+align-items:center;
+gap:6px;
+cursor:pointer
+}
+
+.layer-row input[type=checkbox] {
+accent-color:var(--amber)
+}
+
+.layer-row .opacity input {
+width:110px;
+accent-color:var(--amber)
+}
+
+.key-swatch {
+width:10px;
+height:10px;
+border-radius:3px;
+display:inline-block
+}
+
+.site-list .site-change b {
+font-variant-numeric:tabular-nums
 }
 
 .date-picker {
@@ -312,6 +412,11 @@ background:#fff;
 border:3px solid #101b25;
 transform:rotate(45deg);
 box-shadow:0 0 0 2px #fff8
+}
+
+@media (max-width:900px) {
+  .monitor-page #map { height:420px }
+  .monitor-page .site-panel { max-height:520px }
 }
 
 @media (max-width:760px) {
