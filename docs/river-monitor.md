@@ -57,16 +57,23 @@ For every pass (all frames of one track on one day):
    centre is far enough from the shore for a channel at least W wide, and check whether a
    community (within 1 km) and the hub town fall in the same piece of water. The widest W
    that still links them is the narrowest point of the route. Widths are estimated
-   conservatively (one pixel less) so warnings come early rather than late.
+   conservatively (one pixel less) so warnings come early rather than late. At the
+   "any water" level, pixels touching at a corner count as connected, because one-pixel
+   creeks often run diagonally.
+   Routes start where people reach the water, not at the middle of the settlement: a place
+   called "Porto de X" next to X is X's port, and towns use the nearest ferry terminal, pier
+   or harbour within 3 km (villages and hamlets within 500 m) from OpenStreetMap. Without
+   this, a town whose centre is a kilometre inland (Alvarães) looked isolated while its port
+   stayed connected.
 4. **Status**: *connected* (route ≥ 60 m), *at risk* (route narrower), *isolated* (no water
    route, or no water within 1 km), *no data* (not covered by the pass, or a route could run
    through a gap in the pass).
    Isolation is only confirmed when the previous pass with data agrees; the first pass that
    shows it counts as *at risk (to confirm)*, because one image can be spoiled by wind or rain.
 5. **Whole record**: places that never have water within 1 km are *inland* (not river
-   dependent) and places that never show a resolvable route on any pass are *not resolved*
-   (streams narrower than the radar can see at 20 m). Both are left out of the counts, so
-   *isolated* means a community lost a route it had.
+   dependent) and places never linked through a channel of at least 40 m on any pass are
+   *not resolved* (one-pixel creeks come and go between passes). Both are left out of the
+   counts, so *isolated* means a community lost a route it had.
 6. **Change**: water lost and gained since the previous pass of the same track.
 
 Passes that cover less than 80 % of the area are kept as images but not evaluated, and
@@ -75,6 +82,21 @@ passes under 5 % are hidden.
 The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and 23 October 2026
 (low water). With the final settings, places without a route drop from 44 to 18 at high water
 (the rest are mostly streams too narrow to resolve) while 30 remain at low water.
+
+## Validation so far (Tefé, November 2026)
+
+- **River level**: against the official ANA gauge Tefé-Missões (station 12900001, Solimões),
+  across the 15 evaluated passes, detected water follows the river level (Spearman +0.96) and
+  so does the number of monitored communities without a water route (−0.99).
+- **Places named in reports**: Caiambé, the boat landing used in the 2023–2024 droughts, stays
+  connected; Alvarães stays connected through its port.
+- **Not validated yet: how many communities are isolated.** Tefé's civil defence counted 122
+  of 151 communities isolated in 2023 and 88 in 2024, but at that gauge the 2026 river stays
+  5–7 m higher than in those years (minimum 780 cm on 26 October 2026, against about 23 cm in
+  2024), and no per-community list for 2026 has been published. A list from the civil
+  defence or the Instituto Mamirauá, or the same method run on ALOS-2 L-band data for 2023 and
+  2024, is needed. Several places named in health reports (Vila Bastos, São Francisco do
+  Itauba, Porto Praia de Baixo) are missing from OpenStreetMap.
 
 ## Limits
 

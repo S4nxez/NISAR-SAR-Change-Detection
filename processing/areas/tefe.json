@@ -7,6 +7,7 @@
   "hub": {"name": "Tefé", "lon": -64.7102, "lat": -3.3485, "radius_m": 2000},
   "river": {"name": "Solimões main channel", "lon": -64.625, "lat": -3.287, "radius_m": 1500},
   "access_radius_m": 1000,
+  "access_snap_m": {"city": 3000, "town": 3000, "village": 500, "hamlet": 500, "default": 300},
   "min_coverage": 0.8,
   "min_coverage_shown": 0.05,
   "water_db": -15.0,

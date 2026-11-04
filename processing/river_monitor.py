@@ -45,6 +45,7 @@ import os
 import sys
 import time
 import traceback
+import unicodedata
 
 import numpy as np
 import requests
@@ -57,7 +58,7 @@ AREAS = os.path.join(HERE, "areas")
 OUT_ROOT = os.path.join(ROOT, "frontend", "public", "data", "monitor")
 
 ASF_SEARCH = "https://api.daac.asf.alaska.edu/services/search/param"
-OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS_MIRRORS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
 USER_AGENT = "nisar-river-monitor/0.1 (NASA Space Apps 2026 prototype)"
 GRID = "science/LSAR/GCOV/grids"
 
@@ -386,7 +387,8 @@ def connectivity(water, valid, px_m, hub, targets, widths, access_m, safe_m):
     for w in [0] + list(widths):
         # a channel whose centre line is e pixels from the shore is at least (2e - 1) pixels wide
         mask = water if w == 0 else inside >= (w + px_m) / 2.0
-        labels, _ = ndimage.label(mask)
+        # one-pixel creeks often run diagonally: at the "any water" level, corner contacts count
+        labels, _ = ndimage.label(mask, structure=np.ones((3, 3)) if w == 0 else None)
         hub_l = near_labels(labels, hub_r, hub_c, hub_rad / px_m)
         if not hub_l:
             break
@@ -501,8 +503,10 @@ def evaluate(area, communities, water, valid, wide, entry):
     if not entry["evaluated"]:
         return
     hub, river = area["hub"], area["river"]
-    hub_px = (*to_px(area, hub["lon"], hub["lat"]), hub["radius_m"])
-    targets = [to_px(area, c["lon"], c["lat"]) for c in communities]
+    hub_lon, hub_lat = (hub["access"]["lon"], hub["access"]["lat"]) if hub.get("access") else (hub["lon"], hub["lat"])
+    hub_px = (*to_px(area, hub_lon, hub_lat), hub["radius_m"])
+    # route and distance to water are measured from where people reach the water (see assign_access)
+    targets = [to_px(area, *(c.get("access") or (c["lon"], c["lat"]))) for c in communities]
     res = connectivity(water, valid, px_m, hub_px, targets, area["widths_m"],
                        area["access_radius_m"], area["safe_width_m"])
     entry["hub_link"] = connectivity(water, valid, px_m, hub_px, [to_px(area, river["lon"], river["lat"])],
@@ -551,9 +555,10 @@ def classify_communities(area, cat):
     """
     Use the whole record to decide which communities the radar can actually monitor:
       inland      no water within access_radius_m on any pass (not river-dependent)
-      unresolved  water nearby but never linked to the hub on any pass: its channels are
-                  narrower than the radar resolves, so "isolated" would be a false alarm
-      monitored   linked to the hub on at least one pass; isolation means a lost link
+      unresolved  water nearby but never linked to the hub through a channel of at least the
+                  narrowest width level on any pass: its channels are narrower than the radar
+                  resolves reliably, so "isolated" would be a false alarm
+      monitored   linked to the hub that way on at least one pass; isolation means a lost link
     Per-pass counts are then taken over monitored communities only.
     """
     evaluated = [p for p in cat["passes"] if p.get("evaluated") and p.get("status")]
@@ -564,7 +569,9 @@ def classify_communities(area, cat):
             c["class"] = "no_data"
         elif min(r[2] for r in rows) > area["access_radius_m"]:
             c["class"] = "inland"
-        elif not any(r[0] in (STATUS["connected"], STATUS["at_risk"]) for r in rows):
+        elif not any(r[0] in (STATUS["connected"], STATUS["at_risk"]) and r[1] for r in rows):
+            # never linked through a channel the radar resolves (>= the narrowest width level):
+            # one-pixel creeks come and go between passes, so they cannot carry an alarm
             c["class"] = "unresolved"
         else:
             c["class"] = "monitored"
@@ -615,30 +622,101 @@ def refresh_changes(area, cat):
 
 
 # ---------------------------------------------------------------- commands
+def overpass(query):
+    last = None
+    for url in OVERPASS_MIRRORS:
+        try:
+            r = requests.post(url, data={"data": query}, timeout=180, headers={"User-Agent": USER_AGENT})
+            r.raise_for_status()
+            return r.json().get("elements", [])
+        except (requests.RequestException, ValueError) as e:
+            last = e
+    raise SystemExit(f"OpenStreetMap (Overpass) is not answering: {last}")
+
+
+def metres(lon_a, lat_a, lon_b, lat_b):
+    k = math.cos(math.radians((lat_a + lat_b) / 2))
+    return math.hypot((lon_a - lon_b) * 111320.0 * k, (lat_a - lat_b) * 110570.0)
+
+
+def fold(s):
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower().strip()
+
+
+def assign_access(places, landings, snap_m):
+    """
+    A place node marks the middle of a settlement, which for a town can be a kilometre or more
+    from its waterfront. Give each place the water access people actually use:
+      - a place called "Porto de X" / "Porto X" near X is X's port: it becomes X's access point
+        and is dropped as a community of its own;
+      - otherwise the nearest landing (ferry terminal, pier, harbour) within snap_m[place type].
+    Places get "access" = [lon, lat] and "access_source" when moved.
+    """
+    by_name = {}
+    for p in places:
+        by_name.setdefault(fold(p["name"]), []).append(p)
+    ports = set()
+    for p in places:
+        n = fold(p["name"])
+        for prefix in ("porto de ", "porto do ", "porto da ", "porto "):
+            if n.startswith(prefix) and n[len(prefix):] in by_name:
+                owners = [o for o in by_name[n[len(prefix):]]
+                          if metres(o["lon"], o["lat"], p["lon"], p["lat"]) <= 5000]
+                for o in owners:
+                    o["access"], o["access_source"] = [p["lon"], p["lat"]], f"port: {p['name']}"
+                if owners:
+                    ports.add(id(p))
+                break
+    kept = [p for p in places if id(p) not in ports]
+    for p in kept:
+        if "access" in p:
+            continue
+        limit = snap_m.get(p.get("place"), snap_m.get("default", 0))
+        best = min(((metres(p["lon"], p["lat"], l["lon"], l["lat"]), l) for l in landings),
+                   key=lambda t: t[0], default=(None, None))
+        if best[1] is not None and 0 < best[0] <= limit:
+            p["access"], p["access_source"] = [best[1]["lon"], best[1]["lat"]], best[1]["kind"]
+    return kept
+
+
 def cmd_communities(area):
     lon0, lat0, lon1, lat1 = area["bbox"]
-    q = (f'[out:json][timeout:90];(node["place"~"^(town|village|hamlet|isolated_dwelling|locality)$"]'
-         f'({lat0},{lon0},{lat1},{lon1}););out body;')
-    r = requests.post(OVERPASS, data={"data": q}, timeout=180, headers={"User-Agent": USER_AGENT})
-    r.raise_for_status()
-    hub = area["hub"]["name"].lower()
-    feats = []
-    for e in r.json().get("elements", []):
+    box = f"({lat0},{lon0},{lat1},{lon1})"
+    places, landings = [], []
+    for e in overpass(f'[out:json][timeout:90];(node["place"~"^(town|village|hamlet|isolated_dwelling|locality)$"]{box};);out body;'):
         t = e.get("tags", {})
-        name = t.get("name")
-        if not name or name.lower() == hub:
-            continue
-        props = {"id": f"osm{e['id']}", "name": name, "place": t.get("place")}
-        if t.get("population", "").isdigit():
-            props["population"] = int(t["population"])
+        if t.get("name"):
+            p = {"id": f"osm{e['id']}", "name": t["name"], "place": t.get("place"),
+                 "lon": round(e["lon"], 6), "lat": round(e["lat"], 6)}
+            if t.get("population", "").isdigit():
+                p["population"] = int(t["population"])
+            places.append(p)
+    q = (f'[out:json][timeout:90];(nwr["amenity"="ferry_terminal"]{box};nwr["harbour"]{box};'
+         f'nwr["landuse"~"^(port|harbour)$"]{box};nwr["man_made"="pier"]{box};);out center tags;')
+    for e in overpass(q):
+        t, c = e.get("tags", {}), e.get("center", e)
+        kind = ("ferry terminal" if t.get("amenity") == "ferry_terminal" else "pier" if t.get("man_made") == "pier"
+                else "harbour")
+        landings.append({"lon": round(c["lon"], 6), "lat": round(c["lat"], 6), "kind": kind})
+    places = assign_access(places, landings, area.get("access_snap_m", {}))
+    hub = area["hub"]
+    hub_place = next((p for p in places if fold(p["name"]) == fold(hub["name"])), None)
+    places = [p for p in places if p is not hub_place]
+    feats = []
+    for p in sorted(places, key=lambda p: p["name"]):
+        props = {k: v for k, v in p.items() if k not in ("lon", "lat")}
         feats.append({"type": "Feature", "properties": props,
-                      "geometry": {"type": "Point", "coordinates": [round(e["lon"], 6), round(e["lat"], 6)]}})
-    feats.sort(key=lambda f: f["properties"]["name"])
+                      "geometry": {"type": "Point", "coordinates": [p["lon"], p["lat"]]}})
+    out = {"type": "FeatureCollection", "attribution": "© OpenStreetMap contributors (ODbL)", "features": feats}
+    if hub_place and hub_place.get("access"):
+        out["hub_access"] = {"lon": hub_place["access"][0], "lat": hub_place["access"][1],
+                             "source": hub_place["access_source"]}
     path = os.path.join(AREAS, area["communities"])
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"type": "FeatureCollection", "attribution": "© OpenStreetMap contributors (ODbL)",
-                   "features": feats}, f, ensure_ascii=False, indent=1)
-    log(f"{len(feats)} places saved to {os.path.relpath(path, ROOT)}")
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    moved = sum("access" in p for p in places)
+    log(f"{len(feats)} places saved to {os.path.relpath(path, ROOT)} ({len(landings)} landings; "
+        f"{moved} places use a landing or port as their water access)")
 
 
 def load_communities(area):
@@ -647,6 +725,8 @@ def load_communities(area):
         raise SystemExit(f"Missing {os.path.relpath(path, ROOT)}: run `river_monitor.py communities` first.")
     with open(path, encoding="utf-8") as f:
         fc = json.load(f)
+    if fc.get("hub_access"):
+        area["hub"] = {**area["hub"], "access": fc["hub_access"]}
     out = []
     for feat in fc["features"]:
         p = feat["properties"]
