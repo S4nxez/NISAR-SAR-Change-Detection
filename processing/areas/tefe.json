@@ -1,0 +1,18 @@
+{
+  "id": "tefe",
+  "name": "Lake Tefé and the Middle Solimões",
+  "country": "Brazil (Amazonas)",
+  "bbox": [-65.10, -3.75, -64.40, -3.05],
+  "step_deg": 0.00018,
+  "hub": {"name": "Tefé", "lon": -64.7102, "lat": -3.3485, "radius_m": 2000},
+  "river": {"name": "Solimões main channel", "lon": -64.625, "lat": -3.287, "radius_m": 1500},
+  "access_radius_m": 1000,
+  "min_coverage": 0.8,
+  "min_coverage_shown": 0.05,
+  "water_db": -15.0,
+  "water_db_weak": -12.0,
+  "speckle_m": 60,
+  "widths_m": [40, 60, 100, 200, 400],
+  "safe_width_m": 60,
+  "communities": "tefe_communities.geojson"
+}
