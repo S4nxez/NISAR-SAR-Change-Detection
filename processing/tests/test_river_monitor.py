@@ -8,7 +8,8 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-from river_monitor import STATUS, classify_communities, connectivity, parse_name, water_mask  # noqa: E402
+from river_monitor import (STATUS, assign_access, classify_communities, connectivity,  # noqa: E402
+                           parse_name, water_mask)
 
 PX = 20.0
 WIDTHS = [40, 60, 100, 200, 400]
@@ -57,6 +58,14 @@ class TestConnectivity(unittest.TestCase):
         self.assertEqual(st, STATUS["isolated"])
         self.assertIsNone(b)
 
+    def test_diagonal_one_pixel_creek_still_links_the_lake(self):
+        water, valid = river_scene(channel_px=0)
+        for i in range(170):  # staircase creek from the river to the lake, touching only at corners
+            water[100 + (i % 2), 30 + i] = True
+        (st, b, _), = self.run_scene(water, valid, [(100, 262)])
+        self.assertEqual(st, STATUS["at_risk"])
+        self.assertEqual(b, 0)
+
     def test_detached_pond_is_isolated_and_far_place_is_isolated(self):
         water, valid = river_scene()
         res = self.run_scene(water, valid, [(185, 105), (150, 150)])
@@ -101,6 +110,34 @@ class TestWaterMask(unittest.TestCase):
         self.assertFalse(joined[54, 15])
 
 
+class TestAccess(unittest.TestCase):
+    SNAP = {"town": 3000, "hamlet": 500, "default": 300}
+
+    def test_town_takes_its_port_and_the_port_is_not_a_community(self):
+        places = [{"name": "Alvarães", "place": "town", "lon": -64.8148, "lat": -3.2156},
+                  {"name": "Porto de Alvaraes", "place": "locality", "lon": -64.8044, "lat": -3.2110}]
+        kept = assign_access(places, [], self.SNAP)
+        self.assertEqual([p["name"] for p in kept], ["Alvarães"])
+        self.assertEqual(kept[0]["access"], [-64.8044, -3.2110])
+        self.assertIn("Porto de Alvaraes", kept[0]["access_source"])
+
+    def test_nearest_landing_within_the_limit_of_the_place_type(self):
+        landing = [{"lon": -64.810, "lat": -3.211, "kind": "ferry terminal"}]   # ~600 m away
+        town = {"name": "A", "place": "town", "lon": -64.8148, "lat": -3.2140}
+        hamlet = {"name": "B", "place": "hamlet", "lon": -64.8148, "lat": -3.2140}
+        a, = assign_access([town], landing, self.SNAP)
+        b, = assign_access([hamlet], landing, self.SNAP)
+        self.assertEqual(a["access_source"], "ferry terminal")
+        self.assertNotIn("access", b)
+
+    def test_a_far_port_with_the_same_name_is_ignored(self):
+        places = [{"name": "Nazaré", "place": "hamlet", "lon": -64.53, "lat": -3.17},
+                  {"name": "Porto Nazaré", "place": "hamlet", "lon": -64.90, "lat": -3.60}]   # ~60 km apart
+        kept = assign_access(places, [], self.SNAP)
+        self.assertEqual(len(kept), 2)
+        self.assertNotIn("access", kept[0])
+
+
 class TestCatalog(unittest.TestCase):
     def test_parse_name(self):
         g = parse_name("NISAR_L2_PR_GCOV_033_161_A_176_2005_DHDH_A_20261023T100258_20261023T100332_P05023_N_F_J_001.h5")
@@ -117,6 +154,15 @@ class TestCatalog(unittest.TestCase):
         cls = {c["id"]: c["class"] for c in cat["communities"]}
         self.assertEqual(cls, {"a": "monitored", "b": "unresolved", "c": "inland"})
         self.assertEqual(cat["passes"][0]["counts"]["connected"], 1)
+
+    def test_links_only_through_unresolvable_creeks_do_not_make_a_place_monitored(self):
+        area = {"access_radius_m": 1000}
+        p = lambda d, st: {"date": d, "time_utc": "10:00", "evaluated": True, "status": st}  # noqa: E731
+        cat = {"communities": [{"id": "a"}, {"id": "b"}],
+               "passes": [p("2026-01-01", {"a": [2, 0, 60], "b": [2, 40, 60]}),
+                          p("2026-01-07", {"a": [3, None, 60], "b": [3, None, 60]})]}
+        classify_communities(area, cat)
+        self.assertEqual({c["id"]: c["class"] for c in cat["communities"]}, {"a": "unresolved", "b": "monitored"})
 
     def test_isolation_needs_two_passes_in_a_row(self):
         area = {"access_radius_m": 1000}

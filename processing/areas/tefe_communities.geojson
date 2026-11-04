@@ -113,7 +113,12 @@
     "id": "osm415524054",
     "name": "Alvarães",
     "place": "town",
-    "population": 15866
+    "population": 15866,
+    "access": [
+     -64.80443,
+     -3.210979
+    ],
+    "access_source": "port: Porto de Alvaraes"
    },
    "geometry": {
     "type": "Point",
@@ -563,7 +568,12 @@
    "properties": {
     "id": "osm3984833617",
     "name": "Castanheirinha",
-    "place": "hamlet"
+    "place": "hamlet",
+    "access": [
+     -64.824113,
+     -3.204331
+    ],
+    "access_source": "ferry terminal"
    },
    "geometry": {
     "type": "Point",
@@ -1118,7 +1128,12 @@
    "properties": {
     "id": "osm3986860583",
     "name": "Maranhao",
-    "place": "hamlet"
+    "place": "hamlet",
+    "access": [
+     -64.533418,
+     -3.388586
+    ],
+    "access_source": "pier"
    },
    "geometry": {
     "type": "Point",
@@ -1433,7 +1448,12 @@
    "properties": {
     "id": "osm3984833637",
     "name": "Olaria",
-    "place": "hamlet"
+    "place": "hamlet",
+    "access": [
+     -64.802572,
+     -3.210796
+    ],
+    "access_source": "ferry terminal"
    },
    "geometry": {
     "type": "Point",
@@ -1620,21 +1640,6 @@
     "coordinates": [
      -64.66401,
      -3.361234
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "osm10300245160",
-    "name": "Porto de Alvaraes",
-    "place": "locality"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     -64.80443,
-     -3.210979
     ]
    }
   },
@@ -2523,5 +2528,10 @@
     ]
    }
   }
- ]
+ ],
+ "hub_access": {
+  "lon": -64.709065,
+  "lat": -3.345121,
+  "source": "pier"
+ }
 }

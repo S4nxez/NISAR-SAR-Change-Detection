@@ -72,7 +72,8 @@ function initMap() {
   map.fitBounds(state.cat.grid.bounds);
 
   const { hub, river } = state.cat.area;
-  L.marker([hub.lat, hub.lon], { icon: L.divIcon({ className: "", html: '<div class="hub-icon"></div>', iconSize: [16, 16] }), zIndexOffset: 1000 })
+  const hubAt = hub.access || hub;
+  L.marker([hubAt.lat, hubAt.lon], { icon: L.divIcon({ className: "", html: '<div class="hub-icon"></div>', iconSize: [16, 16] }), zIndexOffset: 1000 })
     .bindTooltip(`<strong>${esc(hub.name)}</strong> · hub town`, { className: "community-tip" }).addTo(map);
   L.circleMarker([river.lat, river.lon], { radius: 5, color: "#fff", weight: 2, fillColor: "#72b8d0", fillOpacity: 1 })
     .bindTooltip(esc(river.name), { className: "community-tip" }).addTo(map);
@@ -237,6 +238,7 @@ function renderDetail() {
       <div><span>NARROWEST POINT OF THE ROUTE</span><strong>${r && r[0] ? widthLabel(r[1]) : "—"}</strong></div>
       <div><span>NEAREST WATER</span><strong>${r && r[0] ? fmt.format(r[2]) + " m" : "—"}</strong></div>
       <div><span>TYPE</span><strong>${esc(c.place)}</strong></div>
+      <div><span>MEASURED FROM</span><strong>${c.access ? esc(c.access_source) : "the place itself"}</strong></div>
       <div><span>LAST LINKED TO ${esc(state.cat.area.hub.name.toUpperCase())}</span><strong>${lastOk ? fmtDay(lastOk.q.date) : "—"}</strong></div>
     </div>
     <span class="stat-label">ROUTE WIDTH ON EVERY EVALUATED PASS</span>
