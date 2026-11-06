@@ -108,7 +108,14 @@ function initMap() {
   map.createPane("change").style.zIndex = 350;
   otherLayer = L.layerGroup();
   markerLayer = L.layerGroup().addTo(map);
-  map.fitBounds(state.cat.grid.bounds, { paddingTopLeft: [innerWidth > 900 ? 150 : 0, 0] });
+  map.fitBounds(state.cat.grid.bounds);
+
+  // the edge of the monitored area, drawn like a sensor footprint
+  const circ = state.cat.area.circle;
+  if (circ) {
+    L.circle([circ.lat, circ.lon], { radius: circ.radius_km * 1000, color: "#b6c3ff", weight: 1, opacity: 0.55,
+      dashArray: "2 6", fill: false, interactive: false }).addTo(map);
+  }
 
   const { hub } = state.cat.area;
   const at = hub.access || hub;
@@ -578,7 +585,7 @@ function showNotice(html) {
   const n = document.createElement("div");
   n.className = "notice";
   n.innerHTML = html;
-  document.querySelector(".scene-map").appendChild(n);
+  document.querySelector(".map-frame").appendChild(n);
 }
 
 async function boot() {

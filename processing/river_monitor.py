@@ -113,6 +113,12 @@ def block_mean(a, f):
 def load_area(area_id):
     with open(os.path.join(AREAS, area_id + ".json"), encoding="utf-8") as f:
         area = json.load(f)
+    if area.get("circle"):
+        # circular area: the grid is the square around it, pixels outside the circle are not part of it
+        c = area["circle"]
+        r = c["radius_km"] * 1000.0
+        dlat, dlon = r / 110570.0, r / (111320.0 * math.cos(math.radians(c["lat"])))
+        area["bbox"] = [round(c["lon"] - dlon, 5), round(c["lat"] - dlat, 5), round(c["lon"] + dlon, 5), round(c["lat"] + dlat, 5)]
     lon0, lat0, lon1, lat1 = area["bbox"]
     step = area["step_deg"]
     area["nx"] = int(round((lon1 - lon0) / step))
@@ -126,6 +132,27 @@ def to_px(area, lon, lat):
     """lon/lat -> (row, col) on the area grid (row 0 at the north edge)."""
     lon0, _, _, lat1 = area["bbox"]
     return int((lat1 - lat) / area["step_deg"]), int((lon - lon0) / area["step_deg"])
+
+
+def in_area(area, lon, lat):
+    lon0, lat0, lon1, lat1 = area["bbox"]
+    if not (lon0 <= lon <= lon1 and lat0 <= lat <= lat1):
+        return False
+    c = area.get("circle")
+    return not c or metres(lon, lat, c["lon"], c["lat"]) <= c["radius_km"] * 1000.0
+
+
+def area_mask(area):
+    """Grid pixels that belong to the area (all of them for a box, the disc for a circle)."""
+    c = area.get("circle")
+    if not c:
+        return np.ones((area["ny"], area["nx"]), bool)
+    lon0, _, _, lat1 = area["bbox"]
+    step = area["step_deg"]
+    k = math.cos(math.radians(c["lat"]))
+    x = ((lon0 + (np.arange(area["nx"]) + 0.5) * step) - c["lon"]) * 111320.0 * k
+    y = ((lat1 - (np.arange(area["ny"]) + 0.5) * step) - c["lat"]) * 110570.0
+    return (x[None, :] ** 2 + y[:, None] ** 2) <= (c["radius_km"] * 1000.0) ** 2
 
 
 def area_wkt(area):
@@ -367,20 +394,24 @@ def near_labels(labels, row, col, radius_px):
     return set(np.unique(v[v > 0]).tolist())
 
 
-def connectivity(water, valid, px_m, hub, targets, widths, access_m, safe_m):
+def connectivity(water, valid, px_m, hub, targets, widths, access_m, safe_m, in_area_mask=None):
     """
     For each target (row, col): [status, bottleneck_m, distance_to_water_m].
     bottleneck_m is the widest channel width in `widths` that still links the target to the
     hub (0 = linked only through channels narrower than widths[0], -1 = not linked).
+    in_area_mask marks the pixels that belong to the area: pixels outside it (the corners of
+    a circular area) are not data gaps.
     """
     inside = ndimage.distance_transform_edt(water) * px_m
     to_water = ndimage.distance_transform_edt(~water) * px_m
     hub_r, hub_c, hub_rad = hub
+    in_mask = np.ones_like(valid) if in_area_mask is None else in_area_mask
+    gaps = ~valid & in_mask
     # Where the pass has gaps, a route might run through the missing part: targets linked only
     # when the gaps are assumed to be water are undetermined, not isolated.
     maybe = set()
-    if not valid.all():
-        labels, _ = ndimage.label(water | ~valid)
+    if gaps.any():
+        labels, _ = ndimage.label(water | gaps)
         hub_l = near_labels(labels, hub_r, hub_c, hub_rad / px_m)
         maybe = {i for i, (r, c) in enumerate(targets) if near_labels(labels, r, c, access_m / px_m) & hub_l}
     linked = [-1] * len(targets)
@@ -402,7 +433,7 @@ def connectivity(water, valid, px_m, hub, targets, widths, access_m, safe_m):
     win = int(access_m / px_m)
     for i, (r, c) in enumerate(targets):
         a0, b0 = max(0, r - win), max(0, c - win)
-        cover = valid[a0:r + win + 1, b0:c + win + 1]
+        cover = valid[a0:r + win + 1, b0:c + win + 1][in_mask[a0:r + win + 1, b0:c + win + 1]]
         if not (0 <= r < water.shape[0] and 0 <= c < water.shape[1]) or cover.size == 0 or cover.mean() < 0.8:
             out.append([STATUS["no_data"], None, None])
             continue
@@ -469,9 +500,9 @@ def load_mask(path):
 def process_pass(area, communities, ps, out_dir, token):
     t0 = time.time()
     db, read_mb, spacing = read_pass(area, ps, token)
+    db[~area_mask(area)] = np.nan   # outside a circular area: transparent in the images, never water
     water, valid = water_mask(db, area["water_db"], area.get("water_db_weak"))
     px_m = area["px_m"]
-    coverage = float(valid.mean())
     inside = ndimage.distance_transform_edt(water) * px_m
     wide = wide_water(water, inside, area["safe_width_m"], px_m)
     del inside
@@ -482,8 +513,7 @@ def process_pass(area, communities, ps, out_dir, token):
     np.savez_compressed(os.path.join(pdir, "water.npz"), shape=np.array(water.shape),
                         water=np.packbits(water), valid=np.packbits(valid))
     entry = {k: ps[k] for k in ("id", "date", "time_utc", "track", "direction", "frames", "modes", "beta")}
-    entry.update(coverage=round(coverage, 4), read_mb=round(read_mb, 1), spacing_m=spacing,
-                 files={"radar": "radar.webp", "water": "water.png"})
+    entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"})
     evaluate(area, communities, water, valid, wide, entry)
     entry["seconds"] = round(time.time() - t0, 1)
     return entry
@@ -493,7 +523,8 @@ def evaluate(area, communities, water, valid, wide, entry):
     """Water statistics and community status of one pass (fills `entry`)."""
     px_m = area["px_m"]
     pix_km2 = (px_m / 1000.0) ** 2
-    coverage = float(valid.mean())
+    in_mask = area_mask(area)
+    coverage = float(valid[in_mask].mean())
     entry.update(water_km2=round(float(water.sum()) * pix_km2, 2),
                  narrow_km2=round(float((water & ~wide).sum()) * pix_km2, 2),
                  coverage=round(coverage, 4),
@@ -509,9 +540,9 @@ def evaluate(area, communities, water, valid, wide, entry):
     # route and distance to water are measured from where people reach the water (see assign_access)
     targets = [to_px(area, *(c.get("access") or (c["lon"], c["lat"]))) for c in communities]
     res = connectivity(water, valid, px_m, hub_px, targets, area["widths_m"],
-                       area["access_radius_m"], area["safe_width_m"])
+                       area["access_radius_m"], area["safe_width_m"], in_mask)
     entry["hub_link"] = connectivity(water, valid, px_m, hub_px, [to_px(area, river["lon"], river["lat"])],
-                                     area["widths_m"], river["radius_m"], area["safe_width_m"])[0]
+                                     area["widths_m"], river["radius_m"], area["safe_width_m"], in_mask)[0]
     entry["status"] = {c["id"]: r for c, r in zip(communities, res)}
     names = {v: k for k, v in STATUS.items()}
     entry["counts"] = {k: 0 for k in STATUS}
@@ -531,8 +562,8 @@ def load_catalog(area, communities):
         with open(path, encoding="utf-8") as f:
             cat = json.load(f)
     lon0, lat0, lon1, lat1 = area["bbox"]
-    cat.update(area={k: area[k] for k in ("id", "name", "country", "bbox", "hub", "river",
-                                         "access_radius_m", "safe_width_m", "widths_m", "water_db")},
+    cat.update(area={k: area[k] for k in ("id", "name", "country", "bbox", "circle", "hub", "river",
+                                         "access_radius_m", "safe_width_m", "widths_m", "water_db") if k in area},
                grid={"nx": area["nx"], "ny": area["ny"], "step_deg": area["step_deg"],
                      "pixel_m": round(area["px_m"], 1), "bounds": [[lat0, lon0], [lat1, lon1]]},
                communities=communities,
@@ -741,7 +772,7 @@ def cmd_communities(area):
     places = assign_access(places, landings, area.get("access_snap_m", {}))
     hub = area["hub"]
     hub_place = next((p for p in places if fold(p["name"]) == fold(hub["name"])), None)
-    places = [p for p in places if p is not hub_place]
+    places = [p for p in places if p is not hub_place and in_area(area, p["lon"], p["lat"])]
     feats = []
     for p in sorted(places, key=lambda p: p["name"]):
         props = {k: v for k, v in p.items() if k not in ("lon", "lat")}
@@ -771,8 +802,7 @@ def load_communities(area):
     for feat in fc["features"]:
         p = feat["properties"]
         lon, lat = feat["geometry"]["coordinates"]
-        lon0, lat0, lon1, lat1 = area["bbox"]
-        if lon0 <= lon <= lon1 and lat0 <= lat <= lat1:
+        if in_area(area, lon, lat):
             out.append({**p, "lon": lon, "lat": lat})
     return out
 

@@ -36,7 +36,8 @@ list.
 
 ## Area file
 
-`processing/areas/<area>.json` defines the bounding box, the grid (~20 m), the hub town, a
+`processing/areas/<area>.json` defines the area, either as a `circle` (centre and radius in km;
+Tefé uses 55 km) or as a `bbox`, the grid (~20 m), the hub town, a
 point on the main river (to report the hub ↔ main river link), the water threshold and the
 rules below. `processing/areas/<area>_communities.geojson` holds the places (OpenStreetMap,
 ODbL). Add an area by writing a new pair of files and passing `--area <id>`; the web page
@@ -76,6 +77,10 @@ For every pass (all frames of one track on one day):
    counts, so *isolated* means a community lost a route it had.
 6. **Change**: water lost and gained since the previous pass of the same track.
 
+With a circular area, pixels outside the circle are not part of the area: they are transparent in
+the images, never water, and not counted as gaps in a pass. Coverage is measured inside the
+circle.
+
 Passes that cover less than 80 % of the area are kept as images but not evaluated, and
 passes under 5 % are hidden.
 
@@ -86,8 +91,10 @@ The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and
 ## Validation so far (Tefé, November 2026)
 
 - **River level**: against the official ANA gauge Tefé-Missões (station 12900001, Solimões),
-  across the 15 evaluated passes, detected water follows the river level (Spearman +0.96) and
-  so does the number of monitored communities without a water route (−0.99).
+  across the 15 evaluated passes, monitored communities without a water route follow the river
+  level (Spearman −0.86 over the 55 km circle; −0.99 over the earlier 78 km square) and so does
+  detected water (+0.85; +0.96 over the square). Over the circle the high-water passes of track
+  161 cover only 88–89 % of the area, which makes their water totals less comparable.
 - **Places named in reports**: Caiambé, the boat landing used in the 2023–2024 droughts, stays
   connected; Alvarães stays connected through its port.
 - **Not validated yet: how many communities are isolated.** Tefé's civil defence counted 122
