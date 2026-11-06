@@ -34,13 +34,16 @@
   <main>
     <section class="scene" aria-label="Radar map of the area">
       <div class="scene-map">
-        <div id="map" role="application" aria-label="Map: radar image, detected water and communities"></div>
-
         <div class="headline" id="headline" aria-live="polite">
-          <p class="headline-meta" id="headline-meta">Loading the record…</p>
-          <h1 id="headline-text">&nbsp;</h1>
+          <div>
+            <p class="headline-meta" id="headline-meta">Loading the record…</p>
+            <h1 id="headline-text">&nbsp;</h1>
+          </div>
           <p class="headline-sub" id="headline-sub"></p>
         </div>
+
+        <div class="map-frame">
+        <div id="map" role="application" aria-label="Map: radar image, detected water and communities"></div>
 
         <fieldset class="layers">
           <legend class="sr-only">Map layers</legend>
@@ -56,6 +59,7 @@
 
         <p class="plate" id="plate"></p>
         <div class="map-key" id="map-key"></div>
+        </div>
       </div>
 
       <aside class="roster" id="roster" aria-labelledby="roster-title">

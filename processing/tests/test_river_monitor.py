@@ -8,8 +8,8 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-from river_monitor import (STATUS, assign_access, classify_communities, connectivity,  # noqa: E402
-                           parse_gauge, parse_name, water_mask)
+from river_monitor import (STATUS, area_mask, assign_access, classify_communities, connectivity,  # noqa: E402
+                           in_area, parse_gauge, parse_name, water_mask)
 
 PX = 20.0
 WIDTHS = [40, 60, 100, 200, 400]
@@ -65,6 +65,16 @@ class TestConnectivity(unittest.TestCase):
         (st, b, _), = self.run_scene(water, valid, [(100, 262)])
         self.assertEqual(st, STATUS["at_risk"])
         self.assertEqual(b, 0)
+
+    def test_outside_a_circular_area_is_not_a_data_gap(self):
+        water, valid = river_scene()
+        yy, xx = np.mgrid[:200, :300]
+        inside = (yy - 100) ** 2 + (xx - 150) ** 2 <= 160 ** 2   # disc holding river, channel and lake
+        valid &= inside
+        water &= inside
+        (st, b, _), = connectivity(water, valid, PX, (100, 20, 200), [(100, 262)], WIDTHS, 400, 60, inside)
+        self.assertEqual(st, STATUS["connected"])
+        self.assertEqual(b, 60)
 
     def test_detached_pond_is_isolated_and_far_place_is_isolated(self):
         water, valid = river_scene()
@@ -136,6 +146,21 @@ class TestAccess(unittest.TestCase):
         kept = assign_access(places, [], self.SNAP)
         self.assertEqual(len(kept), 2)
         self.assertNotIn("access", kept[0])
+
+
+class TestCircularArea(unittest.TestCase):
+    AREA = {"circle": {"lon": -64.75, "lat": -3.40, "radius_km": 10}, "bbox": [-64.84, -3.4905, -64.66, -3.3095],
+            "step_deg": 0.002, "nx": 90, "ny": 90}
+
+    def test_mask_is_a_disc_filling_about_pi_over_four_of_the_grid(self):
+        m = area_mask(self.AREA)
+        self.assertTrue(m[45, 45])
+        self.assertFalse(m[0, 0])
+        self.assertAlmostEqual(m.mean(), np.pi / 4, delta=0.03)
+
+    def test_places_in_the_corner_of_the_grid_are_outside_the_area(self):
+        self.assertTrue(in_area(self.AREA, -64.75, -3.40))
+        self.assertFalse(in_area(self.AREA, -64.835, -3.485))   # inside the box, outside the disc
 
 
 class TestCatalog(unittest.TestCase):
