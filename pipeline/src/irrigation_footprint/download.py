@@ -53,20 +53,49 @@ def download(urls_and_sizes: list[tuple[str, int | None]], out_dir: Path) -> lis
     return paths
 
 
+def parse_track_frame(spec: str) -> tuple[str, int, int]:
+    """``A034F20`` / ``D114F70`` -> (direction, track, frame)."""
+    spec = spec.strip().upper()
+    if len(spec) < 4 or spec[0] not in "AD" or "F" not in spec[1:]:
+        raise ValueError(f"expected <A|D><track>F<frame>, e.g. D114F70, got {spec!r}")
+    track, frame = spec[1:].split("F", 1)
+    return ("ASCENDING" if spec[0] == "A" else "DESCENDING", int(track), int(frame))
+
+
+def select_rows(rows: list[dict], names: list[str], track_frames: list[str]) -> list[dict]:
+    """Inventory rows matching the given product names or <A|D><track>F<frame> selectors, in inventory order."""
+    wanted = {parse_track_frame(s) for s in track_frames}
+    known = {r["name"] for r in rows}
+    missing = [n for n in names if n not in known]
+    if missing:
+        raise ValueError(f"not in the inventory: {missing}")
+    return [
+        r for r in rows
+        if r["name"] in names or (r["direction"], int(r["track"]), int(r["frame"])) in wanted
+    ]
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("names", nargs="+", help="GUNW product names from the inventory")
+    parser.add_argument("names", nargs="*", help="GUNW product names from the inventory")
+    parser.add_argument("--track-frame", action="append", default=[], metavar="D114F70",
+                        help="download every product of this track and frame (repeatable)")
     parser.add_argument("--inventory", type=Path, default=None, help="default: <data>/inventory/gunw.csv")
     parser.add_argument("--out", type=Path, default=None, help="default: <data>/gunw")
     args = parser.parse_args(argv)
     with (args.inventory or data_dir() / "inventory" / "gunw.csv").open(encoding="utf-8") as fh:
-        rows = {r["name"]: r for r in csv.DictReader(fh)}
-    missing = [n for n in args.names if n not in rows]
-    if missing:
-        raise SystemExit(f"not in the inventory: {missing}")
-    wanted = [(rows[n]["url"], int(rows[n]["h5_bytes"]) if rows[n]["h5_bytes"] else None) for n in args.names]
+        rows = list(csv.DictReader(fh))
+    try:
+        selected = select_rows(rows, args.names, args.track_frame)
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
+    if not selected:
+        raise SystemExit("nothing selected: give product names or --track-frame")
+    total_gb = sum(int(r["h5_bytes"] or 0) for r in selected) / 1e9
+    print(f"{len(selected)} products, {total_gb:.1f} GB")
+    wanted = [(r["url"], int(r["h5_bytes"]) if r["h5_bytes"] else None) for r in selected]
     for path in download(wanted, args.out or data_dir() / "gunw"):
-        print(path)
+        print(path, flush=True)
 
 
 if __name__ == "__main__":

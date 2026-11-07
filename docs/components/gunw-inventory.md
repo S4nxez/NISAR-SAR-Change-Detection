@@ -29,6 +29,7 @@
 ```bash
 python -m irrigation_footprint.inventory
 python -m irrigation_footprint.download <product name> [...]
+python -m irrigation_footprint.download --track-frame A034F20 --track-frame D114F70   # ADR-002 selection
 ```
 
 ## Product name fields
