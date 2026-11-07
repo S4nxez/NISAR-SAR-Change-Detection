@@ -40,7 +40,7 @@ public class JwtService {
         ArrayList<LinkedTreeMap<String, Object>> auth = extractClaim(token, claims -> (ArrayList<LinkedTreeMap<String, Object>>) claims.get("auth"));
 
         if (auth == null || auth.isEmpty())
-            throw new IllegalArgumentException("El token no contiene autoridades válidas");
+            throw new IllegalArgumentException("The token does not contain valid authorities");
 
         return auth.stream()
                 .map(map -> new SimpleGrantedAuthority("ROLE_" + map.get("role").toString()))

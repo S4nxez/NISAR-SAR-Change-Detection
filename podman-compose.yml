@@ -25,8 +25,8 @@ services:
 
   backend:
     image: ghcr.io/s4nxez/nisar-sar-change-detection-back:${NISAR_IMAGE_TAG:-latest}
-    # Max 5 reintentos si Spring/Flyway falla al arrancar; el contador se reinicia
-    # con cada deploy (--force-recreate). Evita bucles infinitos de arranque.
+    # At most 5 retries if Spring/Flyway fails at startup; the counter resets on
+    # every deploy (--force-recreate). Avoids endless startup loops.
     restart: on-failure:5
     depends_on:
       mysql:

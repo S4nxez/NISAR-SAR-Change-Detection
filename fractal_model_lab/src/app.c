@@ -23,7 +23,7 @@ void	app_init(t_app *app)
 	app->zoom = NO_ZOOM;
 	app->focus = PANEL_TERM;
 	app->prev_focus = PANEL_PARAMS;
-	app_log(app, "Fractal Model Lab listo. Escribe 'help' o pulsa Tab.");
+	app_log(app, "Fractal Model Lab ready. Type 'help' or press Tab.");
 	report_generate(app);
 }
 

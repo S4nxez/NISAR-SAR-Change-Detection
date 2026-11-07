@@ -30,7 +30,7 @@ public class SiteCatalogService {
 
         List<SiteObservationEntity> observations = siteObservationSeriesRepository.findAll();
 
-        // Fechas globales, ordenadas cronológicamente.
+        // Global dates, in chronological order.
         List<String> dates = observations.stream()
                 .map(SiteObservationEntity::getObservationDate)
                 .distinct()
@@ -87,7 +87,7 @@ public class SiteCatalogService {
                 })
                 .toList();
 
-        // Agrupar por país (orden alfabético) y, dentro de cada país, por nombre.
+        // Group by country (alphabetical) and, within each country, by name.
         List<CountrySites> countries = sites.stream()
                 .collect(Collectors.groupingBy(SarSite::country, TreeMap::new, Collectors.toList()))
                 .entrySet().stream()

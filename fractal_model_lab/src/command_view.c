@@ -32,7 +32,7 @@ int	cmd_focus(t_app *app, int argc, char **argv)
 
 	if (argc != 2)
 	{
-		app_log(app, "uso: focus <1-4>");
+		app_log(app, "usage: focus <1-4>");
 		return (0);
 	}
 	panel = parse_panel(app, argv[1]);
@@ -71,7 +71,7 @@ int	cmd_scroll(t_app *app, int argc, char **argv)
 	if (argc != 2 || !parse_int(argv[1], &level)
 		|| level < 1 || level > total)
 	{
-		app_logf(app, "uso: scroll <nivel 1-%d>", total);
+		app_logf(app, "usage: scroll <level 1-%d>", total);
 		return (0);
 	}
 	app->fractal_top = level - 1;
