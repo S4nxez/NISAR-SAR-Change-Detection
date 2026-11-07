@@ -1,0 +1,39 @@
+# Reproducible environment of the irrigation footprint pipeline and its tests.
+# Works with micromamba, mamba or conda (conda-forge only: GDAL, rasterio and MintPy are unreliable from pip on Windows).
+#   micromamba create -f pipeline/environment.yml && micromamba activate irrigation-footprint
+#   pip install -e pipeline --no-deps
+name: irrigation-footprint
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # InSAR time series (prep_nisar.py reader for GUNW)
+  - mintpy>=1.6.2
+  # Arrays, rasters and HDF5
+  - numpy
+  - scipy
+  - dask
+  - xarray>=2024.10
+  - zarr
+  - h5py>=3.10
+  - netcdf4
+  - rasterio>=1.3
+  - rioxarray>=0.15
+  # Vector data and grids
+  - geopandas
+  - shapely>=2.0
+  - pyproj>=3.4
+  - h3-py>=4
+  # Search and download (NASA Earthdata / ASF)
+  - asf_search>=7.0
+  - earthaccess
+  - requests
+  - pyyaml
+  # Dependencies of nisar-pytools available on conda-forge
+  - snaphu>=0.3
+  # Tests and quality
+  - pytest
+  - ruff
+  - pip:
+      - nisar-pytools==0.5.0
