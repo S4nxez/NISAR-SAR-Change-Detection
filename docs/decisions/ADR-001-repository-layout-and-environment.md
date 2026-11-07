@@ -1,6 +1,7 @@
 # ADR-001: Repository layout and Python environment
 
-- Status: **Proposed** (pending team confirmation, plan step 0.6)
+- Status: **Accepted** (plan step 0.6; confirmed 2026-11-07: micromamba, English, `data/` ignore rule; every merge
+  between branches goes through a pull request)
 - Date: 2026-11-07
 
 ## Context
@@ -18,9 +19,12 @@ conda distribution.
    Pipeline data does not move elsewhere, so paths follow the plan.
 3. `server/` and `fractal_model_lab/` are kept for now: CI builds and smoke tests them, and removing them requires
    changing `build.yml`, `deploy.yml`, `preview.yml`, `tools/ci/*` and `podman-compose.yml` together (phases 7 and 9).
-4. Environment: `pipeline/environment.yml` from conda-forge only, Python 3.11, installed with micromamba (single binary)
-   or mamba/conda. GDAL, rasterio and MintPy are unreliable from pip on Windows. `nisar-pytools` is pinned (0.5.0) and
-   installed from PyPI after its dependencies (including `snaphu`) come from conda-forge.
+4. Environment: `pipeline/environment.yml` from conda-forge only, Python 3.11, installed with micromamba (the team's
+   choice; mamba/conda read the same file). GDAL, rasterio and MintPy are unreliable from pip on Windows.
+   `nisar-pytools` is pinned (0.5.0) and installed from PyPI with `--no-deps`: its dependencies come from conda-forge
+   except `snaphu`, which has no Windows build (conda-forge or PyPI). `nisar-pytools` only imports `snaphu` inside its
+   unwrapping function, which the GUNW path does not need (GUNW is already unwrapped). The optional GSLC long-pairs
+   branch of the plan would need unwrapping, so it would run on Linux or WSL2.
 5. Repository language: English (code, docs, commits), as the rest of the repository.
 
 ## Effect on accuracy
