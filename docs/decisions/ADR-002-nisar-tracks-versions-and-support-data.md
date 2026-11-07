@@ -18,7 +18,7 @@ cover the whole area in one frame. Some pairs exist in two versions (CRID `P0502
    measured (phase 2) before choosing which one enters the time series. The choice is recorded in a later ADR.
    On the selected tracks this concerns A034 f20 (2025-12-30 → 2026-01-11, 2026-06-28 → 2026-07-10) and D114 f70
    (2025-11-30 → 2025-12-24, 2025-12-24 → 2026-01-17, `P05023` vs `X05010`).
-3. **Evapotranspiration:** OpenET API with a free account; the key goes in `.env` as `OPENET_API_KEY`.
+3. **Evapotranspiration:** OpenET API with an account at https://account.etdata.org; the key goes in `.env` as `OPENET_API_KEY`.
 4. **NISAR vs Sentinel-1 comparison (phase 6):** November 2025 – April 2026, the real overlap of NISAR and OPERA
    DISP-S1, which also matches the DWR monthly rasters (to 2026-04-01).
 
