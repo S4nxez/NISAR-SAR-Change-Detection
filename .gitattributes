@@ -1,2 +1,6 @@
 data/sql/*.sql linguist-detectable=false
 data/csv/*.csv linguist-detectable=false
+# Windows scripts: cmd.exe and PowerShell 5.1 need CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
