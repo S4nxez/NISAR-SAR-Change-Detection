@@ -9,8 +9,13 @@ time series, support layers, 500 m hexagon classification). Its outputs are prec
 # From the repository root, with micromamba (or mamba / conda, same arguments)
 micromamba create -f pipeline/environment.yml
 micromamba activate irrigation-footprint
+pip install --no-deps nisar-pytools==0.5.0
 pip install -e pipeline --no-deps
 ```
+
+`nisar-pytools` is installed without its dependencies because it requires `snaphu`, which has no Windows build; all
+its other dependencies are in `environment.yml`. Phase unwrapping with `nisar-pytools` is therefore unavailable on
+Windows (not needed for GUNW, see ADR-001).
 
 ## Tests
 

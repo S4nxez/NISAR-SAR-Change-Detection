@@ -1,7 +1,9 @@
 # Reproducible environment of the irrigation footprint pipeline and its tests.
 # Works with micromamba, mamba or conda (conda-forge only: GDAL, rasterio and MintPy are unreliable from pip on Windows).
 #   micromamba create -f pipeline/environment.yml && micromamba activate irrigation-footprint
-#   pip install -e pipeline --no-deps
+#   pip install --no-deps nisar-pytools==0.5.0 && pip install -e pipeline --no-deps
+# nisar-pytools comes from PyPI without its dependencies (all listed below): it requires snaphu, which has no Windows
+# build, but only imports it inside its own unwrapping function. GUNW is already unwrapped (see ADR-001).
 name: irrigation-footprint
 channels:
   - conda-forge
@@ -30,10 +32,6 @@ dependencies:
   - earthaccess
   - requests
   - pyyaml
-  # Dependencies of nisar-pytools available on conda-forge
-  - snaphu>=0.3
   # Tests and quality
   - pytest
   - ruff
-  - pip:
-      - nisar-pytools==0.5.0
