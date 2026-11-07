@@ -22,7 +22,7 @@ static void	draw_memory(WINDOW *win, t_tree tree, t_cost cost, int margin)
 	fmt_count(tree.nodes, a, FMT_LEN);
 	fmt_count(tree.leaves, b, FMT_LEN);
 	fmt_count(tree.voters, c, FMT_LEN);
-	ui_textf(win, 1, "Modelos %s  (%s D + %s V)", a, b, c);
+	ui_textf(win, 1, "Models %s  (%s D + %s V)", a, b, c);
 	fmt_mib(cost.ram_mib, a, FMT_LEN);
 	fmt_mib(cost.required_mib, b, FMT_LEN);
 	ui_textf(win, 2, "RAM %s (+%d%%: %s)", a, margin, b);
@@ -41,8 +41,8 @@ static void	draw_cpu(WINDOW *win, t_cost cost, int target_ms)
 	fmt_time_us(cost.cpu_us, cpu, FMT_LEN);
 	fmt_time_us(container_latency_us(cost), latency, FMT_LEN);
 	fmt_count(cost.vcpus, vcpus, FMT_LEN);
-	ui_textf(win, 5, "Disco %s  CPU %s/inf", disk, cpu);
-	ui_textf(win, 6, "vCPU %s (<%d ms)  latencia %s",
+	ui_textf(win, 5, "Disk %s  CPU %s/inf", disk, cpu);
+	ui_textf(win, 6, "vCPU %s (<%d ms)  latency %s",
 		vcpus, target_ms, latency);
 }
 
@@ -59,12 +59,12 @@ static void	draw_container(WINDOW *win, t_cost cost)
 		ui_textf(win, 7, "Cluster %s x %s %d vCPU/%d GiB",
 			count, tier->name, tier->vcpus, tier->ram_gib);
 		wattroff(win, COLOR_PAIR(CP_WARN) | A_BOLD);
-		ui_text(win, 8, 2, "Reparte subarboles entre nodos");
+		ui_text(win, 8, 2, "Split subtrees across nodes");
 		return ;
 	}
 	tier = container_tier(cost.tier);
 	wattron(win, COLOR_PAIR(CP_LEAF) | A_BOLD);
-	ui_textf(win, 7, "Contenedor %s %d vCPU/%d GiB",
+	ui_textf(win, 7, "Container %s %d vCPU/%d GiB",
 		tier->name, tier->vcpus, tier->ram_gib);
 	wattroff(win, COLOR_PAIR(CP_LEAF) | A_BOLD);
 	ui_textf(win, 8, "docker run --cpus=%d --memory=%dg",
@@ -74,12 +74,12 @@ static void	draw_container(WINDOW *win, t_cost cost)
 static void	draw_profile(WINDOW *win, t_profile profile)
 {
 	wattron(win, A_DIM);
-	ui_text(win, 10, 2, "Perfil (comando 'profile'):");
-	ui_textf(win, 11, "  decisor %d MiB, %d us/inferencia",
+	ui_text(win, 10, 2, "Profile ('profile' command):");
+	ui_textf(win, 11, "  decider %d MiB, %d us/inference",
 		profile.leaf_mib, profile.leaf_us);
-	ui_textf(win, 12, "  votante %d MiB, %d us/voto",
+	ui_textf(win, 12, "  voter %d MiB, %d us/vote",
 		profile.voter_mib, profile.voter_us);
-	ui_textf(win, 13, "  runtime TF %d MiB, pesos %d%% RAM",
+	ui_textf(win, 13, "  TF runtime %d MiB, weights %d%% RAM",
 		profile.runtime_mib, profile.disk_pct);
 	wattroff(win, A_DIM);
 }
@@ -93,7 +93,7 @@ void	draw_cost(WINDOW *win, t_app *app)
 	profile = field_profile(app->values);
 	tree = app_tree(app);
 	cost = cost_estimate(tree, profile);
-	ui_frame(win, "[3] RECURSOS / CONTENEDOR", app->focus == PANEL_COST);
+	ui_frame(win, "[3] RESOURCES / CONTAINER", app->focus == PANEL_COST);
 	draw_memory(win, tree, cost, profile.headroom_pct);
 	draw_cpu(win, cost, profile.target_ms);
 	draw_container(win, cost);

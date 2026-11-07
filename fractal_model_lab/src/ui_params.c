@@ -45,7 +45,7 @@ static void	draw_levels_line(WINDOW *win, t_app *app, int y)
 	int		total;
 
 	total = tree_total_levels(app_params(app));
-	len = snprintf(line, sizeof(line), "Por nivel:");
+	len = snprintf(line, sizeof(line), "Per level:");
 	level = 0;
 	while (level < total && len < getmaxx(win) - 8)
 	{
@@ -69,24 +69,24 @@ static void	draw_derived(WINDOW *win, t_app *app, int y)
 	fmt_count(tree.nodes, nodes, FMT_LEN);
 	fmt_count(tree.leaves, leaves, FMT_LEN);
 	fmt_count(tree.voters, voters, FMT_LEN);
-	ui_textf(win, y, "Niveles   (L-1)*E+1 = %d", tree.total_levels);
-	ui_textf(win, y + 1, "Nodos     %s", nodes);
+	ui_textf(win, y, "Levels    (L-1)*E+1 = %d", tree.total_levels);
+	ui_textf(win, y + 1, "Nodes     %s", nodes);
 	wattron(win, COLOR_PAIR(CP_LEAF));
-	ui_textf(win, y + 2, "Decisores %s  (hojas D)", leaves);
+	ui_textf(win, y + 2, "Deciders  %s  (D leaves)", leaves);
 	wattroff(win, COLOR_PAIR(CP_LEAF));
 	wattron(win, COLOR_PAIR(CP_VOTER_A));
-	ui_textf(win, y + 3, "Votantes  %s  (nodos V)", voters);
+	ui_textf(win, y + 3, "Voters    %s  (V nodes)", voters);
 	wattroff(win, COLOR_PAIR(CP_VOTER_A));
 	draw_levels_line(win, app, y + 4);
 	if (tree.saturated)
-		ui_text(win, y + 5, 2, "Aviso: >2^64, valores saturados");
+		ui_text(win, y + 5, 2, "Warning: >2^64, saturated values");
 }
 
 void	draw_params(WINDOW *win, t_app *app)
 {
 	int	id;
 
-	ui_frame(win, "[2] PARAMETROS", app->focus == PANEL_PARAMS);
+	ui_frame(win, "[2] PARAMETERS", app->focus == PANEL_PARAMS);
 	id = 0;
 	while (id < FRACTAL_FIELDS)
 	{
@@ -95,5 +95,5 @@ void	draw_params(WINDOW *win, t_app *app)
 	}
 	draw_derived(win, app, FRACTAL_FIELDS + 2);
 	if (app->focus == PANEL_PARAMS)
-		ui_text(win, getmaxy(win) - 2, 2, "-/+ cambia  Enter edita");
+		ui_text(win, getmaxy(win) - 2, 2, "-/+ changes  Enter edits");
 }
