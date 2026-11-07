@@ -13,14 +13,14 @@ products from ASF.
 | --- | --- |
 | `EARTHDATA_TOKEN` | Earthdata bearer token. Wins over username/password if both are set |
 | `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD` | Earthdata Login, used when there is no token |
-| `IRRIGATION_DATA_DIR` | Optional data root; default `<repo>/data` |
+| `IRRIGATION_DATA_DIR` | Optional data root; default `<repo>/data`. Use a large disk: the selected GUNW stack is about 115 GB |
 
 Values come from the process environment first, then from the git-ignored `.env` at the repository root
 (template: `.env.example`). The same `.env` is read by `podman-compose.yml`, so it also holds the MySQL variables.
 
 ## Outputs
 
-- `data_dir()`: data root path.
+- `data_dir()`: data root path (reads `.env` itself, so every command honours `IRRIGATION_DATA_DIR`).
 - `earthdata_credentials()`: `EarthdataCredentials(username, password, token)`; raises `MissingCredentialsError` if
   neither a token nor a username + password is set.
 

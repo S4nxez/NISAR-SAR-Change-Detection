@@ -19,9 +19,22 @@ def test_repo_root_contains_the_pipeline():
 
 
 def test_data_dir_defaults_to_repo_data_and_can_be_overridden(monkeypatch, tmp_path):
-    assert config.data_dir() == config.REPO_ROOT / "data"
+    missing = tmp_path / "missing.env"
+    assert config.data_dir(missing) == config.REPO_ROOT / "data"
     monkeypatch.setenv("IRRIGATION_DATA_DIR", str(tmp_path))
-    assert config.data_dir() == tmp_path
+    assert config.data_dir(missing) == tmp_path
+
+
+def test_data_dir_is_read_from_env_file(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text(f"IRRIGATION_DATA_DIR={tmp_path / 'big-disk'}\n", encoding="utf-8")
+    assert config.data_dir(env) == tmp_path / "big-disk"
+
+
+def test_empty_data_dir_falls_back_to_repo_data(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("IRRIGATION_DATA_DIR=\n", encoding="utf-8")
+    assert config.data_dir(env) == config.REPO_ROOT / "data"
 
 
 def test_parse_env_file_handles_comments_quotes_and_export(tmp_path):
