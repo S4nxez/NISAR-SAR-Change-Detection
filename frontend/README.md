@@ -18,6 +18,7 @@ Open `http://localhost:8080`.
 - `src/services/mapService.js` — Leaflet map and markers.
 - `src/styles/main.css` — design tokens, layout, responsive styles.
 - `public/data/world.geo.json` — retained source GeoJSON asset, available for future overlays.
+- `monitor.html` + `src/monitor/` — river lifeline monitor: for every NISAR pass, which riverside communities still have a water route to their hub town. Reads `public/data/monitor/<area>/catalog.json`, built and kept up to date by `processing/river_monitor.py`. See `docs/river-monitor.md`.
 
 ## Important
 - **All values and detections are illustrative UI demo data**, not live Sentinel-1 data and not scientific findings.
