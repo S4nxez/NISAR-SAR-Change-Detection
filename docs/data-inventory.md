@@ -42,6 +42,6 @@ Findings that change the plan's assumptions:
 
 ## Pending
 
-- Download one GUNW and document its HDF5 structure, units, sign convention and connected components
-  (`docs/components/gunw.md`): blocked until the Earthdata account authorizes the ASF application.
+- GUNW structure documented in `docs/components/gunw.md`. Open: whether the `...CorrectionApplied = True` flags
+  mean the phase is already corrected, and the phase sign convention (both checked in phase 2).
 - Surface water deliveries per irrigation district (class C depends on them).
