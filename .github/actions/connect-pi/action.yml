@@ -24,6 +24,10 @@ runs:
         oauth-secret: ${{ inputs.oauth-secret }}
         tags: tag:ci
         version: latest
+        # The tailnet DNS points at the Pi (100.68.170.113), which runs no DNS server: accepting it
+        # breaks every name lookup on the runner (gh fails with "error connecting to api.github.com").
+        # The Pi is reached by IP, so the runner keeps its own DNS.
+        args: --accept-dns=false
 
     - name: Setup SSH
       shell: bash
