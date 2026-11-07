@@ -16,17 +16,17 @@
 static const t_command	*command_find(const char *name)
 {
 	static const t_command	commands[] = {
-	{"help", "ayuda", cmd_help},
+	{"help", 0, cmd_help},
 	{"generate", "gen", cmd_generate},
-	{"stats", "niveles", cmd_stats},
-	{"reset", "reiniciar", cmd_reset},
-	{"clear", "limpiar", cmd_clear},
-	{"focus", "foco", cmd_focus},
+	{"stats", 0, cmd_stats},
+	{"reset", 0, cmd_reset},
+	{"clear", 0, cmd_clear},
+	{"focus", 0, cmd_focus},
 	{"zoom", "max", cmd_zoom},
-	{"scroll", "ver", cmd_scroll},
-	{"quit", "salir", cmd_quit},
-	{"set", "fijar", cmd_set},
-	{"profile", "perfil", cmd_profile},
+	{"scroll", 0, cmd_scroll},
+	{"quit", 0, cmd_quit},
+	{"set", 0, cmd_set},
+	{"profile", 0, cmd_profile},
 	{0, 0, 0}
 	};
 	int						i;
@@ -35,7 +35,8 @@ static const t_command	*command_find(const char *name)
 	while (commands[i].name)
 	{
 		if (!strcmp(name, commands[i].name)
-			|| !strcmp(name, commands[i].alias))
+			|| (commands[i].alias
+				&& !strcmp(name, commands[i].alias)))
 			return (&commands[i]);
 		i++;
 	}
@@ -69,7 +70,7 @@ void	command_execute(t_app *app, char *line)
 	argc = tokenize(line, argv + 1);
 	if (argc < 0)
 	{
-		app_log(app, "error: demasiados argumentos");
+		app_log(app, "error: too many arguments");
 		return ;
 	}
 	if (argc == 0)
@@ -83,5 +84,5 @@ void	command_execute(t_app *app, char *line)
 		cmd_set(app, argc + 1, argv);
 	}
 	else
-		app_logf(app, "error: '%s' desconocido, escribe help", argv[1]);
+		app_logf(app, "error: unknown '%s', type help", argv[1]);
 }

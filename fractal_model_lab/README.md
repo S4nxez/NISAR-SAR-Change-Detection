@@ -1,14 +1,14 @@
 # Fractal Model Lab
 
-Aplicación TUI en C (`ncursesw`) para diseñar un esquema de IA en forma de
-árbol fractal y estimar por adelantado los recursos que necesitará antes de
-implementarlo (la parte Python/TensorFlow queda para una fase posterior).
+TUI application in C (`ncursesw`) to design an AI schema shaped as a fractal
+tree and estimate up front the resources it will need before implementing it
+(the Python/TensorFlow part is left for a later phase).
 
-- Cada **hoja** del árbol es un modelo **decisor** (`D`).
-- Cada **nodo intermedio** es un modelo de **votación** (`V`) que agrega a
-  sus hijos.
+- Every **leaf** of the tree is a **decider** model (`D`).
+- Every **intermediate node** is a **voting** model (`V`) that aggregates its
+  children.
 
-## Requisitos
+## Requirements
 
 ```sh
 sudo apt install build-essential libncurses-dev
@@ -16,86 +16,85 @@ make
 ./fractal_lab
 ```
 
-Tamaño mínimo de terminal: 60x16 (recomendado 100x30 o más).
+Minimum terminal size: 60x16 (100x30 or more recommended).
 
-## Cuadrantes
+## Quadrants
 
-| # | Panel | Contenido |
-|---|-------|-----------|
-| 1 | Fractal | Árbol dibujado con conectores de línea (`┌─┴─┐`). Los niveles que no caben nodo a nodo se agrupan por su ancestro visible y se muestran por densidad (`:` `+` `*` `#`). A la derecha, nodos por nivel; `*` marca la raíz de cada copia fractal y el color cambia por copia. |
-| 2 | Parámetros | `niveles`, `profundidad`, `exponencial` y sus derivados: niveles totales, nodos, decisores, votantes y nodos por nivel. |
-| 3 | Recursos | RAM (con desglose y margen), disco de pesos, CPU por inferencia, vCPU para la latencia objetivo, latencia estimada y contenedor recomendado (con su `docker run`), o clúster si no cabe en uno. |
-| 4 | Terminal / logs | Línea de comandos e historial de mensajes. |
+| # | Panel | Content |
+|---|-------|---------|
+| 1 | Fractal | Tree drawn with line connectors (`┌─┴─┐`). Levels that do not fit node by node are grouped by their visible ancestor and shown by density (`:` `+` `*` `#`). On the right, nodes per level; `*` marks the root of each fractal copy and the color changes per copy. |
+| 2 | Parameters | `levels`, `depth`, `exponent` and their derived values: total levels, nodes, deciders, voters and nodes per level. |
+| 3 | Resources | RAM (with breakdown and headroom), weights on disk, CPU per inference, vCPU for the target latency, estimated latency and recommended container (with its `docker run`), or a cluster if it does not fit in one. |
+| 4 | Terminal / logs | Command line and message history. |
 
-## Modelo del árbol
+## Tree model
 
-- **niveles (L)**: niveles del árbol base, contando la raíz.
-- **profundidad (D)**: hijos por nodo (los nodos por nivel se multiplican por D).
-- **exponencial (E)**: veces que el árbol base se aplica sobre sus propias
-  hojas (autosemejanza fractal).
+- **levels (L)**: levels of the base tree, counting the root.
+- **depth (D)**: children per node (nodes per level are multiplied by D).
+- **exponent (E)**: times the base tree is applied on its own leaves (fractal
+  self-similarity).
 
-Niveles totales = `(L-1)*E + 1`; el nivel `k` (desde 0) tiene `D^k` nodos.
-Ejemplo `L=3 D=3 E=2`: 5 niveles con 1, 3, 9, 27 y 81 nodos (121 modelos:
-81 decisores y 40 votantes). Los cálculos usan aritmética saturada de 64 bits,
-así que los valores extremos se muestran como `>1.8E` y no se desbordan.
+Total levels = `(L-1)*E + 1`; level `k` (from 0) has `D^k` nodes.
+Example `L=3 D=3 E=2`: 5 levels with 1, 3, 9, 27 and 81 nodes (121 models:
+81 deciders and 40 voters). Calculations use 64-bit saturated arithmetic, so
+extreme values are shown as `>1.8E` and never overflow.
 
-## Teclado
+## Keyboard
 
-| Tecla | Acción |
-|-------|--------|
-| `Tab` / `Shift-Tab`, `1`-`4` | Cambiar de panel |
-| `z` | Maximizar o restaurar el panel activo |
-| `g` / `h` / `q` | Generar el informe / ayuda / salir |
-| `:` | Ir al terminal (`Esc` vuelve al panel anterior) |
-| Fractal: `↑` `↓` `Inicio` `Fin` | Desplazar los niveles mostrados |
-| Parámetros: `↑` `↓` | Seleccionar el parámetro |
-| Parámetros: `←` `→` o `-` `+` | Cambiar su valor |
-| Parámetros: `Enter` | Escribe `set <campo> ` en el terminal |
-| Terminal: `RePág` `AvPág` `↑` `↓` | Desplazar los logs |
+| Key | Action |
+|-----|--------|
+| `Tab` / `Shift-Tab`, `1`-`4` | Switch panel |
+| `z` | Maximize or restore the active panel |
+| `g` / `h` / `q` | Generate the report / help / quit |
+| `:` | Go to the terminal (`Esc` returns to the previous panel) |
+| Fractal: `↑` `↓` `Home` `End` | Scroll the displayed levels |
+| Parameters: `↑` `↓` | Select the parameter |
+| Parameters: `←` `→` or `-` `+` | Change its value |
+| Parameters: `Enter` | Types `set <field> ` in the terminal |
+| Terminal: `PgUp` `PgDn` `↑` `↓` | Scroll the logs |
 
-## Comandos
+## Commands
 
 ```
-help                      ayuda
-generate | gen            informe del esquema actual
-stats                     nodos por nivel
-set <campo> <n>           también vale '<campo> <n>' (p. ej. 'depth 4')
-profile [campo n]         ver o cambiar el perfil de modelo
+help                      help
+generate | gen            report of the current schema
+stats                     nodes per level
+set <field> <n>           '<field> <n>' also works (e.g. 'depth 4')
+profile [field n]         show or change the model profile
 reset | clear | quit
-focus <1-4> | zoom [1-4|off] | scroll <nivel>
+focus <1-4> | zoom [1-4|off] | scroll <level>
 ```
 
-Campos del árbol: `levels`/`niveles`, `depth`/`profundidad`,
-`exponent`/`exponencial`.
+Tree fields: `levels`, `depth`, `exponent`.
 
-## Estimación de recursos
+## Resource estimation
 
-Se basa en un perfil de modelo editable con `profile <campo> <n>`:
+Based on a model profile editable with `profile <field> <n>`:
 
-| Campo | Por defecto | Significado |
-|-------|-------------|-------------|
-| `runtime_mib` | 512 | Memoria base del runtime de TensorFlow |
-| `leaf_mib` / `voter_mib` | 48 / 6 | RAM por modelo decisor / votante |
-| `disk_pct` | 40 | Tamaño de los pesos en disco, en % de la RAM de los modelos |
-| `leaf_us` / `voter_us` | 5000 / 200 | CPU por inferencia / voto |
-| `target_ms` | 250 | Latencia objetivo, usada para calcular las vCPU |
-| `headroom_pct` | 25 | Margen de RAM sobre el total |
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `runtime_mib` | 512 | Base memory of the TensorFlow runtime |
+| `leaf_mib` / `voter_mib` | 48 / 6 | RAM per decider / voter model |
+| `disk_pct` | 40 | Size of the weights on disk, as % of the models' RAM |
+| `leaf_us` / `voter_us` | 5000 / 200 | CPU per inference / vote |
+| `target_ms` | 250 | Target latency, used to compute the vCPUs |
+| `headroom_pct` | 25 | RAM headroom over the total |
 
-El contenedor elegido es el más pequeño de la tabla de `src/container.c`
-(micro 1/1 GiB … 8xlarge 96 vCPU/384 GiB) que cubra la RAM con margen y las
-vCPU. Si ninguno basta, se propone un clúster de 8xlarge. Son estimaciones
-orientativas, no medidas reales de TensorFlow.
+The chosen container is the smallest one in the `src/container.c` table
+(micro 1/1 GiB … 8xlarge 96 vCPU/384 GiB) that covers the RAM with headroom
+and the vCPUs. If none is enough, a cluster of 8xlarge is proposed. These are
+rough estimates, not real TensorFlow measurements.
 
-## Estructura y normas
+## Structure and rules
 
 ```text
-include/  cabeceras por módulo (tree, cost, field, format, app, ui, view, command)
-src/      tree*, cost/container   -> cálculo
-          fractal_*               -> renderizado del árbol
-          ui_*                    -> paneles
-          input*, command*        -> teclado y terminal
+include/  headers per module (tree, cost, field, format, app, ui, view, command)
+src/      tree*, cost/container   -> calculation
+          fractal_*               -> tree rendering
+          ui_*                    -> panels
+          input*, command*        -> keyboard and terminal
 ```
 
-Todo el código cumple la Norminette 3 de 42 (`norminette src include`):
-cabecera 42, como mucho 25 líneas y 4 parámetros por función, 5 variables por
-función y 5 funciones por fichero, sin `for`, `switch` ni ternarios.
+All the code follows 42's Norminette 3 (`norminette src include`): 42 header,
+at most 25 lines and 4 parameters per function, 5 variables per function and
+5 functions per file, no `for`, `switch` or ternaries.

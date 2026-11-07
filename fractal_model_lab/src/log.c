@@ -46,25 +46,24 @@ void	app_clear_logs(t_app *app)
 
 static void	help_keys(t_app *app)
 {
-	app_log(app, "Teclas: Tab/S-Tab panel | 1-4 foco | z zoom | q salir");
-	app_log(app, "        g generar | h ayuda | : ir al terminal");
-	app_log(app, "Fractal: flechas arriba/abajo desplazan niveles");
-	app_log(app, "Parametros: arriba/abajo elige, -/+ o izq/der cambia,");
-	app_log(app, "        Enter escribe 'set <campo> ' en el terminal");
-	app_log(app, "Terminal: Esc sale, RePag/AvPag desplaza los logs");
+	app_log(app, "Keys: Tab/S-Tab panel | 1-4 focus | z zoom | q quit");
+	app_log(app, "        g generate | h help | : go to terminal");
+	app_log(app, "Fractal: up/down arrows scroll levels");
+	app_log(app, "Parameters: up/down selects, -/+ or left/right changes,");
+	app_log(app, "        Enter types 'set <field> ' in the terminal");
+	app_log(app, "Terminal: Esc leaves, PgUp/PgDn scroll the logs");
 }
 
 void	app_help(t_app *app)
 {
-	app_log(app, "--- ayuda ---");
+	app_log(app, "--- help ---");
 	help_keys(app);
-	app_log(app, "Comandos: help | gen | stats | reset | clear | quit");
-	app_log(app, "  set <campo> <n>  (o '<campo> <n>')");
-	app_log(app, "  campos: levels depth exponent (niveles profundidad");
-	app_log(app, "  exponencial) y los de 'profile'");
-	app_log(app, "  profile [campo n]  perfil de modelo para recursos");
-	app_log(app, "  focus <1-4> | zoom [1-4|off] | scroll <nivel>");
-	app_log(app, "Arbol: L niveles, D hijos por nodo; E aplica el arbol");
-	app_log(app, "  sobre cada hoja E veces: (L-1)*E+1 niveles totales.");
-	app_log(app, "  Hojas (D) = modelos decisores; resto (V) = votantes.");
+	app_log(app, "Commands: help | gen | stats | reset | clear | quit");
+	app_log(app, "  set <field> <n>  (or '<field> <n>')");
+	app_log(app, "  fields: levels depth exponent and those of 'profile'");
+	app_log(app, "  profile [field n]  model profile for resources");
+	app_log(app, "  focus <1-4> | zoom [1-4|off] | scroll <level>");
+	app_log(app, "Tree: L levels, D children per node; E applies the tree");
+	app_log(app, "  on every leaf E times: (L-1)*E+1 total levels.");
+	app_log(app, "  Leaves (D) = decider models; the rest (V) = voters.");
 }

@@ -87,6 +87,6 @@ void	draw_logs(WINDOW *win, t_app *app)
 		i--;
 	}
 	if (app->log_scroll > 0)
-		mvwprintw(win, getmaxy(win) - 1, 2, " +%d recientes (AvPag) ",
+		mvwprintw(win, getmaxy(win) - 1, 2, " +%d newer (PgDn) ",
 			app->log_scroll);
 }
