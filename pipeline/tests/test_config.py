@@ -19,9 +19,22 @@ def test_repo_root_contains_the_pipeline():
 
 
 def test_data_dir_defaults_to_repo_data_and_can_be_overridden(monkeypatch, tmp_path):
-    assert config.data_dir() == config.REPO_ROOT / "data"
+    missing = tmp_path / "missing.env"
+    assert config.data_dir(missing) == config.REPO_ROOT / "data"
     monkeypatch.setenv("IRRIGATION_DATA_DIR", str(tmp_path))
-    assert config.data_dir() == tmp_path
+    assert config.data_dir(missing) == tmp_path
+
+
+def test_data_dir_is_read_from_env_file(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text(f"IRRIGATION_DATA_DIR={tmp_path / 'big-disk'}\n", encoding="utf-8")
+    assert config.data_dir(env) == tmp_path / "big-disk"
+
+
+def test_empty_data_dir_falls_back_to_repo_data(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("IRRIGATION_DATA_DIR=\n", encoding="utf-8")
+    assert config.data_dir(env) == config.REPO_ROOT / "data"
 
 
 def test_parse_env_file_handles_comments_quotes_and_export(tmp_path):
@@ -55,12 +68,12 @@ def test_environment_wins_over_env_file(monkeypatch, tmp_path):
     assert config.earthdata_credentials(env).username == "from_env"
 
 
-def test_token_wins_over_password(monkeypatch, tmp_path):
+def test_token_comes_with_password_as_fallback(monkeypatch, tmp_path):
     monkeypatch.setenv("EARTHDATA_TOKEN", "tok")
     monkeypatch.setenv("EARTHDATA_USERNAME", "jorge")
     monkeypatch.setenv("EARTHDATA_PASSWORD", "secret")
     creds = config.earthdata_credentials(tmp_path / "missing.env")
-    assert creds.token == "tok" and creds.password is None
+    assert (creds.token, creds.username, creds.password) == ("tok", "jorge", "secret")
 
 
 def test_missing_credentials_raise_without_leaking(monkeypatch, tmp_path):

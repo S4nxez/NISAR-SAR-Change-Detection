@@ -14,9 +14,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def data_dir() -> Path:
-    """Root of downloaded and derived data: ``$IRRIGATION_DATA_DIR`` or ``<repo>/data`` (git-ignored)."""
-    return Path(os.environ.get("IRRIGATION_DATA_DIR", REPO_ROOT / "data"))
+def data_dir(env_file: Path | None = None) -> Path:
+    """Root of downloaded and derived data: ``IRRIGATION_DATA_DIR`` (environment or ``.env``) or ``<repo>/data``."""
+    load_env(env_file)
+    return Path(os.environ.get("IRRIGATION_DATA_DIR") or REPO_ROOT / "data")
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -65,7 +66,8 @@ def earthdata_credentials(env_file: Path | None = None) -> EarthdataCredentials:
     username = os.environ.get("EARTHDATA_USERNAME") or None
     password = os.environ.get("EARTHDATA_PASSWORD") or None
     if token:
-        return EarthdataCredentials(username=username, token=token)
+        # username/password kept as a fallback for an expired token
+        return EarthdataCredentials(username=username, password=password, token=token)
     if username and password:
         return EarthdataCredentials(username=username, password=password)
     raise MissingCredentialsError(
