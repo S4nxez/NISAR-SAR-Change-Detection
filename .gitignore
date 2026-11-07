@@ -52,3 +52,20 @@ fractal_model_lab/fractal_lab
 SpringBoot/.idea/modules.xml
 SpringBoot/.idea/modules.xml
 .env
+
+### Irrigation footprint pipeline ###
+# Downloaded and derived data never go to git (CLAUDE.md); only the legacy
+# Spring demo data generator stays tracked until server/ is retired
+/data/*
+!/data/csv/
+!/data/sql_generator.py
+# Credentials: .env is ignored above, its template is tracked
+.env.*
+!.env.example
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+.ipynb_checkpoints/
