@@ -65,7 +65,8 @@ def earthdata_credentials(env_file: Path | None = None) -> EarthdataCredentials:
     username = os.environ.get("EARTHDATA_USERNAME") or None
     password = os.environ.get("EARTHDATA_PASSWORD") or None
     if token:
-        return EarthdataCredentials(username=username, token=token)
+        # username/password kept as a fallback for an expired token
+        return EarthdataCredentials(username=username, password=password, token=token)
     if username and password:
         return EarthdataCredentials(username=username, password=password)
     raise MissingCredentialsError(

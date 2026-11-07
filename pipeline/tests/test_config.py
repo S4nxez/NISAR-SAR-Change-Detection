@@ -55,12 +55,12 @@ def test_environment_wins_over_env_file(monkeypatch, tmp_path):
     assert config.earthdata_credentials(env).username == "from_env"
 
 
-def test_token_wins_over_password(monkeypatch, tmp_path):
+def test_token_comes_with_password_as_fallback(monkeypatch, tmp_path):
     monkeypatch.setenv("EARTHDATA_TOKEN", "tok")
     monkeypatch.setenv("EARTHDATA_USERNAME", "jorge")
     monkeypatch.setenv("EARTHDATA_PASSWORD", "secret")
     creds = config.earthdata_credentials(tmp_path / "missing.env")
-    assert creds.token == "tok" and creds.password is None
+    assert (creds.token, creds.username, creds.password) == ("tok", "jorge", "secret")
 
 
 def test_missing_credentials_raise_without_leaking(monkeypatch, tmp_path):
