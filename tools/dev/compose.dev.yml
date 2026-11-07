@@ -1,0 +1,86 @@
+# Entorno de desarrollo local (Windows + Docker Desktop). Lo maneja tools/dev/dev.ps1
+# a través del Makefile de la raíz: no hace falta lanzarlo a mano.
+#
+#   mysql  -> siempre. Publica 127.0.0.1:${DB_PORT:-3306} con root/root y la base NisarSar,
+#             que son justo los valores por defecto de server/src/main/resources/application.properties,
+#             así que el servidor arrancado desde IntelliJ conecta sin configurar nada.
+#   server -> perfil "server": solo si la máquina no tiene un JDK 21 (SERVER_MODE=docker).
+#   front  -> perfil "front": live-server con recarga en caliente si no se usa Go Live de VS Code
+#             (FRONT_MODE=docker).
+#
+# Las rutas son relativas a este fichero.
+name: nisarsar-dev
+
+services:
+  mysql:
+    image: docker.io/library/mysql:8
+    container_name: nisarsar-dev-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: NisarSar
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+      start_period: 10s
+
+  server:
+    profiles: ["server"]
+    image: docker.io/library/maven:3.9-eclipse-temurin-21
+    container_name: nisarsar-dev-server
+    working_dir: /app
+    command: ["mvn", "-B", "-ntp", "-DskipTests", "spring-boot:run"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/NisarSar
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      SERVER_PORT: "8080"
+    ports:
+      - "127.0.0.1:${SERVER_PORT:-8080}:8080"
+    volumes:
+      - ../../server:/app
+      # target/ propio del contenedor: no pisa el que compila IntelliJ en Windows
+      - server_target:/app/target
+      - maven_repo:/root/.m2
+
+  front:
+    profiles: ["front"]
+    image: docker.io/library/node:20-alpine
+    container_name: nisarsar-dev-front
+    working_dir: /app
+    command:
+      - sh
+      - -c
+      - >-
+        npx --yes live-server@1.2.2 --host=0.0.0.0 --port=5500 --no-browser --wait=150
+        --proxy=/api:$${API_TARGET}
+    environment:
+      # Destino de /api: el contenedor 'server' si el servidor corre en Docker, o el host
+      # (IntelliJ / make con JDK local). dev.ps1 lo ajusta y recrea este contenedor al cambiar.
+      API_TARGET: ${API_TARGET:-http://host.docker.internal:8080/api}
+      # Los cambios hechos en Windows no llegan como eventos al contenedor: se sondea
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${FRONT_PORT:-5500}:5500"
+    volumes:
+      - ../../frontend:/app:ro
+      - npm_cache:/root/.npm
+
+volumes:
+  mysql_data:
+  server_target:
+  maven_repo:
+  npm_cache:

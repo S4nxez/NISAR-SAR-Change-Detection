@@ -52,3 +52,6 @@ fractal_model_lab/fractal_lab
 SpringBoot/.idea/modules.xml
 SpringBoot/.idea/modules.xml
 .env
+
+### entorno de desarrollo local (make up) ###
+.dev/
