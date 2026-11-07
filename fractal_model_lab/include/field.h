@@ -37,7 +37,6 @@ typedef enum e_field_id
 typedef struct s_field
 {
 	const char	*name;
-	const char	*alias;
 	const char	*label;
 	int			min;
 	int			max;

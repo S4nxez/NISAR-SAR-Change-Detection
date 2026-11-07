@@ -21,9 +21,9 @@ static void	log_tree(t_app *app)
 
 	tree = app_tree(app);
 	fmt_count(tree.nodes, nodes, FMT_LEN);
-	app_logf(app, "  -> %d niveles, %s nodos", tree.total_levels, nodes);
+	app_logf(app, "  -> %d levels, %s nodes", tree.total_levels, nodes);
 	if (tree.saturated)
-		app_log(app, "aviso: el recuento supera 2^64 (saturado)");
+		app_log(app, "warning: the count exceeds 2^64 (saturated)");
 }
 
 int	field_change(t_app *app, int id, int value)
@@ -34,7 +34,7 @@ int	field_change(t_app *app, int id, int value)
 	field = field_get(id);
 	if (value < field->min || value > field->max)
 	{
-		app_logf(app, "error: %s fuera de rango (%d-%d)",
+		app_logf(app, "error: %s out of range (%d-%d)",
 			field->name, field->min, field->max);
 		return (0);
 	}

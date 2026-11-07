@@ -50,14 +50,14 @@ static void	draw_header(t_view *view, t_tree tree)
 
 	fmt_count(tree.nodes, nodes, FMT_LEN);
 	fmt_count(tree.leaves, leaves, FMT_LEN);
-	ui_textf(view->win, 1, "%d niveles  %s nodos  %s decisores",
+	ui_textf(view->win, 1, "%d levels  %s nodes  %s deciders",
 		view->total, nodes, leaves);
 	if (view->first > 0)
 		mvwprintw(view->win, getmaxy(view->win) - 1, 2,
-			" ^ %d niveles arriba ", view->first);
+			" ^ %d levels above ", view->first);
 	if (view->first + view->shown < view->total)
 		mvwprintw(view->win, getmaxy(view->win) - 1,
-			getmaxx(view->win) - 24, " v %d niveles abajo ",
+			getmaxx(view->win) - 24, " v %d levels below ",
 			view->total - view->first - view->shown);
 }
 
@@ -84,7 +84,7 @@ void	draw_fractal(WINDOW *win, t_app *app)
 	t_view	view;
 	int		level;
 
-	ui_frame(win, "[1] FRACTAL  V votante  D decisor  * copia",
+	ui_frame(win, "[1] FRACTAL  V voter  D decider  * copy",
 		app->focus == PANEL_FRACTAL);
 	view_init(&view, win, app_params(app), app->fractal_top);
 	draw_header(&view, app_tree(app));
