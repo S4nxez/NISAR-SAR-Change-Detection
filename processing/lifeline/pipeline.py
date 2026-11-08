@@ -1,0 +1,148 @@
+"""The monitor's commands: communities, update, reevaluate and watch."""
+import concurrent.futures as cf
+import datetime as dt
+import os
+import time
+import traceback
+
+import numpy as np
+
+from . import asf, places
+from .area import area_mask
+from .catalog import (catalog_path, classify_communities, evaluate, load_catalog, pass_dir, refresh_changes,
+                      save_catalog, wide_water_of)
+from .config import AREAS_DIR, OUT_ROOT, log
+from .gauge import refresh_gauge
+from .layers import load_mask, save_mask, save_radar, save_water
+from .radar import read_pass
+from .remote import earthdata_token
+from .water import water_mask
+
+ENTRY_KEYS = ("id", "date", "time_utc", "track", "direction", "frames", "modes", "beta")
+
+
+def process_pass(area, communities, ps, out_root, token, read=None):
+    """Read one pass (with read_pass unless `read` is given), write its layers and return its catalog entry."""
+    t0 = time.time()
+    db, read_mb, spacing = (read or read_pass)(area, ps, token)
+    db[~area_mask(area)] = np.nan   # outside a circular area: transparent in the images, never water
+    water, valid = water_mask(db, area["water_db"], area.get("water_db_weak"))
+    wide = wide_water_of(area, water)
+    pdir = pass_dir(area, ps["id"], out_root)
+    os.makedirs(pdir, exist_ok=True)
+    save_radar(db, os.path.join(pdir, "radar.webp"))
+    save_water(water, wide, os.path.join(pdir, "water.png"))
+    save_mask(water, valid, os.path.join(pdir, "water.npz"))
+    entry = {k: ps[k] for k in ENTRY_KEYS}
+    entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"})
+    evaluate(area, communities, water, valid, wide, entry)
+    entry["seconds"] = round(time.time() - t0, 1)
+    return entry
+
+
+def _process_job(job):
+    """process_pass in a worker process: (pass id, entry or None, error text or None)."""
+    area, communities, ps, out_root, token = job
+    try:
+        return ps["id"], process_pass(area, communities, ps, out_root, token), None
+    except Exception:  # keep the batch running; the pass is retried on the next update
+        return ps["id"], None, traceback.format_exc(limit=3)
+
+
+def pending_passes(found, cat, redo=False, limit=None):
+    """Passes to process, oldest first: the ones not in the catalog (all with redo), the last
+    `limit` of them when given."""
+    done = {p["id"] for p in cat["passes"]}
+    todo = sorted((p for pid, p in found.items() if redo or pid not in done), key=lambda p: p["date"])
+    return todo[-limit:] if limit else todo
+
+
+def describe(entry):
+    c = entry.get("counts")
+    counts = (f", connected {c['connected']} / at risk {c['at_risk']} / isolated {c['isolated']}" if c
+              else ", not evaluated (partial coverage)")
+    return (f"{entry['id']}: coverage {entry['coverage'] * 100:.0f} %, water {entry['water_km2']} km², "
+            f"read {entry['read_mb']} MB in {entry['seconds']} s{counts}")
+
+
+def put_entry(cat, entry):
+    cat["passes"] = [p for p in cat["passes"] if p["id"] != entry["id"]] + [entry]
+
+
+def update(area, workers=2, limit=None, redo=False, out_root=OUT_ROOT, areas_dir=AREAS_DIR,
+           search=asf.search, token=earthdata_token, executor=cf.ProcessPoolExecutor):
+    """Search ASF and process every pass not in the catalog yet, then refresh the whole record."""
+    communities = places.load_communities(area, areas_dir)
+    cat = load_catalog(area, communities, out_root)
+    log(f"Searching ASF for NISAR GCOV over {area['name']} ...")
+    found = search(area)
+    todo = pending_passes(found, cat, redo, limit)
+    log(f"{len(found)} passes found, {len(todo)} to process")
+    cat["last_search"] = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if todo:
+        tok = token()
+        jobs = [(area, communities, ps, out_root, tok) for ps in todo]
+        with executor(max_workers=max(1, workers)) as ex:
+            for pid, entry, err in ex.map(_process_job, jobs):
+                if err:
+                    log(f"FAILED {pid}:\n{err}")
+                    continue
+                put_entry(cat, entry)
+                log(describe(entry))
+                # the page may read the catalog meanwhile: keep its counts and classes consistent
+                classify_communities(area, cat)
+                save_catalog(area, cat, out_root)
+    refresh_changes(area, cat, out_root)
+    classify_communities(area, cat)
+    refresh_gauge(area, cat)
+    save_catalog(area, cat, out_root)
+    log(f"Catalog: {catalog_path(area, out_root)} ({len(cat['passes'])} passes); "
+        f"communities {cat['community_classes']}")
+    return cat
+
+
+def reevaluate(area, out_root=OUT_ROOT, areas_dir=AREAS_DIR):
+    """Recompute water layers and community status from the stored masks (no download)."""
+    communities = places.load_communities(area, areas_dir)
+    cat = load_catalog(area, communities, out_root)
+    for entry in cat["passes"]:
+        pdir = pass_dir(area, entry["id"], out_root)
+        path = os.path.join(pdir, "water.npz")
+        if not os.path.exists(path):
+            continue
+        water, valid = load_mask(path)
+        wide = wide_water_of(area, water)
+        save_water(water, wide, os.path.join(pdir, "water.png"))
+        evaluate(area, communities, water, valid, wide, entry)
+        log(f"{entry['id']}: re-evaluated")
+    refresh_changes(area, cat, out_root)
+    classify_communities(area, cat)
+    save_catalog(area, cat, out_root)
+    log(f"Catalog: {len(cat['passes'])} passes; communities {cat['community_classes']}")
+    return cat
+
+
+def communities(area, areas_dir=AREAS_DIR, query=places.overpass):
+    """Fetch the area's places and landings from OpenStreetMap and write the communities file."""
+    found = places.fetch_places(area, query)
+    landings = places.fetch_landings(area, query)
+    kept = places.assign_access(found, landings, area.get("access_snap_m", {}))
+    collection = places.communities_collection(area, kept)
+    places.save_communities(area, collection, areas_dir)
+    moved = sum("access" in f["properties"] for f in collection["features"])
+    log(f"{len(collection['features'])} places saved to {places.communities_path(area, areas_dir)} "
+        f"({len(landings)} landings; {moved} places use a landing or port as their water access)")
+    return collection
+
+
+def watch(area, hours=6.0, workers=2, run=update, sleep=time.sleep, rounds=None):
+    """Run update every `hours` (forever unless `rounds` is given); a failed round is logged."""
+    done = 0
+    while rounds is None or done < rounds:
+        try:
+            run(area, workers)
+        except Exception:
+            log("update failed:\n" + traceback.format_exc(limit=3))
+        done += 1
+        log(f"next search in {hours} h")
+        sleep(hours * 3600)
