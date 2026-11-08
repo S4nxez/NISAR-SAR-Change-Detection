@@ -127,3 +127,28 @@ so the radar result can be read against the river.
 `frontend/public/data/monitor/<area>/catalog.json` plus, per pass, `radar.webp`, `water.png`
 (channels narrower than the safe width in amber), `change.png` and `water.npz` (packed water
 mask used for the change layer and `reevaluate`).
+
+## Code and tests
+
+`processing/river_monitor.py` is the command line; the code is the `processing/lifeline` package:
+
+| Module | What |
+|---|---|
+| `area.py`, `geo.py` | area files, the lon/lat grid, the circular area mask, distances |
+| `asf.py`, `remote.py` | search of NISAR GCOV passes at ASF; ranged reads of remote products with the Earthdata token |
+| `radar.py` | speckle filter and the read of one pass onto the area grid |
+| `water.py` | water mask (hysteresis), channel widths and the route of every community to the hub |
+| `layers.py` | `radar.webp`, `water.png`, `change.png` and the stored water mask |
+| `places.py`, `gauge.py` | communities and landings from OpenStreetMap; river level from ANA |
+| `catalog.py` | evaluation of a pass, whole-record classification, `catalog.json` |
+| `pipeline.py` | the commands (`communities`, `update`, `reevaluate`, `watch`) |
+
+```bash
+python -m pip install -r processing/requirements.txt
+python -m unittest discover -s processing/tests -t processing
+```
+
+The tests need no network access and no NISAR product: HTTP clients are replaced by stand-ins, the
+GCOV reader runs on a small synthetic HDF5 product and the commands write to temporary folders.
+They run in the CI before any image is built. The web page's own tests are in `frontend/tests`
+(`npm test` in `frontend/`).

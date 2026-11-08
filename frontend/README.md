@@ -19,10 +19,24 @@ Open `http://localhost:8080` for the river lifeline monitor, or `http://localhos
 - `src/styles/main.css` — design tokens, layout, responsive styles.
 - `public/data/world.geo.json` — retained source GeoJSON asset, available for future overlays.
 - `index.html` + `src/monitor/` — river lifeline monitor (the home page): for every NISAR pass, which riverside communities still have a water route to their hub town. Reads `public/data/monitor/<area>/catalog.json`, built and kept up to date by `processing/river_monitor.py`. See `docs/river-monitor.md`.
+  - `monitorApp.js` — page state, user interface events and boot (the only module that touches the whole page).
+  - `record.js` — questions asked to the pass record: status of a community, pass for a day, next passes, roster rows.
+  - `panels.js` — HTML of the headline, plate, map key, roster, ledger and dossier (pure functions returning strings).
+  - `passLog.js` — the SVG pass log; its geometry helpers are pure.
+  - `mapView.js` — the Leaflet map (Leaflet is passed in).
+  - `exporters.js` — CSV and GeoJSON of the selected day.
+  - `config.js`, `dates.js`, `format.js` — constants, UTC days and text formatting.
+
+## Tests
+```bash
+npm ci      # once: installs jsdom, the only (dev) dependency
+npm test    # node --test "tests/**/*.test.js"
+```
+Unit tests use Node's built-in `node:test` (Node 22+) and live in `tests/`; the page tests load `index.html` in `jsdom` with a stand-in for Leaflet. `tests/pages.test.js` checks every page: it must declare its icon and no local URL may start with `/`, because the app is served under a path prefix (`/terra-pulse/`, `/terra-pulse-dev/`, `/terra-pulse-dev/pr-<N>/`). The CI runs them before building the images; `tests/`, `package.json` and `package-lock.json` are left out of the nginx image (`.dockerignore`).
 
 ## Important
 - **All values and detections are illustrative UI demo data**, not live Sentinel-1 data and not scientific findings.
-- The map uses CARTO basemap tiles and requires an internet connection. Chart.js, Leaflet and Google Fonts are loaded from CDNs.
+- The SAR Observatory map uses CARTO basemap tiles and the river lifeline monitor OpenStreetMap tiles; both need an internet connection. Chart.js, Leaflet and Google Fonts are loaded from CDNs.
 - No framework/build step is required. When the project grows, a bundler such as Vite can be added without changing the component boundaries.
 
 ## Suggested next implementation steps
