@@ -17,7 +17,7 @@ narrow it has become.
 python -m pip install -r processing/requirements.txt
 python processing/river_monitor.py communities     # once: places from OpenStreetMap
 python processing/river_monitor.py update          # all passes not processed yet
-python -m http.server 8080 --directory frontend    # then open http://localhost:8080/monitor.html
+python -m http.server 8080 --directory frontend    # then open http://localhost:8080
 ```
 
 `update` needs a NASA Earthdata token (free account at https://urs.earthdata.nasa.gov,
@@ -41,7 +41,7 @@ Tefé uses 55 km) or as a `bbox`, the grid (~20 m), the hub town, a
 point on the main river (to report the hub ↔ main river link), the water threshold and the
 rules below. `processing/areas/<area>_communities.geojson` holds the places (OpenStreetMap,
 ODbL). Add an area by writing a new pair of files and passing `--area <id>`; the web page
-takes `monitor.html?area=<id>`.
+takes `index.html?area=<id>`.
 
 ## Method
 
