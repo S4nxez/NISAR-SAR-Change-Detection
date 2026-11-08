@@ -51,6 +51,9 @@ export function openPage(page, { url = "http://localhost/terra-pulse-dev/pr-15/"
   const html = fs.readFileSync(path.join(FRONTEND, page), "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
   const dom = new JSDOM(html, { url, pretendToBeVisual: true });
   const { window } = dom;
+  // jsdom fires its own load event asynchronously: wait for it, so that it never boots the app a second time
+  const loaded = window.document.readyState === "complete"
+    ? Promise.resolve() : new Promise(resolve => window.addEventListener("load", resolve, { once: true }));
   patchSvg(window);
   const saved = Object.fromEntries(GLOBALS.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
   const timers = [];
@@ -64,7 +67,7 @@ export function openPage(page, { url = "http://localhost/terra-pulse-dev/pr-15/"
   for (const [k, v] of Object.entries(values)) Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
   window.L = leaflet;
   return {
-    window, leaflet, timers,
+    window, leaflet, timers, loaded,
     $: sel => window.document.querySelector(sel),
     restore() {
       for (const [k, d] of Object.entries(saved)) {
@@ -79,6 +82,7 @@ let instance = 0;
 
 // Import monitorApp.js as a fresh module (it boots on the window load event) and wait for the first render.
 export async function bootApp(page) {
+  await page.loaded;
   await import(`../../src/monitor/monitorApp.js?instance=${++instance}`);
   page.window.dispatchEvent(new page.window.Event("load"));
   for (let i = 0; i < 50 && page.$("#headline-meta").textContent.startsWith("Loading"); i++) {
