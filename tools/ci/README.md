@@ -41,6 +41,8 @@ enabled (for the approval).
 | Step | Fails when |
 |---|---|
 | Frontend - check JavaScript syntax | An ES module under `frontend/` has a syntax error (`node --check`, the frontend has no build step) |
+| Frontend - run unit tests | A test under `frontend/tests` fails (`npm test`: `node:test`, with `jsdom` for the page tests). They also check that every page declares its icon and that no local URL starts with `/`, which would escape the path prefix of production, develop and PR previews |
+| Processing - run unit tests | A test under `processing/tests` fails (`unittest`, no network access): water mask, routes, catalog, OpenStreetMap places, river gauge, remote reads and the commands of the river lifeline monitor |
 | Rollback - test rollback.sh | `test-rollback.sh` fails: `rollback.sh` no longer marks or restores the known-good images as it should (tested against fake `podman` and `podman-compose`, no container runs) |
 | Model lab - compile | `fractal_model_lab` does not compile from sources (`-Werror`, so warnings too) |
 | Backend - compile, run tests and package | `mvn verify` fails: compilation errors or failing tests (every test under `server/src/test` runs) |
