@@ -55,7 +55,7 @@ finished:
 |---|---|---|
 | `server/` | JUnit, `server/src/test` | `cd server && mvn verify` |
 | `frontend/` | `node:test`, `frontend/tests` (`jsdom` for page tests) | `cd frontend && npm ci && npm test` |
-| `processing/` | `unittest`, `processing/tests` | `python -m unittest discover -s processing/tests -t processing` |
+| `processing/` | `unittest`, `processing/tests` | `python -m pip install -e processing && python -m unittest discover -s processing/tests -t processing` |
 | `tools/ci/` | shell test scripts, `tools/ci/test-*.sh` | `tools/ci/test-rollback.sh` |
 | `fractal_model_lab/` | no test harness yet: it must compile with `-Werror` | `make -C fractal_model_lab` |
 
@@ -76,7 +76,7 @@ and to this table in the same pull request.
 |---|---|
 | `server/` | Spring Boot 3 backend (Java 21, Maven, Flyway, MySQL) |
 | `frontend/` | Vanilla JS/HTML/CSS served by nginx under a path prefix (use relative URLs); calls `api/*` on the same origin |
-| `processing/` | Python NISAR radar processing (river lifeline monitor), writes the static data the frontend reads |
+| `processing/` | Python NISAR radar processing (river lifeline monitor): a batch worker that writes the record the backend serves under `api/monitor` |
 | `fractal_model_lab/` | C/ncurses TUI, follows 42's Norminette (see its README) |
 | `data/` | CSV sources and the synthetic SQL generator |
 | `tools/ci/`, `.github/workflows/` | Validation, image builds, deploy and PR previews |

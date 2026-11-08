@@ -11,28 +11,65 @@ This monitor uses every NISAR radar pass (through clouds and smoke, under the fo
 to tell, community by community, whether a water route to the hub town still exists and how
 narrow it has become.
 
+## Architecture
+
+```
+NASA ASF / OpenStreetMap / ANA ──> monitor worker (processing/, Python) ──> monitor_data volume
+                                                                               │ read-only
+                          browser <── Caddy /api/* <── backend (server/, Java) ┘
+                          browser <── Caddy /      <── frontend (frontend/, nginx)
+```
+
+- **Worker** (`processing/`, the `monitor` service of `podman-compose.yml`): all the radar processing, in Python
+  because it relies on its scientific stack (HDF5 reads with `h5py`, `numpy`/`scipy` filters and distance
+  transforms, `pyproj`). It is a batch job, not a web service: it never answers requests, it writes files.
+- **Backend** (`server/`): the only API the web page talks to. It serves the record from the volume under
+  `/api/monitor` and refuses a catalog whose `schema_version` it does not know.
+- **Frontend** (`frontend/`): reads everything from `api/monitor/...`.
+
+### API
+
+| Request | Answer |
+|---|---|
+| `GET /api/monitor/areas/{area}` | `catalog.json` of the area. `Cache-Control: no-cache` with `Last-Modified`: the page polls it every ten minutes and gets `304 Not Modified` until the worker writes a new one. `404` while the area has no record, `503` when its `schema_version` is not the backend's |
+| `GET /api/monitor/areas/{area}/passes/{pass}/{layer}` | `radar.webp`, `water.png` or `change.png` of a pass (cached for an hour). Any other file (`water.npz`) is `404` |
+
+Area and pass ids are plain names (`[A-Za-z0-9_-]`); anything else is `404`.
+
+### Catalog contract
+
+`catalog.json` carries `schema_version` (`SCHEMA_VERSION` in `processing/src/lifeline/config.py`, and the same constant
+in the backend's `MonitorRecordService`; a unit test checks they match) and its own `status_codes` table
+(`{"0": "no_data", "1": "connected", "2": "at_risk", "3": "isolated"}`): the page names the codes from that table
+instead of repeating them. Change `schema_version` on both sides whenever a reader would notice the change.
+
 ## Run it
 
 ```bash
-python -m pip install -r processing/requirements.txt
-python processing/river_monitor.py communities     # once: places from OpenStreetMap
-python processing/river_monitor.py update          # all passes not processed yet
-python -m http.server 8080 --directory frontend    # then open http://localhost:8080
+python -m pip install -e processing        # the lifeline package, its pinned dependencies and the river-monitor command
+river-monitor communities                  # once: places from OpenStreetMap
+river-monitor update                       # all passes not processed yet, into processing/output/
 ```
+
+Then run the backend with `MONITOR_DATA_DIR` pointing at `processing/output` and open the frontend through it
+(the page reads `api/monitor/...`). `python -m lifeline` is the same command line as `river-monitor`.
+`MONITOR_DATA_DIR` and `MONITOR_AREAS_DIR` change where the record is written and where the area files are read.
+
+In the stack, the `monitor` service runs `river-monitor watch --hours 6` and writes to the `monitor_data` volume.
+A new volume starts empty: the first round processes every pass ASF lists (about one minute per pass on the Pi).
 
 `update` needs a NASA Earthdata token (free account at https://urs.earthdata.nasa.gov,
 *Generate Token*) in the `EARTHDATA_TOKEN` environment variable. It never downloads whole
 products: only the area of interest is read with HTTP range requests (about 100 MB and one
 minute per pass for the Tefé area, instead of ~1.9 GB).
 
-To keep it running, `python processing/river_monitor.py watch --hours 6` searches ASF every six
-hours and processes new passes; the web page picks them up every ten minutes without a reload.
-On Windows the same command can be registered in Task Scheduler; on Linux, use cron or a
-systemd service.
+`river-monitor watch --hours 6` searches ASF every six hours and processes new passes; the web page
+picks them up every ten minutes without a reload. In the stack the token is `EARTHDATA_TOKEN` in the
+stack's `.env` (see `tools/ci/README.md`).
 
-`python processing/river_monitor.py reevaluate` recomputes every pass from the stored water
-masks (no download), for example after changing the rules in the area file or the community
-list.
+`river-monitor reevaluate` recomputes every pass from the stored water masks (no download), for
+example after changing the rules in the area file or the community list. In the stack:
+`podman-compose run --rm monitor reevaluate`.
 
 ## Area file
 
@@ -124,31 +161,32 @@ The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and
 in the area file as `gauge`), refreshed on every `update`: the page draws it behind the pass log
 so the radar result can be read against the river.
 
-`frontend/public/data/monitor/<area>/catalog.json` plus, per pass, `radar.webp`, `water.png`
+`<MONITOR_DATA_DIR>/<area>/catalog.json` plus, per pass (`passes/<pass>/`), `radar.webp`, `water.png`
 (channels narrower than the safe width in amber), `change.png` and `water.npz` (packed water
-mask used for the change layer and `reevaluate`).
+mask used for the change layer and `reevaluate`, never served). The record is data, not code: it
+lives in the volume (or `processing/output/` locally, ignored by git), never in the repository.
 
 ## Code and tests
 
-`processing/river_monitor.py` is the command line; the code is the `processing/lifeline` package:
+`processing/` is a Python project (`pyproject.toml`, `src` layout). The `lifeline` package is split by
+responsibility, and `tests/` mirrors it:
 
-| Module | What |
+| Package / module | What |
 |---|---|
-| `area.py`, `geo.py` | area files, the lon/lat grid, the circular area mask, distances |
-| `asf.py`, `remote.py` | search of NISAR GCOV passes at ASF; ranged reads of remote products with the Earthdata token |
-| `radar.py` | speckle filter and the read of one pass onto the area grid |
-| `water.py` | water mask (hysteresis), channel widths and the route of every community to the hub |
-| `layers.py` | `radar.webp`, `water.png`, `change.png` and the stored water mask |
-| `places.py`, `gauge.py` | communities and landings from OpenStreetMap; river level from ANA |
-| `catalog.py` | evaluation of a pass, whole-record classification, `catalog.json` |
+| `config.py` | paths (`MONITOR_DATA_DIR`, `MONITOR_AREAS_DIR`), remote services, `SCHEMA_VERSION`, status codes |
+| `geometry/` | `geo.py` distances and place-name folding; `area.py` area files, the lon/lat grid, the circular area mask |
+| `sources/` | external data: `asf.py` NISAR GCOV search; `remote.py` Earthdata token and ranged reads; `places.py` communities and landings from OpenStreetMap; `gauge.py` river level from ANA |
+| `analysis/` | `radar.py` speckle filter and the read of one pass onto the area grid; `water.py` water mask (hysteresis), channel widths and the route of every community to the hub |
+| `output/` | `layers.py` `radar.webp`, `water.png`, `change.png` and the stored water mask; `catalog.py` evaluation of a pass, whole-record classification, `catalog.json` |
 | `pipeline.py` | the commands (`communities`, `update`, `reevaluate`, `watch`) |
+| `cli.py`, `__main__.py` | the command line: `river-monitor` or `python -m lifeline` |
 
 ```bash
-python -m pip install -r processing/requirements.txt
+python -m pip install -e processing
 python -m unittest discover -s processing/tests -t processing
 ```
 
 The tests need no network access and no NISAR product: HTTP clients are replaced by stand-ins, the
 GCOV reader runs on a small synthetic HDF5 product and the commands write to temporary folders.
-They run in the CI before any image is built. The web page's own tests are in `frontend/tests`
-(`npm test` in `frontend/`).
+They run in the CI before any image is built. The backend's API has its own tests in
+`server/src/test` (`mvn verify`) and the web page's in `frontend/tests` (`npm test` in `frontend/`).

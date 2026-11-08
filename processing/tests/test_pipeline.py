@@ -5,8 +5,8 @@ from unittest import mock
 import numpy as np
 
 from lifeline import pipeline
-from lifeline.catalog import catalog_path, pass_dir
-from lifeline.places import communities_collection, save_communities
+from lifeline.output.catalog import catalog_path, pass_dir
+from lifeline.sources.places import communities_collection, save_communities
 
 from .helpers import TempDirTest, river_scene, scene_db, small_area
 
@@ -46,7 +46,7 @@ class SyncExecutor:
 
 
 @mock.patch("lifeline.pipeline.log")
-@mock.patch("lifeline.catalog.log", create=True)
+@mock.patch("lifeline.output.catalog.log", create=True)
 class TestPipeline(TempDirTest):
     def setUp(self):
         super().setUp()

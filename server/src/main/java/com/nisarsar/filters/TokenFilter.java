@@ -73,6 +73,6 @@ public class TokenFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith(Constants.API + Constants.SITES);
+        return path.startsWith(Constants.API + Constants.SITES) || path.startsWith(Constants.API + Constants.MONITOR);
     }
 }

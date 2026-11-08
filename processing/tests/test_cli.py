@@ -1,21 +1,22 @@
+import runpy
 import unittest
 from unittest import mock
 
-import river_monitor
+from lifeline import cli
 
 
-@mock.patch("river_monitor.load_area", return_value={"id": "tefe"})
-@mock.patch("river_monitor.pipeline")
+@mock.patch("lifeline.cli.load_area", return_value={"id": "tefe"})
+@mock.patch("lifeline.cli.pipeline")
 class TestCommandLine(unittest.TestCase):
     def test_update_with_options(self, pipeline, load_area):
-        river_monitor.main(["update", "--area", "x", "--workers", "4", "--limit", "3", "--redo"])
+        cli.main(["update", "--area", "x", "--workers", "4", "--limit", "3", "--redo"])
         load_area.assert_called_once_with("x")
         pipeline.update.assert_called_once_with({"id": "tefe"}, 4, 3, True)
 
     def test_default_area_and_other_commands(self, pipeline, load_area):
-        river_monitor.main(["communities"])
-        river_monitor.main(["reevaluate"])
-        river_monitor.main(["watch", "--hours", "1.5"])
+        cli.main(["communities"])
+        cli.main(["reevaluate"])
+        cli.main(["watch", "--hours", "1.5"])
         load_area.assert_called_with("tefe")
         pipeline.communities.assert_called_once_with({"id": "tefe"})
         pipeline.reevaluate.assert_called_once_with({"id": "tefe"})
@@ -23,8 +24,14 @@ class TestCommandLine(unittest.TestCase):
 
     def test_unknown_command_is_rejected(self, pipeline, load_area):
         with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
-            river_monitor.main(["download"])
+            cli.main(["download"])
         load_area.assert_not_called()
+
+    def test_python_dash_m_lifeline_runs_the_same_command_line(self, pipeline, load_area):
+        with mock.patch("sys.argv", ["lifeline", "reevaluate", "--area", "y"]):
+            runpy.run_module("lifeline", run_name="__main__")
+        load_area.assert_called_once_with("y")
+        pipeline.reevaluate.assert_called_once_with({"id": "tefe"})
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ enabled (for the approval).
 |---|---|
 | Frontend - check JavaScript syntax | An ES module under `frontend/` has a syntax error (`node --check`, the frontend has no build step) |
 | Frontend - run unit tests | A test under `frontend/tests` fails (`npm test`: `node:test`, with `jsdom` for the page tests). They also check that every page declares its icon and that no local URL starts with `/`, which would escape the path prefix of production, develop and PR previews |
-| Processing - run unit tests | A test under `processing/tests` fails (`unittest`, no network access): water mask, routes, catalog, OpenStreetMap places, river gauge, remote reads and the commands of the river lifeline monitor |
+| Processing - run unit tests | A test under `processing/tests` fails (`unittest`, no network access): water mask, routes, catalog, OpenStreetMap places, river gauge, remote reads and the commands of the river lifeline monitor. The `lifeline` package is installed from `processing/pyproject.toml` (pinned dependencies) |
 | Rollback - test rollback.sh | `test-rollback.sh` fails: `rollback.sh` no longer marks or restores the known-good images as it should (tested against fake `podman` and `podman-compose`, no container runs) |
 | Model lab - compile | `fractal_model_lab` does not compile from sources (`-Werror`, so warnings too) |
 | Backend - compile, run tests and package | `mvn verify` fails: compilation errors or failing tests (every test under `server/src/test` runs) |
@@ -52,7 +52,16 @@ enabled (for the approval).
 | Startup check - smoke test | `smoke-test.sh` fails: Spring initialization, Flyway migrations, database connection, Caddy routing or frontend assets |
 
 The startup check runs the production `podman-compose.yml` (services, env vars, healthcheck, `Caddyfile`, published port) with `docker compose`,
-layered with `compose.ci.yml`, against a fresh database with throwaway credentials.
+layered with `compose.ci.yml`, against a fresh database with throwaway credentials. The river lifeline worker (`monitor`) is built from the
+commit too, but there it only prints its help and exits: the check never contacts NASA.
+
+### River lifeline worker
+
+The `monitor` service runs the processing image (`nisar-sar-change-detection-processing`, built by Build Images for `latest` and `develop`,
+not for PR previews) and writes the record to the stack's `monitor_data` volume, which the backend mounts read-only and serves under
+`/api/monitor` (see `docs/river-monitor.md`). It reads NISAR products with `EARTHDATA_TOKEN` from the stack's `.env`; without it each round
+fails and is logged (`podman-compose logs monitor`) and the page says the record has not been built. Each stack has its own volume, so production
+and develop process the passes separately. `rollback.sh` only switches the backend and the frontend: the worker keeps the deployed image.
 
 ## Post-deployment smoke test
 
@@ -175,7 +184,8 @@ changes on the Pi:
 ```bash
 git clone --branch develop https://github.com/S4nxez/NISAR-SAR-Change-Detection.git /opt/NISAR-SAR-Change-Detection-develop
 cd /opt/NISAR-SAR-Change-Detection-develop
-# Its own database password. NISAR_* make podman-compose, run by hand here, act on the develop stack too
+# Its own database password. NISAR_* make podman-compose, run by hand here, act on the develop stack too. Add
+# EARTHDATA_TOKEN=<NASA Earthdata token> for the river lifeline worker (see "River lifeline worker" above)
 printf 'MYSQL_ROOT_PASSWORD=%s\nMYSQL_USER=root\nNISAR_IMAGE_TAG=develop\nNISAR_HTTP_PORT=8090\n' "$(openssl rand -hex 16)" > .env
 : > server/.env
 chmod 600 .env server/.env

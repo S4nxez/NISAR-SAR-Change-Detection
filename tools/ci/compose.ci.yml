@@ -16,3 +16,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Containerfile
+
+  # Built from this commit too, but the startup check does not contact NASA: the worker only shows its help and exits
+  monitor:
+    image: nisarsar-processing:ci
+    build:
+      context: ./processing
+      dockerfile: Containerfile
+    restart: "no"
+    command: ["--help"]

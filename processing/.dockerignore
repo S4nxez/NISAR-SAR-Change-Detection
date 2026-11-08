@@ -1,0 +1,6 @@
+# Only pyproject.toml, src/ and areas/ go into the worker image
+tests/
+output/
+**/__pycache__/
+**/*.egg-info/
+build/

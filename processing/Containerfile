@@ -1,0 +1,30 @@
+# River lifeline monitor worker: searches ASF for new NISAR passes and writes the record to MONITOR_DATA_DIR
+# (the monitor_data volume of podman-compose.yml), which the backend serves under api/monitor.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    MONITOR_AREAS_DIR=/app/areas \
+    MONITOR_DATA_DIR=/data/monitor
+
+WORKDIR /app
+
+# Dependencies first, so a code change does not reinstall them
+COPY pyproject.toml ./
+RUN python -c "import tomllib; print('\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" \
+        > /tmp/requirements.txt \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
+
+COPY src ./src
+COPY areas ./areas
+RUN pip install --no-cache-dir --no-deps . \
+    && useradd --system --uid 10001 monitor \
+    && mkdir -p /data/monitor \
+    && chown monitor /data/monitor
+
+USER monitor
+VOLUME /data/monitor
+
+ENTRYPOINT ["river-monitor"]
+CMD ["watch", "--hours", "6"]
