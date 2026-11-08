@@ -16,17 +16,17 @@
 const t_field	*field_get(int id)
 {
 	static const t_field	fields[FIELD_COUNT] = {
-	{"levels", "niveles", "Niveles", 1, 12, 3},
-	{"depth", "profundidad", "Profundidad", 1, 12, 3},
-	{"exponent", "exponencial", "Exponencial", 1, 5, 2},
-	{"runtime_mib", "runtime", "Runtime TF (MiB)", 0, 65536, 512},
-	{"leaf_mib", "hoja_mib", "RAM decisor (MiB)", 1, 65536, 48},
-	{"voter_mib", "voto_mib", "RAM votante (MiB)", 1, 65536, 6},
-	{"disk_pct", "disco_pct", "Pesos en disco (%RAM)", 0, 1000, 40},
-	{"leaf_us", "hoja_us", "CPU decisor (us)", 1, 100000000, 5000},
-	{"voter_us", "voto_us", "CPU votante (us)", 1, 100000000, 200},
-	{"target_ms", "objetivo_ms", "Latencia objetivo (ms)", 1, 600000, 250},
-	{"headroom_pct", "margen", "Margen RAM (%)", 0, 500, 25}
+	{"levels", "Levels", 1, 12, 3},
+	{"depth", "Depth", 1, 12, 3},
+	{"exponent", "Exponent", 1, 5, 2},
+	{"runtime_mib", "Runtime TF (MiB)", 0, 65536, 512},
+	{"leaf_mib", "Decider RAM (MiB)", 1, 65536, 48},
+	{"voter_mib", "Voter RAM (MiB)", 1, 65536, 6},
+	{"disk_pct", "Weights on disk (%RAM)", 0, 1000, 40},
+	{"leaf_us", "Decider CPU (us)", 1, 100000000, 5000},
+	{"voter_us", "Voter CPU (us)", 1, 100000000, 200},
+	{"target_ms", "Target latency (ms)", 1, 600000, 250},
+	{"headroom_pct", "RAM headroom (%)", 0, 500, 25}
 	};
 
 	if (id < 0 || id >= FIELD_COUNT)
@@ -43,7 +43,7 @@ int	field_find(const char *name)
 	while (name && id < FIELD_COUNT)
 	{
 		field = field_get(id);
-		if (!strcmp(name, field->name) || !strcmp(name, field->alias))
+		if (!strcmp(name, field->name))
 			return (id);
 		id++;
 	}

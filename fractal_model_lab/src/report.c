@@ -24,10 +24,10 @@ static void	report_resources(t_app *app, t_cost cost)
 	fmt_mib(cost.required_mib, need, FMT_LEN);
 	fmt_mib(cost.disk_mib, disk, FMT_LEN);
 	fmt_time_us(cost.cpu_us, cpu, FMT_LEN);
-	app_logf(app, "RAM %s (con margen %s), disco %s", ram, need, disk);
+	app_logf(app, "RAM %s (with headroom %s), disk %s", ram, need, disk);
 	fmt_time_us(container_latency_us(cost), ram, FMT_LEN);
 	fmt_count(cost.vcpus, need, FMT_LEN);
-	app_logf(app, "CPU %s/inferencia -> %s vCPU, latencia %s",
+	app_logf(app, "CPU %s/inference -> %s vCPU, latency %s",
 		cpu, need, ram);
 }
 
@@ -40,12 +40,12 @@ static void	report_container(t_app *app, t_cost cost)
 	{
 		tier = container_tier(TIER_COUNT - 1);
 		fmt_count(cost.replicas, count, FMT_LEN);
-		app_logf(app, "aviso: no cabe en un contenedor; cluster de %s x %s",
+		app_logf(app, "warning: too big for one container; cluster of %s x %s",
 			count, tier->name);
 		return ;
 	}
 	tier = container_tier(cost.tier);
-	app_logf(app, "Contenedor: %s (%d vCPU / %d GiB)",
+	app_logf(app, "Container: %s (%d vCPU / %d GiB)",
 		tier->name, tier->vcpus, tier->ram_gib);
 }
 
@@ -62,9 +62,9 @@ void	report_generate(t_app *app)
 	cost = cost_estimate(tree, field_profile(app->values));
 	fmt_count(tree.nodes, nodes, FMT_LEN);
 	fmt_count(tree.leaves, leaves, FMT_LEN);
-	app_logf(app, "--- esquema L=%d D=%d E=%d ---",
+	app_logf(app, "--- schema L=%d D=%d E=%d ---",
 		params.levels, params.depth, params.exponent);
-	app_logf(app, "%d niveles, %s nodos, %s decisores",
+	app_logf(app, "%d levels, %s nodes, %s deciders",
 		tree.total_levels, nodes, leaves);
 	report_resources(app, cost);
 	report_container(app, cost);
@@ -79,15 +79,15 @@ void	report_levels(t_app *app)
 
 	params = app_params(app);
 	total = tree_total_levels(params);
-	app_log(app, "--- nodos por nivel ---");
+	app_log(app, "--- nodes per level ---");
 	level = 0;
 	while (level < total)
 	{
 		fmt_count(tree_level_nodes(params, level), count, FMT_LEN);
 		if (tree_is_leaf(params, level))
-			app_logf(app, "N%-2d decisores %s", level + 1, count);
+			app_logf(app, "N%-2d deciders %s", level + 1, count);
 		else
-			app_logf(app, "N%-2d votantes  %s  (copia %d)", level + 1,
+			app_logf(app, "N%-2d voters    %s  (copy %d)", level + 1,
 				count, tree_iteration(params, level) + 1);
 		level++;
 	}
@@ -98,7 +98,7 @@ void	report_profile(t_app *app)
 	const t_field	*field;
 	int				id;
 
-	app_log(app, "--- perfil de modelo (profile <campo> <n>) ---");
+	app_log(app, "--- model profile (profile <field> <n>) ---");
 	id = FRACTAL_FIELDS;
 	while (id < FIELD_COUNT)
 	{

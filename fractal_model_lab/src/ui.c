@@ -50,9 +50,9 @@ static void	status_hint(WINDOW *win, t_app *app)
 	names[PANEL_TERM] = "Terminal";
 	wprintw(win, " [%s] ", names[app->focus]);
 	if (app->focus == PANEL_TERM)
-		wprintw(win, "Esc: salir del terminal | Tab: panel | help");
+		wprintw(win, "Esc: leave the terminal | Tab: panel | help");
 	else
-		wprintw(win, "Tab/1-4 panel | z zoom | g gen | h ayuda | q salir");
+		wprintw(win, "Tab/1-4 panel | z zoom | g gen | h help | q quit");
 }
 
 void	draw_status(WINDOW *win, t_app *app)
@@ -65,7 +65,7 @@ void	draw_status(WINDOW *win, t_app *app)
 	wbkgd(win, A_REVERSE);
 	wmove(win, 0, 0);
 	if (app->too_small)
-		wprintw(win, " Terminal %dx%d: minimo %dx%d. Amplia o pulsa q.",
+		wprintw(win, " Terminal %dx%d: minimum %dx%d. Enlarge it or press q.",
 			cols, rows, MIN_WIDTH, MIN_HEIGHT);
 	else
 		status_hint(win, app);

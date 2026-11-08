@@ -21,12 +21,12 @@ static int	set_named(t_app *app, const char *name, const char *arg)
 	id = field_find(name);
 	if (id < 0)
 	{
-		app_logf(app, "error: campo '%s' desconocido", name);
+		app_logf(app, "error: unknown field '%s'", name);
 		return (0);
 	}
 	if (!parse_int(arg, &value))
 	{
-		app_logf(app, "error: '%s' no es un entero positivo", arg);
+		app_logf(app, "error: '%s' is not a positive integer", arg);
 		return (0);
 	}
 	return (field_change(app, id, value));
@@ -36,7 +36,7 @@ int	cmd_set(t_app *app, int argc, char **argv)
 {
 	if (argc != 3)
 	{
-		app_log(app, "uso: set <campo> <valor>");
+		app_log(app, "usage: set <field> <value>");
 		return (0);
 	}
 	return (set_named(app, argv[1], argv[2]));
@@ -51,7 +51,7 @@ int	cmd_profile(t_app *app, int argc, char **argv)
 	}
 	if (argc != 3 || field_find(argv[1]) < FRACTAL_FIELDS)
 	{
-		app_log(app, "uso: profile <campo_perfil> <valor>");
+		app_log(app, "usage: profile <profile_field> <value>");
 		return (0);
 	}
 	return (set_named(app, argv[1], argv[2]));

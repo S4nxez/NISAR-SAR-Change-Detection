@@ -1,0 +1,185 @@
+name: PR preview
+
+# A preview of every pull request into develop, to try its changes before they are merged: Build Images (build.yml)
+# validates the pull request (merged into develop, as GitHub tests it) and builds its images, tagged pr-<N>, then
+# tools/ci/preview.sh runs them on the Raspberry Pi next to the develop stack, whose Caddy serves them at
+# <develop URL>/pr-<N>/. A comment on the pull request links it. Every push redeploys it from scratch (its own empty
+# database, filled by Flyway with the demo data), and closing the pull request removes it. See tools/ci/README.md
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    branches: [ develop ]
+
+# One run per pull request: a newer push cancels the run of an older one (preview.sh deploy starts from scratch, so a
+# half-done deployment is replaced by the next), and closing cancels a deployment in progress before removing it
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PR: ${{ github.event.pull_request.number }}
+  # The develop stack's Caddy on the Pi (develop.yml), which serves the previews
+  DEVELOP_HTTP_PORT: 8090
+  # The develop stack's public URL, e.g. https://raspberrypi.tail0a4b52.ts.net/terra-pulse-dev. Empty, previews are
+  # only reachable through the Pi (see tools/ci/README.md)
+  DEVELOP_PUBLIC_URL: ${{ vars.DEVELOP_PUBLIC_URL }}
+  # Marks the comment this workflow keeps up to date on the pull request
+  COMMENT_MARKER: '<!-- pr-preview -->'
+
+jobs:
+  images:
+    # Only pull requests from branches of this repository: a fork's code would run on the Pi, and neither forks nor
+    # Dependabot get the secrets Deploy needs
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image-tag: pr-${{ github.event.pull_request.number }}
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # The commit Build Images built (the pull request merged into develop), for tools/ci
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/connect-pi
+        with:
+          oauth-client-id: ${{ secrets.CLIENT_ID }}
+          oauth-secret: ${{ secrets.CLIENT_SECRET }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy the preview
+        id: deploy
+        timeout-minutes: 4
+        run: |
+          # shellcheck disable=SC2029 # PR expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true bash -s -- deploy $PR" < tools/ci/preview.sh
+
+      - name: Smoke test - preview
+        id: stack
+        timeout-minutes: 3
+        # Through the develop stack's Caddy, as the public URL reaches it. A new backend answers within ~1 min on the Pi
+        run: |
+          # shellcheck disable=SC2029 # the URL expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=150 bash -s -- http://127.0.0.1:$DEVELOP_HTTP_PORT/pr-$PR" < tools/ci/smoke-test.sh
+
+      - name: Smoke test - public URL
+        timeout-minutes: 2
+        run: |
+          if [ -z "$DEVELOP_PUBLIC_URL" ]; then
+            echo "::notice title=Public URL::No DEVELOP_PUBLIC_URL variable: the preview was only checked on the Pi (see tools/ci/README.md)"
+            exit 0
+          fi
+          rc=0
+          # shellcheck disable=SC2029 # the URL expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true SMOKE_TIMEOUT=30 bash -s -- '${DEVELOP_PUBLIC_URL%/}/pr-$PR'" < tools/ci/smoke-test.sh || rc=$?
+          if [ "$rc" -eq 1 ]; then
+            echo "::error title=Public URL::The preview passed on the Pi but not at ${DEVELOP_PUBLIC_URL%/}/pr-$PR/: check Tailscale Funnel for the develop stack (tailscale serve status on the Pi)"
+          fi
+          exit "$rc"
+
+      - name: Smoke test - container status and logs
+        if: failure() && steps.deploy.conclusion != 'skipped' && steps.stack.outcome != 'success'
+        run: |
+          # shellcheck disable=SC2029 # PR expands on the runner, as intended
+          ssh -n pi "podman ps -a --filter label=nisar.preview.pr=$PR" || true
+          logs="$(ssh -n pi "podman logs nisar-pr-$PR-backend 2>&1")" || true
+          # Innermost exception of the backend's first start, as in Deploy
+          cause="$(awk '/Starting .*Application/ && ++starts > 1 { exit } /Caused by:/ { cause = $0 } END { print cause }' <<<"$logs")"
+          if [ -n "$cause" ]; then echo "::error title=Backend error::${cause//%/%25}"; fi
+          echo "::group::backend logs"
+          printf '%s\n' "$logs"
+          echo "::endgroup::"
+          echo "::group::mysql logs"
+          ssh -n pi "podman logs --tail 50 nisar-pr-$PR-mysql 2>&1" || true
+          echo "::endgroup::"
+          # The frontend's (nginx) log records visitors' IP addresses, and this public repository's Actions logs are public
+          echo "frontend logs are not printed (visitors' IP addresses), read them on the Pi: podman logs nisar-pr-$PR-frontend"
+
+      - name: Comment the preview link
+        # Not when cancelled: a newer run replaces this one, and comments
+        if: (success() || failure()) && steps.deploy.conclusion != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ job.status }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$DEVELOP_PUBLIC_URL" ]; then
+            link="${DEVELOP_PUBLIC_URL%/}/pr-$PR/"
+            where="**[$link]($link)**"
+          else
+            where="\`http://127.0.0.1:$DEVELOP_HTTP_PORT/pr-$PR/\` on the Pi (not public: the \`DEVELOP_PUBLIC_URL\` variable is not set). From another machine: \`ssh -L $DEVELOP_HTTP_PORT:127.0.0.1:$DEVELOP_HTTP_PORT <pi>\`, then \`http://localhost:$DEVELOP_HTTP_PORT/pr-$PR/\`"
+          fi
+          if [ "$OUTCOME" = success ]; then
+            body="$COMMENT_MARKER
+          🔎 **Preview** of this pull request, at ${HEAD_SHA:0:7} merged into \`develop\`: $where
+
+          Redeployed on every push, removed when the pull request is closed. It has its own database, created from scratch (migrations and demo data) on every deployment. [Deployment run]($RUN_URL)"
+          else
+            body="$COMMENT_MARKER
+          ⚠️ **Preview** of ${HEAD_SHA:0:7} failed: see the [deployment run]($RUN_URL). The preview may not answer, or still run an older commit: $where"
+          fi
+          tools/ci/pr-comment.sh "$PR" "$COMMENT_MARKER" "$body"
+
+      - name: Disconnect Tailscale
+        if: always()
+        run: |
+          sudo tailscale logout || true
+          sudo pkill -x tailscaled || true
+
+  remove:
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # The pull request's last commit (its branch may be deleted, the commit stays): the preview.sh that deployed it
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/connect-pi
+        with:
+          oauth-client-id: ${{ secrets.CLIENT_ID }}
+          oauth-secret: ${{ secrets.CLIENT_SECRET }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Remove the preview
+        run: |
+          # shellcheck disable=SC2029 # PR expands on the runner, as intended
+          ssh pi "GITHUB_ACTIONS=true bash -s -- remove $PR" < tools/ci/preview.sh
+
+      - name: Update the preview comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tools/ci/pr-comment.sh "$PR" "$COMMENT_MARKER" "$COMMENT_MARKER
+          🗑️ **Preview** removed: the pull request is closed. Reopening it deploys it again." --only-update
+
+      - name: Disconnect Tailscale
+        if: always()
+        run: |
+          sudo tailscale logout || true
+          sudo pkill -x tailscaled || true

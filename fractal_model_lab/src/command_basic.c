@@ -42,7 +42,7 @@ int	cmd_reset(t_app *app, int argc, char **argv)
 	(void)argv;
 	field_reset(app->values);
 	app->fractal_top = 0;
-	app_log(app, "Parametros y perfil restaurados.");
+	app_log(app, "Parameters and profile restored.");
 	report_generate(app);
 	return (1);
 }

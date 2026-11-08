@@ -37,9 +37,21 @@ build/
 ### Mac OS ###
 .DS_Store
 
+### Vim ###
+*.swp
+*.swo
+
+### Fractal Model Lab ###
+# Build outputs of its Makefile (OBJ_DIR and NAME)
+fractal_model_lab/obj/
+fractal_model_lab/fractal_lab
+
 ### own ###
 *.pdf
 *.zip
 SpringBoot/.idea/modules.xml
 SpringBoot/.idea/modules.xml
 .env
+
+### local development environment (make up) ###
+.dev/
