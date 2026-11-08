@@ -1,0 +1,72 @@
+name: Sync main into develop
+
+# Every push to main, whoever makes it (the weekly merge, a manual merge of develop from the GitHub UI, a hotfix), is merged
+# back into develop, so the next release pull request develop -> main starts from main and doesn't conflict.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-main
+  cancel-in-progress: false
+
+# Pushed with GITHUB_TOKEN, which starts no workflow: the develop stack isn't redeployed (a squash sync changes nothing in it;
+# after a hotfix, the next push to develop deploys it).
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Merge main into develop
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Retried in case develop gets a push between the fetch and ours
+          for attempt in 1 2 3; do
+            git fetch origin main develop
+            if git merge-base --is-ancestor origin/main origin/develop; then
+              echo "develop already contains main"
+              exit 0
+            fi
+            git checkout -B develop origin/develop
+
+            # A squash merge of develop leaves main with the tree of a develop commit: develop already holds all of it, so
+            # record main as merged keeping develop's tree. Otherwise main has changes develop lacks (e.g. a hotfix): merge
+            # them for real, and stop on conflicts instead of dropping them.
+            main_tree="$(git rev-parse 'origin/main^{tree}')"
+            squashed=""
+            for commit in $(git rev-list origin/develop ^origin/main); do
+              if [ "$(git rev-parse "$commit^{tree}")" = "$main_tree" ]; then
+                squashed="$commit"
+                break
+              fi
+            done
+
+            if [ -n "$squashed" ]; then
+              echo "main matches develop at $squashed (squash merge): merging with the ours strategy"
+              git merge -s ours --no-edit -m "chore(release): sync main into develop" origin/main
+            elif ! git merge --no-edit -m "chore(release): merge main into develop" origin/main; then
+              git merge --abort
+              echo "::error::main has changes that conflict with develop. Merge main into develop by hand (a pull request" \
+                "into develop merged with a merge commit, not a squash), or the next release pull request will conflict."
+              exit 1
+            fi
+
+            if git push origin develop; then
+              exit 0
+            fi
+            echo "push rejected (develop moved), retrying"
+          done
+          echo "::error::could not push develop after 3 attempts"
+          exit 1

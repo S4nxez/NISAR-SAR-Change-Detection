@@ -10,6 +10,7 @@ Weekly merge (weekly-merge.yml, Wed 21:00 UTC): PR develop ─> main (squash) �
 push to main ────────────────────────────────────────────────────────────────┴─> Build Images (build.yml): validate ─> build (multi-arch images pushed to GHCR)
                                                                                                                          └─> Deploy (deploy.yml): mark the running version as known-good ─> deploy on the Pi
                                                                                                                                                   ─> post-deployment smoke test ─> rollback if anything failed
+push to main ─> Sync main into develop (sync-main.yml): merges main back into develop, so the next release PR doesn't conflict
 push to develop ─> Develop (develop.yml): the same Build Images (images tagged develop) and Deploy, to the develop stack on the Pi (QA)
 pull request into develop ─> PR preview (preview.yml): the same Build Images (images tagged pr-<N>), then preview.sh runs them next to the
                              develop stack, at <develop URL>/pr-<N>/, linked in a comment. Closing the pull request removes it
@@ -20,10 +21,15 @@ before the weekly merge releases it to production. See [Develop stack](#develop-
 own preview, see [PR previews](#pr-previews).
 
 Every Wednesday at 21:00 UTC `weekly-merge.yml` releases `develop` into `main` (it does nothing if `develop` has nothing new):
-it opens a pull request, approves it as `github-actions[bot]` and squash merges it (`main` requires 1 approval and a linear history),
-then merges `main` back into `develop` with the `ours` strategy so the next PR starts from the squash commit. The merge is pushed
-with the `RELEASE_TOKEN` secret, so the push event fires Build Images and Deploy as for any other push to `main`. If it fails
-(e.g. conflicts) the PR stays open and the next run reuses it. It can also be run by hand from the Actions tab.
+it opens a pull request, approves it as `github-actions[bot]` and squash merges it (`main` requires 1 approval and a linear history).
+The merge is pushed with the `RELEASE_TOKEN` secret, so the push event fires Build Images and Deploy as for any other push to `main`.
+If it fails (e.g. conflicts) the PR stays open and the next run reuses it. It can also be run by hand from the Actions tab.
+
+Every push to `main` also runs `sync-main.yml`, which merges `main` back into `develop` so the next release PR starts from it:
+with the `ours` strategy when `main` is a squash merge of `develop` (its tree is that of a `develop` commit), with a normal merge
+otherwise (e.g. a hotfix pushed to `main`). It runs whoever pushed, so `develop` can also be released by hand: squash merge a PR
+`develop` -> `main` from the GitHub UI. If the merge conflicts the job fails and `main` must be merged into `develop` by hand, with a
+pull request into `develop` merged with a merge commit (a squash would not record `main` as merged and the release PR would conflict).
 
 Setup: a fine-grained PAT of the repository owner for this repository with *Contents* and *Pull requests* read and write, stored
 as the `RELEASE_TOKEN` repository secret, and *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*
@@ -130,8 +136,8 @@ with the weekly merge. Every push to `develop` runs **Develop** (`develop.yml`),
 
 Called from `develop`, both workflows run as they are in the pushed commit: a change to the pipeline itself is tried on the develop stack before
 it reaches `main`. Run on their own (a push to `main`, Build Images on `main`) they build and deploy production, as before. Develop runs one at a
-time (concurrency group `develop`), so an older run never pushes or deploys `develop` images after a newer one. The weekly merge's sync of
-`main` into `develop` is pushed with `GITHUB_TOKEN`, which starts no workflow: it doesn't redeploy the develop stack (it changes nothing in it).
+time (concurrency group `develop`), so an older run never pushes or deploys `develop` images after a newer one. The sync of
+`main` into `develop` (`sync-main.yml`) is pushed with `GITHUB_TOKEN`, which starts no workflow: it doesn't redeploy the develop stack (after a squash merge it changes nothing in it).
 
 The two stacks share nothing but the host:
 

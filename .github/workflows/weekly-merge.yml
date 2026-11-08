@@ -13,13 +13,13 @@ concurrency:
 # main is protected: changes need a pull request with 1 approval and a linear history.
 # The PR is opened and merged with RELEASE_TOKEN (a PAT of the repo owner) and approved by
 # github-actions[bot] with GITHUB_TOKEN, as a PR author can't approve their own PR.
-# The merge is pushed with a PAT, so the push event fires Build Images (validate + build) and Deploy.
+# The merge is pushed with a PAT, so the push event fires Build Images (validate + build), Deploy and Sync main into develop.
 jobs:
   merge:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
 
     steps:
@@ -34,7 +34,8 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "$(git rev-list origin/main..origin/develop)" ]; then
+          # Compare the trees: after a sync develop always has a merge commit that main lacks, with no changes
+          if git diff --quiet origin/main origin/develop; then
             echo "develop has nothing new for main"
             echo "number=" >> "$GITHUB_OUTPUT"
             exit 0
@@ -62,18 +63,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr.outputs.number }}" --squash \
-            --subject "chore(release): weekly merge develop into main (#${{ steps.pr.outputs.number }})"
+          if ! gh pr merge "${{ steps.pr.outputs.number }}" --squash \
+            --subject "chore(release): weekly merge develop into main (#${{ steps.pr.outputs.number }})"; then
+            echo "::error::Could not merge PR #${{ steps.pr.outputs.number }}. If it conflicts, main has changes that were" \
+              "not merged back into develop: merge main into develop (merge commit, not squash) and the next run reuses the PR."
+            exit 1
+          fi
 
-      # The squash commit isn't in develop's history: record main as merged into develop (keeping
-      # develop's tree, which already holds those changes) so next week's PR starts from it
-      - name: Sync main back into develop
-        if: steps.pr.outputs.number != ''
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main develop
-          git checkout -B develop origin/develop
-          git merge -s ours --no-edit -m "chore(release): sync main into develop" origin/main
-          git push origin develop
+      # main is merged back into develop by sync-main.yml, which runs on every push to main (this merge included)
