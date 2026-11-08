@@ -55,3 +55,11 @@ SpringBoot/.idea/modules.xml
 
 ### local development environment (make up) ###
 .dev/
+
+### Python ###
+__pycache__/
+.coverage
+*.pyc
+
+### Node (frontend tests) ###
+node_modules/
