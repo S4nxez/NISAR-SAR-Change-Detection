@@ -161,6 +161,24 @@ jobs:
             echo "::warning title=Rollback::The running version could not be marked as known-good (see the log): if this deployment fails, it rolls back to the known-good images marked before, if any"
           fi
 
+      # podman-compose runs the stack's checkout on the Pi, which nothing else updates: without this step a deployment
+      # that adds a service or a volume runs the new images with the old podman-compose.yml (develop did, without the
+      # river monitor). The files of this commit replace them; production's checkout may then show them as modified.
+      - name: Stack files - podman-compose.yml and Caddyfile of this commit
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          for file in podman-compose.yml Caddyfile; do
+            # shellcheck disable=SC2029 # DEPLOY_DIR expands on the runner, as intended
+            if ssh pi "cmp -s - '$DEPLOY_DIR/$file'" < "$file"; then
+              echo "$file: as in this commit"
+            else
+              # shellcheck disable=SC2029
+              ssh pi "cat > '$DEPLOY_DIR/$file.new' && mv '$DEPLOY_DIR/$file.new' '$DEPLOY_DIR/$file'" < "$file"
+              echo "::notice title=Stack files::$DEPLOY_DIR/$file updated to this commit's"
+            fi
+          done
+
       # The stack's settings are passed to podman-compose (NISAR_IMAGE_TAG, NISAR_HTTP_PORT in podman-compose.yml),
       # whatever the .env of the checkout says
       - name: Deploy
