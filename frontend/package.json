@@ -1,0 +1,15 @@
+{
+  "name": "nisar-sar-frontend",
+  "private": true,
+  "description": "Vanilla JS frontend served as-is by nginx (no build step); this file only declares ES modules and the test tooling.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "jsdom": "25.0.1"
+  }
+}

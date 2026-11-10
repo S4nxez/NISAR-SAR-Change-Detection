@@ -41,7 +41,10 @@ enabled (for the approval).
 | Step | Fails when |
 |---|---|
 | Frontend - check JavaScript syntax | An ES module under `frontend/` has a syntax error (`node --check`, the frontend has no build step) |
+| Frontend - run unit tests | A test under `frontend/tests` fails (`npm test`: `node:test`, with `jsdom` for the page tests). They also check that every page declares its icon and that no local URL starts with `/`, which would escape the path prefix of production, develop and PR previews |
+| Processing - run unit tests | A test under `processing/tests` fails (`unittest`, no network access): water mask, routes, catalog, OpenStreetMap places, river gauge, remote reads and the commands of the river lifeline monitor. The `lifeline` package is installed from `processing/pyproject.toml` (pinned dependencies) |
 | Rollback - test rollback.sh | `test-rollback.sh` fails: `rollback.sh` no longer marks or restores the known-good images as it should (tested against fake `podman` and `podman-compose`, no container runs) |
+| Preview - test preview.sh | `test-preview.sh` fails: `preview.sh deploy` no longer starts a preview as it should, e.g. without the develop stack's river record (tested against a fake `podman`, no container runs) |
 | Model lab - compile | `fractal_model_lab` does not compile from sources (`-Werror`, so warnings too) |
 | Backend - compile, run tests and package | `mvn verify` fails: compilation errors or failing tests (every test under `server/src/test` runs) |
 | Startup check - prepare environment | `podman-compose.yml` plus `compose.ci.yml` is not a valid compose configuration |
@@ -50,7 +53,17 @@ enabled (for the approval).
 | Startup check - smoke test | `smoke-test.sh` fails: Spring initialization, Flyway migrations, database connection, Caddy routing or frontend assets |
 
 The startup check runs the production `podman-compose.yml` (services, env vars, healthcheck, `Caddyfile`, published port) with `docker compose`,
-layered with `compose.ci.yml`, against a fresh database with throwaway credentials.
+layered with `compose.ci.yml`, against a fresh database with throwaway credentials. The river lifeline worker (`monitor`) is built from the
+commit too, but there it only prints its help and exits: the check never contacts NASA.
+
+### River lifeline worker
+
+The `monitor` service runs the processing image (`nisar-sar-change-detection-processing`, built by Build Images for `latest` and `develop`,
+not for PR previews) and writes the record to the stack's `monitor_data` volume, which the backend mounts read-only and serves under
+`/api/monitor` (see `docs/river-monitor.md`). It reads NISAR products with `EARTHDATA_TOKEN` from the stack's `.env`; without it each round
+fails and is logged (`podman-compose logs monitor`) and the page says the record has not been built. Each stack has its own volume, so production
+and develop process the passes separately; PR previews read develop's (see [PR previews](#pr-previews)). `rollback.sh` only switches the
+backend and the frontend: the worker keeps the deployed image.
 
 ## Post-deployment smoke test
 
@@ -173,7 +186,8 @@ changes on the Pi:
 ```bash
 git clone --branch develop https://github.com/S4nxez/NISAR-SAR-Change-Detection.git /opt/NISAR-SAR-Change-Detection-develop
 cd /opt/NISAR-SAR-Change-Detection-develop
-# Its own database password. NISAR_* make podman-compose, run by hand here, act on the develop stack too
+# Its own database password. NISAR_* make podman-compose, run by hand here, act on the develop stack too. Add
+# EARTHDATA_TOKEN=<NASA Earthdata token> for the river lifeline worker (see "River lifeline worker" above)
 printf 'MYSQL_ROOT_PASSWORD=%s\nMYSQL_USER=root\nNISAR_IMAGE_TAG=develop\nNISAR_HTTP_PORT=8090\n' "$(openssl rand -hex 16)" > .env
 : > server/.env
 chmod 600 .env server/.env
@@ -225,6 +239,9 @@ How a preview relates to the other stacks:
 - **Database**: each preview has its own MySQL, empty on every deployment (no volume): Flyway runs the pull request's migrations and demo
   data from scratch, so a pull request may change its own migrations. It can't share the develop stack's MySQL, the migrations use the
   `NisarSar` database by name (`USE NisarSar`) and would write into develop's data.
+- **River record** (`api/monitor`): the preview's backend mounts the develop stack's `monitor_data` volume read-only
+  (`<project>_monitor_data`, written by develop's monitor worker), so a preview shows develop's record. Previews run no monitor worker.
+  If develop has no such volume yet, the preview starts without a record and its page says the area is not published.
 - **Production**: untouched. `preview.sh` refuses production's checkout, the previews never join production's network, and production's
   Caddy has `NISAR_PR_PREVIEWS` unset, so `/terra-pulse/pr-<N>/` is the app's path as before.
 - **Resources**: at most 3 previews at once (`MAX_PREVIEWS`), each a MySQL, a backend and an nginx, about 600 MB of RAM. A fourth pull request's
@@ -267,7 +284,8 @@ With previews running, `podman-compose down` in the develop checkout can't remov
 | `smoke-test.sh` | Checks a running stack through Caddy: `GET /api/sites` returns a non-empty catalog read from MySQL, and the page and every local asset it references are served. Usage: `smoke-test.sh [BASE_URL]` (default `http://127.0.0.1:8089`), waits up to `SMOKE_TIMEOUT` seconds (default 180) for the backend. Used by the startup check and the post-deployment smoke test |
 | `rollback.sh` | Rollback of the stack on the Pi to its `known-good` images: `status` (read-only), `mark` (tags the images the backend and frontend containers run as `known-good`), `restore` (switches those containers back to them). `DEPLOY_DIR` and `NISAR_IMAGE_TAG` select the stack, production by default. Used by Deploy and by hand, see [Rollback](#rollback) and [Develop stack](#develop-stack) |
 | `test-rollback.sh` | Tests of `rollback.sh` against fake `podman` and `podman-compose` commands, for production's and the develop stack's checkouts: no container runs, only bash is needed. Run by validate |
-| `preview.sh` | PR previews on the develop stack: `deploy <N>` (its own MySQL, backend and frontend, from scratch), `remove <N>`, `status <N>`, `list`. Used by PR preview and by hand, see [PR previews](#pr-previews) |
+| `test-preview.sh` | Tests of `preview.sh deploy` against a fake `podman`: the river record it mounts and its failures. No container runs, only bash is needed. Run by validate |
+| `preview.sh` | PR previews on the develop stack: `deploy <N>` (its own MySQL, backend and frontend, from scratch, with develop's river record), `remove <N>`, `status <N>`, `list`. Used by PR preview and by hand, see [PR previews](#pr-previews) |
 | `pr-comment.sh` | Creates or updates the one comment of `github-actions[bot]` that starts with a marker on a pull request: the preview link |
 | `compose.ci.yml` | Compose override that builds `backend` and `frontend` from the checkout instead of using the published `:latest` images |
 
@@ -293,7 +311,8 @@ With previews running, `podman-compose down` in the develop checkout can't remov
 
 `tools/ci/smoke-test.sh [BASE_URL]` only sends GET requests, so it can check any running stack, production included: on the Pi, without arguments
 it checks the deployed stack as Deploy does, and `tools/ci/smoke-test.sh https://raspberrypi.tail0a4b52.ts.net/terra-pulse` checks the public URL.
-`tools/ci/test-rollback.sh` runs anywhere with bash (it fakes podman): run it after changing `rollback.sh`.
+`tools/ci/test-rollback.sh` and `tools/ci/test-preview.sh` run anywhere with bash (they fake podman): run them after changing `rollback.sh`
+or `preview.sh`.
 
 To reproduce the whole startup check use a separate worktree, since it writes `.env` and `server/.env`, and not on the Raspberry Pi,
 where `127.0.0.1:8089` is the production Caddy (and `127.0.0.1:8090` the develop stack's):

@@ -180,6 +180,7 @@ jobs:
             "cd $DEPLOY_DIR && \
              podman pull ghcr.io/s4nxez/nisar-sar-change-detection-back:$IMAGE_TAG && \
              podman pull ghcr.io/s4nxez/nisar-sar-change-detection-front:$IMAGE_TAG && \
+             podman pull ghcr.io/s4nxez/nisar-sar-change-detection-processing:$IMAGE_TAG && \
              NISAR_IMAGE_TAG=$IMAGE_TAG NISAR_HTTP_PORT=$HTTP_PORT podman-compose up -d --force-recreate > /dev/null 2>&1 && \
              echo DEPLOY_OK"
 

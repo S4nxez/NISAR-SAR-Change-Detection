@@ -24,6 +24,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT/tools/ci/rollback.sh"
 BACK=ghcr.io/s4nxez/nisar-sar-change-detection-back
 FRONT=ghcr.io/s4nxez/nisar-sar-change-detection-front
+PROC=ghcr.io/s4nxez/nisar-sar-change-detection-processing
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -140,19 +141,21 @@ S="$TMP/state"
 
 # deployment VERSION: fresh state. The backend and frontend containers run the images of VERSION
 # (old: the version before the deployment, new: the deployed one), :latest points to them and the
-# old ones are known-good if KNOWN_GOOD=1. mysql, caddy and another project's containers run too.
+# old ones are known-good if KNOWN_GOOD=1. The monitor worker, mysql, caddy and another project's containers run too:
+# rollback.sh leaves them alone, so podman-compose up -d must find them and pull nothing.
 deployment() {
   local version="$1"
   rm -rf "$S" && mkdir -p "$S"
   printf '%s\n' "back-old|2026-10-26 18:30 UTC|1111111aaaa" "front-old|2026-10-26 18:30 UTC|1111111aaaa" \
     "back-new|2026-10-27 19:01 UTC|2222222bbbb" "front-new|2026-10-27 19:01 UTC|" \
-    "mysql-8|2026-06-01 10:00 UTC|" "caddy-2|2026-06-03 17:53 UTC|" "other-app|2026-05-01 09:00 UTC|" > "$S/images"
-  printf '%s\n' "$BACK:latest back-$version" "$FRONT:latest front-$version" \
+    "proc-1|2026-10-27 19:01 UTC|2222222bbbb" "mysql-8|2026-06-01 10:00 UTC|" "caddy-2|2026-06-03 17:53 UTC|" \
+    "other-app|2026-05-01 09:00 UTC|" > "$S/images"
+  printf '%s\n' "$BACK:latest back-$version" "$FRONT:latest front-$version" "$PROC:latest proc-1" \
     "docker.io/library/mysql:8 mysql-8" "docker.io/library/caddy:latest caddy-2" > "$S/tags"
   if [[ "${KNOWN_GOOD:-1}" == 1 ]]; then printf '%s\n' "$BACK:known-good back-old" "$FRONT:known-good front-old" >> "$S/tags"; fi
   printf '%s\n' "c-mysql|mysql|mysql-8|running|$DEPLOY" "c-caddy|caddy|caddy-2|running|$DEPLOY" \
     "c-back|backend|back-$version|running|$DEPLOY" "c-front|frontend|front-$version|running|$DEPLOY" \
-    "o-back|backend|other-app|running|/srv/other" "o-front|frontend|other-app|exited|/srv/other" > "$S/containers"
+    "c-monitor|monitor|proc-1|running|$DEPLOY" "o-back|backend|other-app|running|/srv/other" "o-front|frontend|other-app|exited|/srv/other" > "$S/containers"
   : > "$S/calls"
   cp "$S/containers" "$S/containers.before"
   cp "$S/tags" "$S/tags.before"
@@ -160,17 +163,19 @@ deployment() {
 
 # add_develop VERSION: adds the develop stack to the state, in DEVELOP. Its backend and frontend containers run the
 # develop images of VERSION, :develop points to them and the old ones are develop-known-good if KNOWN_GOOD=1. Its own
-# mysql and caddy containers run too.
+# monitor, mysql and caddy containers run too.
 add_develop() {
   local version="$1"
   printf '%s\n' "devback-old|2026-10-28 10:00 UTC|3333333cccc" "devfront-old|2026-10-28 10:00 UTC|3333333cccc" \
-    "devback-new|2026-10-29 07:00 UTC|4444444dddd" "devfront-new|2026-10-29 07:00 UTC|4444444dddd" >> "$S/images"
-  printf '%s\n' "$BACK:develop devback-$version" "$FRONT:develop devfront-$version" >> "$S/tags"
+    "devback-new|2026-10-29 07:00 UTC|4444444dddd" "devfront-new|2026-10-29 07:00 UTC|4444444dddd" \
+    "devproc-1|2026-10-29 07:00 UTC|4444444dddd" >> "$S/images"
+  printf '%s\n' "$BACK:develop devback-$version" "$FRONT:develop devfront-$version" "$PROC:develop devproc-1" >> "$S/tags"
   if [[ "${KNOWN_GOOD:-1}" == 1 ]]; then
     printf '%s\n' "$BACK:develop-known-good devback-old" "$FRONT:develop-known-good devfront-old" >> "$S/tags"
   fi
   printf '%s\n' "d-mysql|mysql|mysql-8|running|$DEVELOP" "d-caddy|caddy|caddy-2|running|$DEVELOP" \
-    "d-back|backend|devback-$version|running|$DEVELOP" "d-front|frontend|devfront-$version|running|$DEVELOP" >> "$S/containers"
+    "d-back|backend|devback-$version|running|$DEVELOP" "d-front|frontend|devfront-$version|running|$DEVELOP" \
+    "d-monitor|monitor|devproc-1|running|$DEVELOP" >> "$S/containers"
   cp "$S/containers" "$S/containers.before"
   cp "$S/tags" "$S/tags.before"
 }
@@ -292,8 +297,8 @@ check "restore after a failed deployment: only backend and frontend are removed 
   eval 'called "podman rm --force c-back c-front" && called "podman-compose up -d (in $DEPLOY)"'
 check "restore after a failed deployment: backend and frontend run the known-good images" \
   eval 'runs backend back-old && runs frontend front-old && says "Rolled back: the backend and frontend containers run the known-good images"'
-check "restore after a failed deployment: mysql, caddy and the other project's containers are untouched" \
-  untouched c-mysql c-caddy o-back o-front
+check "restore after a failed deployment: monitor, mysql, caddy and the other project's containers are untouched" \
+  untouched c-monitor c-mysql c-caddy o-back o-front
 check "restore keeps the known-good tags and never pulls" \
   eval 'tag_is "$BACK:known-good" back-old && tag_is "$FRONT:known-good" front-old && ! grep -q pulled "$S/containers"'
 deployment new
@@ -319,11 +324,11 @@ check "restore recreates a missing backend container" \
   eval 'rc_is 0 && called "podman rm --force c-front" && called "podman-compose up -d (in $DEPLOY)" &&
     runs backend back-old && runs frontend front-old'
 deployment new
-for id in c-mysql c-caddy c-back c-front; do set_container "$id" "" ""; done
+for id in c-monitor c-mysql c-caddy c-back c-front; do set_container "$id" "" ""; done
 run restore
 check "restore after a deployment stopped half-way (no container left) brings the whole stack back" \
   eval 'rc_is 0 && ! grep -q "^podman rm" "$S/calls" && runs backend back-old && runs frontend front-old &&
-    runs mysql mysql-8 && runs caddy caddy-2 && untouched o-back o-front'
+    runs monitor proc-1 && runs mysql mysql-8 && runs caddy caddy-2 && untouched o-back o-front'
 
 deployment old
 set_tag "$BACK:latest" back-new
@@ -397,8 +402,8 @@ check "restore of the develop stack: develop points to the develop-known-good im
 check "restore of the develop stack: only its backend and frontend are removed and recreated, in its checkout" \
   eval 'called "podman rm --force d-back d-front" && called "podman-compose up -d (in $DEVELOP)" &&
     runs backend devback-old "$DEVELOP" && runs frontend devfront-old "$DEVELOP"'
-check "restore of the develop stack: production's containers, the develop mysql and caddy and the other project's are untouched" \
-  untouched c-mysql c-caddy c-back c-front d-mysql d-caddy o-back o-front
+check "restore of the develop stack: production's containers, the develop monitor, mysql and caddy and the other project's are untouched" \
+  untouched c-monitor c-mysql c-caddy c-back c-front d-monitor d-mysql d-caddy o-back o-front
 check "restore of the develop stack annotates the rollback on the run summary" \
   eval 'says "::warning title=Rollback::Rolled back to the known-good images: backend image devback-old, built 2026-10-28 10:00 UTC, commit 3333333"'
 deployment new

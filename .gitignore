@@ -55,3 +55,15 @@ SpringBoot/.idea/modules.xml
 
 ### local development environment (make up) ###
 .dev/
+
+### Python ###
+__pycache__/
+.coverage
+*.pyc
+
+### Node (frontend tests) ###
+node_modules/
+*.egg-info/
+.ruff_cache/
+# River lifeline record written by a local run of the worker (MONITOR_DATA_DIR default)
+processing/output/
