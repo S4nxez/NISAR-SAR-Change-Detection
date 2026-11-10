@@ -56,7 +56,7 @@ finished:
 | `server/` | JUnit, `server/src/test` | `cd server && mvn verify` |
 | `frontend/` | `node:test`, `frontend/tests` (`jsdom` for page tests) | `cd frontend && npm ci && npm test` |
 | `processing/` | `unittest`, `processing/tests` | `python -m pip install -e processing && python -m unittest discover -s processing/tests -t processing` |
-| `tools/ci/` | shell test scripts, `tools/ci/test-*.sh` | `tools/ci/test-rollback.sh` |
+| `tools/ci/` | shell test scripts, `tools/ci/test-*.sh` | `tools/ci/test-rollback.sh && tools/ci/test-preview.sh` |
 | `fractal_model_lab/` | no test harness yet: it must compile with `-Werror` | `make -C fractal_model_lab` |
 
 A new project, language or test suite gets its command added to the `validate` job

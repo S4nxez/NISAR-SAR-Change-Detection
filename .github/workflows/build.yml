@@ -75,6 +75,10 @@ jobs:
       - name: Rollback - test rollback.sh
         run: tools/ci/test-rollback.sh
 
+      # PR preview runs tools/ci/preview.sh on the Pi
+      - name: Preview - test preview.sh
+        run: tools/ci/test-preview.sh
+
       - name: Model lab - compile
         run: |
           dpkg -s libncurses-dev >/dev/null 2>&1 \
