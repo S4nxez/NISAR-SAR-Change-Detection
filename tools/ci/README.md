@@ -61,7 +61,8 @@ commit too, but there it only prints its help and exits: the check never contact
 The `monitor` service runs the processing image (`nisar-sar-change-detection-processing`, built by Build Images for `latest` and `develop`,
 not for PR previews) and writes the record to the stack's `monitor_data` volume, which the backend mounts read-only and serves under
 `/api/monitor` (see `docs/river-monitor.md`). It reads NISAR products with `EARTHDATA_TOKEN` from the stack's `.env`; without it each round
-fails and is logged (`podman-compose logs monitor`) and the page says the record has not been built. Each stack has its own volume, so production
+fails and is logged (`podman-compose logs monitor`) and the page says the record has not been built. The worker resolves names with public
+DNS servers (`dns` in `podman-compose.yml`): the network's own DNS on the Pi does not forward outside names. Each stack has its own volume, so production
 and develop process the passes separately; PR previews read develop's (see [PR previews](#pr-previews)). `rollback.sh` only switches the
 backend and the frontend: the worker keeps the deployed image.
 
@@ -75,6 +76,7 @@ and the frontend is served, then the same through the public URL. Deploy fails i
 |---|---|
 | Check the stack settings | A setting of the stack to deploy is not valid, or a stack other than production uses production's checkout, image tag or port ([Develop stack](#develop-stack)) |
 | Check the stack on the Pi | The stack's checkout has no `podman-compose.yml`, `.env` or `server/.env` (the develop stack is not set up yet), or a stack other than production would be deployed with less than 2 GB free on the Pi. Nothing has changed then |
+| Stack files - podman-compose.yml and Caddyfile of this commit | The Pi can't be reached or the files can't be written. Copies the deployed commit's `podman-compose.yml` and `Caddyfile` into the stack's checkout when they differ (a notice says so), since nothing else updates it: a new service or volume would otherwise not be deployed. In production's checkout they may then show as modified. Nothing else has changed if it fails |
 | Deploy | An image cannot be pulled or `podman-compose up` fails |
 | Smoke test - deployed stack | `smoke-test.sh http://127.0.0.1:8089` (Caddy) fails on the Pi: the backend does not answer within 120 s (Spring initialization, Flyway migrations on the production data, database connection), Caddy does not route `/api/*`, or the page or one of its assets is not served |
 | Smoke test - public URL | The same checks fail at `https://raspberrypi.tail0a4b52.ts.net/terra-pulse`, through Tailscale Funnel, as browsers reach the app (the frontend calls `../api/sites`, under the `/terra-pulse` prefix). Only runs once the stack passed, so the cause is in front of Caddy: the Funnel mapping (`tailscale serve status` on the Pi) or a URL that ignores the prefix, e.g. an absolute asset path |
@@ -196,7 +198,8 @@ chmod 600 .env server/.env
 Write this `.env` from scratch rather than copying production's, and never set `COMPOSE_PROJECT_NAME` in it: the compose project comes from the
 directory name, which keeps the containers and the database of the two stacks apart. Then re-run the failed Develop run (or push to `develop`).
 The first deployment creates the develop database (Flyway migrations and their demo data) and has no `develop-known-good` to roll back to yet.
-Like production's, the checkout is only updated by hand (`git pull`): Deploy only pulls images and recreates the containers.
+Deploy keeps its `podman-compose.yml` and `Caddyfile` at the deployed commit (as production's) and pulls the images; the rest of the checkout
+is only updated by hand (`git pull`) and nothing in it is used by the stack.
 
 To QA it:
 

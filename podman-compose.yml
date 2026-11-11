@@ -60,6 +60,11 @@ services:
       - monitor_data:/data/monitor
     networks:
       - NisarSar-net
+    # Public resolvers: on the Pi, the network's own DNS (aardvark, rootless with pasta) does not forward outside names,
+    # and the worker only talks to outside services (ASF, Earthdata, ANA, OpenStreetMap), never to the other containers
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
 
   frontend:
     image: ghcr.io/s4nxez/nisar-sar-change-detection-front:${NISAR_IMAGE_TAG:-latest}
