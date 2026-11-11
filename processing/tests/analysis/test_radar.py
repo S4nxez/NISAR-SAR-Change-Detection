@@ -1,6 +1,7 @@
 import io
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -8,6 +9,7 @@ from lifeline.analysis.radar import (
     area_edge,
     block_mean,
     box_sum,
+    filter_db,
     granule_window,
     linear_to_db,
     load_window,
@@ -15,10 +17,11 @@ from lifeline.analysis.radar import (
     product_window,
     read_pass,
     read_window,
-    window_cache_path,
+    refined_lee,
     resample_into,
     speckle_filter,
     speckle_window,
+    window_cache_path,
 )
 
 from ..helpers import small_area
@@ -114,6 +117,71 @@ class TestResample(unittest.TestCase):
         out = np.full((4, 6), np.nan, np.float32)
         resample_into(out, db, area, IdentityTransformer(), x0=500.0, y0=3500.0, dx=1000.0, dy=-1000.0)
         self.assertEqual(int(np.isfinite(out).sum()), 4)
+
+
+def gamma_db(mean_db, shape, looks, seed=0):
+    rng = np.random.default_rng(seed)
+    return (10 * np.log10(rng.gamma(looks, 1 / looks, shape) * 10 ** (mean_db / 10))).astype(np.float32)
+
+
+class TestRefinedLee(unittest.TestCase):
+    def test_homogeneous_areas_are_smoothed_without_bias(self):
+        db = gamma_db(-10.0, (120, 120), 9)
+        out = refined_lee(db, 9.0)
+        lin_in, lin_out = 10 ** (db / 10), 10 ** (out / 10)
+        enl_in = (lin_in.mean() / lin_in.std()) ** 2
+        enl_out = (lin_out[10:-10, 10:-10].mean() / lin_out[10:-10, 10:-10].std()) ** 2
+        self.assertGreater(enl_out, 4 * enl_in)
+        self.assertAlmostEqual(float(lin_out.mean() / lin_in.mean()), 1.0, delta=0.03)
+
+    def test_a_noiseless_shore_is_kept_and_a_narrow_line_is_less_blurred_than_by_the_box(self):
+        db = np.full((40, 40), -7.0, np.float32)
+        db[:, :20] = -23.0                                         # lake | forest
+        out = refined_lee(db, 9.0)
+        np.testing.assert_allclose(out, db, atol=1e-3)              # an edge is not blurred at all
+        line = np.full((40, 40), -7.0, np.float32)
+        line[:, 19:21] = -23.0                                     # 40 m channel: thinner than the half windows
+        lee, box = refined_lee(line, 9.0)[5:-5, 19:21], speckle_filter(line, 3)[5:-5, 19:21]
+        self.assertTrue((lee < box - 3).all())                     # darker than the box keeps it, not exact
+
+    def test_a_60m_channel_keeps_its_width_where_the_box_filter_shrinks_it(self):
+        mean = np.full((200, 200), -7.0, np.float32)
+        mean[:, 99:102] = -23.0                                    # 3 px = 60 m
+        noisy = mean + gamma_db(0.0, mean.shape, 9, seed=3)
+        lee = refined_lee(noisy, 9.0)[5:-5, 99:102] < -15
+        box = speckle_filter(noisy, 3)[5:-5, 99:102] < -15
+        self.assertGreater(lee.mean(), 0.95)
+        self.assertLess(box.mean(), 0.5)
+
+    def test_a_shore_next_to_a_gap_is_kept(self):
+        db = np.full((40, 40), -7.0, np.float32)
+        db[:, :20] = -23.0
+        db[:6, :] = np.nan                                         # swath edge just north of the shore's end
+        db[:, 36:] = np.nan
+        out = refined_lee(db, 9.0)
+        ok = np.isfinite(db)
+        np.testing.assert_allclose(out[ok], db[ok], atol=1e-3)
+
+    def test_no_data_stays_no_data_and_does_not_spread(self):
+        db = gamma_db(-10.0, (60, 60), 9)
+        db[20:30, 20:30] = np.nan
+        out = refined_lee(db, 9.0)
+        np.testing.assert_array_equal(np.isnan(out), np.isnan(db))
+
+    def test_chunks_give_the_same_result(self):
+        db = gamma_db(-12.0, (90, 50), 9, seed=5)
+        db[:, 20:23] = -23.0
+        whole = refined_lee(db, 9.0)
+        with mock.patch("lifeline.analysis.radar.LEE_CHUNK_ROWS", 7):
+            np.testing.assert_allclose(refined_lee(db, 9.0), whole, atol=1e-5)
+
+    def test_filter_choice_comes_from_the_area(self):
+        db = gamma_db(-10.0, (30, 30), 9)
+        np.testing.assert_array_equal(filter_db({"speckle_m": 60}, db, 20.0), speckle_filter(db, 3))
+        np.testing.assert_array_equal(filter_db({"speckle_filter": "refined_lee", "speckle_looks": 9}, db, 20.0),
+                                      refined_lee(db, 9.0))
+        with self.assertRaises(ValueError):
+            filter_db({"speckle_filter": "median"}, db, 20.0)
 
 
 @unittest.skipIf(h5py is None, "h5py and pyproj are needed to read GCOV products")

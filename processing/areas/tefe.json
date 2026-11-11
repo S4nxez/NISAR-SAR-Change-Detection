@@ -14,6 +14,8 @@
   "valid_floor_db": -40.0,
   "water_db": -15.0,
   "water_db_weak": -12.0,
+  "speckle_filter": "refined_lee",
+  "speckle_looks": 9,
   "speckle_m": 60,
   "widths_m": [40, 60, 100, 200, 400],
   "safe_width_m": 60,

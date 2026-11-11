@@ -89,9 +89,11 @@ For every pass (all frames of one track on one day):
 
 1. **Read**: HH backscatter of the area from the NISAR L2 GCOV product (ASF DAAC). Values
    below −40 dB (`valid_floor_db`) are swath-edge fill, not measurements, and become no data
-   ([ADR-001](decisions/ADR-001-river-monitor-fill-is-no-data.md)). Then speckle
-   filtered over ~60 m (a wider window erases channels two or three pixels wide) and
-   resampled to a fixed lon/lat grid shared by all passes.
+   ([ADR-001](decisions/ADR-001-river-monitor-fill-is-no-data.md)). Then speckle filtered with a
+   refined Lee filter (7 × 7 window, edge-aligned half windows, 9 looks: shores are not blurred;
+   [ADR-002](decisions/ADR-002-river-monitor-refined-lee-filter.md); the older box filter,
+   `speckle_filter: "box"`, averages over ~60 m and narrows every channel), and resampled to a fixed
+   lon/lat grid shared by all passes.
 2. **Water**: filtered HH below −15 dB, plus pixels below −12 dB that touch that water
    (hysteresis): wind roughens stretches of rivers and lakes, which then return a little
    more echo and would otherwise cut the river in two. Specks under 1 ha are dropped and

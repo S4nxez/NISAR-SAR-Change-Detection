@@ -1,5 +1,6 @@
 """Backscatter helpers and the read of one pass (all its frames) onto the area grid."""
 import os
+import warnings
 
 import numpy as np
 
@@ -46,6 +47,112 @@ def speckle_filter(db, k):
         out = 10.0 * np.log10(box_sum(lin, k) / box_sum(ok.astype(np.float64), k))
     out[~ok] = np.nan
     return out.astype(np.float32)
+
+
+LEE_RADIUS = 3            # 7 x 7 window
+LEE_CHUNK_ROWS = 512
+LEE_MIN_PIXELS = 10       # fewer valid pixels in the chosen half window: keep the pixel as measured
+
+
+def _lee_halves():
+    """The eight edge-aligned half windows of a 7 x 7 window (28 pixels each, centre line included): west, east,
+    north, south and the four triangles cut by the diagonals."""
+    r = LEE_RADIUS
+    yy, xx = np.mgrid[-r:r + 1, -r:r + 1]
+    return [xx <= 0, xx >= 0, yy <= 0, yy >= 0, (xx + yy) <= 0, (xx + yy) >= 0, (yy - xx) <= 0, (yy - xx) >= 0]
+
+
+LEE_HALVES = _lee_halves()
+
+
+def _sub_means(lin, ok):
+    """Mean of every 3 x 3 block (NaN ignored) of a padded chunk."""
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return box_sum(np.where(ok, lin, 0.0), 3) / box_sum(ok.astype(np.float64), 3)
+
+
+def _lee_chunk(lin, ok, cu2):
+    """Refined Lee on a chunk padded with LEE_RADIUS rows and columns on every side; returns the unpadded result."""
+    from scipy import ndimage
+    r = LEE_RADIUS
+    h, w = lin.shape[0] - 2 * r, lin.shape[1] - 2 * r
+    m = _sub_means(lin, ok)
+    s = {(dy, dx): m[r + dy:r + dy + h, r + dx:r + dx + w] for dy in (-2, 0, 2) for dx in (-2, 0, 2)}
+    def side(*keys):   # mean of the blocks of one side that have data (image edges and gaps are NaN)
+        with np.errstate(invalid="ignore"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return np.nanmean(np.stack([s[k] for k in keys]), axis=0)
+
+    # sub-means of each side of the four possible edges; the side closer to the centre block is the pixel's own
+    sides = [
+        (side((-2, -2), (0, -2), (2, -2)), side((-2, 2), (0, 2), (2, 2))),     # west | east
+        (side((-2, -2), (-2, 0), (-2, 2)), side((2, -2), (2, 0), (2, 2))),     # north | south
+        (side((-2, -2), (-2, 0), (0, -2)), side((0, 2), (2, 0), (2, 2))),      # north-west | south-east
+        (side((-2, 0), (-2, 2), (0, 2)), side((0, -2), (2, -2), (2, 0))),      # north-east | south-west
+    ]
+    centre = s[0, 0]
+    grads = np.stack([np.abs(b - a) for a, b in sides])
+    direction = np.argmax(np.nan_to_num(grads, nan=-1.0), axis=0)
+    first, second = np.stack([a for a, _ in sides]), np.stack([b for _, b in sides])
+    pick = lambda arr: np.take_along_axis(arr, direction[None], 0)[0]   # noqa: E731
+    d1, d2 = np.abs(pick(first) - centre), np.abs(pick(second) - centre)
+    own_side = np.where(np.isnan(d1), 1, np.where(np.isnan(d2) | (d1 <= d2), 0, 1))   # a side without data loses
+    choice = 2 * direction + own_side                    # index into LEE_HALVES
+    lin0 = np.where(ok, lin, 0.0)
+    okf = ok.astype(np.float64)
+    mean = np.zeros((h, w))
+    sq = np.zeros((h, w))
+    cnt = np.zeros((h, w))
+    for k, half in enumerate(LEE_HALVES):
+        sel = choice == k
+        if not sel.any():
+            continue
+        kern = half.astype(np.float64)
+        mean[sel] = ndimage.correlate(lin0, kern, mode="constant")[r:r + h, r:r + w][sel]
+        sq[sel] = ndimage.correlate(lin0 * lin0, kern, mode="constant")[r:r + h, r:r + w][sel]
+        cnt[sel] = ndimage.correlate(okf, kern, mode="constant")[r:r + h, r:r + w][sel]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mu = mean / cnt
+        var = np.maximum(sq / cnt - mu * mu, 0.0)
+        var_x = (var - mu * mu * cu2) / (1.0 + cu2)
+        k = np.clip(np.where(var > 0, var_x / var, 0.0), 0.0, 1.0)
+    x = lin[r:r + h, r:r + w]
+    out = mu + k * (x - mu)
+    out = np.where(cnt >= LEE_MIN_PIXELS, out, x)
+    out[~ok[r:r + h, r:r + w]] = np.nan
+    return out
+
+
+def refined_lee(db, looks):
+    """Refined Lee speckle filter (Lee 1981; edge-aligned windows, Lee, Grunes and De Grandi 1999) in linear power.
+
+    In a 7 x 7 window the strongest of four edge directions is found from the means of nine 3 x 3 blocks; the
+    statistics are taken over the half window on the pixel's own side of that edge, so a channel pixel is averaged
+    with water and not with the bright bank. Then x = mu + k (I - mu), k = var_x / var with
+    var_x = (var - mu^2 Cu^2) / (1 + Cu^2) and Cu^2 = 1 / looks: homogeneous windows (variance of speckle only) are
+    averaged, heterogeneous ones keep the pixel. NaN in, NaN out. Returns dB."""
+    lin = np.where(np.isfinite(db), np.power(10.0, np.nan_to_num(db) / 10.0), np.nan)
+    r = LEE_RADIUS
+    pad = np.pad(lin, r, mode="constant", constant_values=np.nan)
+    ok = np.isfinite(pad)
+    out = np.empty(db.shape, np.float32)
+    for a in range(0, db.shape[0], LEE_CHUNK_ROWS):
+        b = min(db.shape[0], a + LEE_CHUNK_ROWS)
+        out[a:b] = _lee_chunk(pad[a:b + 2 * r], ok[a:b + 2 * r], 1.0 / looks)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        res = 10.0 * np.log10(out)
+    res[~np.isfinite(res)] = np.nan
+    return res.astype(np.float32)
+
+
+def filter_db(area, db, spacing_m):
+    """The area's speckle filter: "box" (mean over speckle_m) or "refined_lee" (with speckle_looks looks)."""
+    kind = area.get("speckle_filter", "box")
+    if kind == "box":
+        return speckle_filter(db, speckle_window(area, spacing_m))
+    if kind == "refined_lee":
+        return refined_lee(db, float(area["speckle_looks"]))
+    raise ValueError(f"unknown speckle_filter {kind!r}")
 
 
 def block_mean(a, f):
@@ -191,7 +298,7 @@ def read_pass(area, ps, token, open_remote=RemoteFile, cache_dir=None):
         read_mb += w["mb"]
         spacing = abs(w["dx"])
         db = mask_fill(linear_to_db(w["bands"]["HHHH"]), area.get("valid_floor_db", DEFAULT_VALID_FLOOR_DB))
-        db = speckle_filter(db, speckle_window(area, spacing))
+        db = filter_db(area, db, spacing)
         tr = Transformer.from_crs(4326, w["epsg"], always_xy=True)
         resample_into(out, db, area, tr, w["x0"], w["y0"], w["dx"], w["dy"])
     return out, read_mb, spacing
