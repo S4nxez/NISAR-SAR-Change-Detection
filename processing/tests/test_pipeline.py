@@ -76,6 +76,7 @@ class TestPipeline(TempDirTest):
         self.assertEqual(sorted(os.listdir(pdir)), ["radar.webp", "water.npz", "water.png"])
         self.assertEqual((entry["read_mb"], entry["spacing_m"], entry["track"]), (12.3, 20.0, 161))
         self.assertEqual(entry["files"], {"radar": "radar.webp", "water": "water.png"})
+        self.assertEqual(entry["threshold"], {"source": "fixed", "strong_db": -15.0, "weak_db": None})
         self.assertTrue(entry["evaluated"])
         self.assertNotIn("granules", entry)
 

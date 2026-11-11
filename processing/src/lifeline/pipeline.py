@@ -8,7 +8,7 @@ import traceback
 import numpy as np
 
 from lifeline.analysis.radar import read_pass
-from lifeline.analysis.water import water_mask
+from lifeline.analysis.water import pass_thresholds, water_mask
 from lifeline.config import AREAS_DIR, OUT_ROOT, log
 from lifeline.geometry.area import area_mask
 from lifeline.output.catalog import (
@@ -34,7 +34,8 @@ def process_pass(area, communities, ps, out_root, token, read=None):
     t0 = time.time()
     db, read_mb, spacing = (read or read_pass)(area, ps, token)
     db[~area_mask(area)] = np.nan   # outside a circular area: transparent in the images, never water
-    water, valid = water_mask(db, area["water_db"], area.get("water_db_weak"))
+    strong_db, weak_db, threshold = pass_thresholds(area, db)
+    water, valid = water_mask(db, strong_db, weak_db)
     wide = wide_water_of(area, water)
     pdir = pass_dir(area, ps["id"], out_root)
     os.makedirs(pdir, exist_ok=True)
@@ -42,7 +43,8 @@ def process_pass(area, communities, ps, out_root, token, read=None):
     save_water(water, wide, os.path.join(pdir, "water.png"))
     save_mask(water, valid, os.path.join(pdir, "water.npz"))
     entry = {k: ps[k] for k in ENTRY_KEYS}
-    entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"})
+    entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"},
+                 threshold=threshold)
     evaluate(area, communities, water, valid, wide, entry)
     entry["seconds"] = round(time.time() - t0, 1)
     return entry

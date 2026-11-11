@@ -8,7 +8,10 @@ from lifeline.analysis.water import (
     connectivity,
     coverage_around,
     disk,
+    ki_threshold,
+    mixed_tiles,
     near_labels,
+    pass_thresholds,
     route_status,
     water_mask,
     wide_water,
@@ -17,6 +20,58 @@ from lifeline.analysis.water import (
 from lifeline.config import STATUS
 
 from ..helpers import PX, WIDTHS, river_scene
+
+
+def two_class_scene(water_db=-22.0, land_db=-7.0, seed=0):
+    """400 x 400 px: water on the west 30 %, land elsewhere, with Gaussian spread in dB."""
+    rng = np.random.default_rng(seed)
+    db = rng.normal(land_db, 2.0, (400, 400)).astype(np.float32)
+    db[:, :120] = rng.normal(water_db, 1.5, (400, 120))
+    return db
+
+
+class TestPassThreshold(unittest.TestCase):
+    ADAPTIVE = {"range_db": [-20.0, -13.0], "tile_m": 2000, "min_tiles": 2}
+
+    def area(self, **kw):
+        return {"water_db": -15.0, "water_db_weak": -12.0, "px_m": 20.0, **kw}
+
+    def test_ki_cuts_between_the_two_classes(self):
+        t = ki_threshold(two_class_scene().ravel())
+        self.assertTrue(-18.0 < t < -11.0, t)
+        self.assertTrue(np.isnan(ki_threshold(np.array([np.nan, 3.0]))))
+        self.assertTrue(np.isnan(ki_threshold(np.full(100, -10.0))))
+
+    def test_only_mixed_and_complete_tiles_are_used(self):
+        db = two_class_scene()
+        db[300:, :] = np.nan                                  # gappy bottom row of tiles
+        tiles = mixed_tiles(db, 100, -15.0)
+        self.assertEqual(sorted((t[0].start, t[1].start) for t in tiles), [(0, 100), (100, 100), (200, 100)])
+
+    def test_fixed_thresholds_without_the_adaptive_setting(self):
+        self.assertEqual(pass_thresholds(self.area(), two_class_scene()),
+                         (-15.0, -12.0, {"source": "fixed", "strong_db": -15.0, "weak_db": -12.0}))
+
+    def test_adaptive_threshold_is_measured_and_keeps_the_weak_offset(self):
+        strong, weak, info = pass_thresholds(self.area(water_db_adaptive=self.ADAPTIVE), two_class_scene())
+        self.assertEqual(info["source"], "adaptive")
+        self.assertTrue(-18.0 < strong < -13.0)
+        self.assertAlmostEqual(weak - strong, 3.0)
+        self.assertEqual(info["tiles"], 4)                    # the column of tiles across the shore
+
+    def test_adaptive_threshold_is_clamped_to_its_range(self):
+        rng = np.random.default_rng(2)
+        db = rng.normal(-6.0, 0.3, (400, 400)).astype(np.float32)
+        db[:, :200] = rng.normal(-16.0, 0.3, (400, 200))      # water and land 10 dB apart: KI cuts near -11 dB
+        strong, weak, info = pass_thresholds(self.area(water_db_adaptive={**self.ADAPTIVE, "tile_m": 8000,
+                                                                          "min_tiles": 1}), db)
+        self.assertGreater(info["measured_db"], -13.0)
+        self.assertEqual((strong, weak, info["source"]), (-13.0, -10.0, "adaptive"))
+
+    def test_too_few_mixed_tiles_fall_back_to_the_fixed_threshold(self):
+        land = np.full((400, 400), -7.0, np.float32)
+        strong, weak, info = pass_thresholds(self.area(water_db_adaptive=self.ADAPTIVE), land)
+        self.assertEqual((strong, weak, info["source"], info["tiles"]), (-15.0, -12.0, "fixed", 0))
 
 
 class TestConnectivity(unittest.TestCase):

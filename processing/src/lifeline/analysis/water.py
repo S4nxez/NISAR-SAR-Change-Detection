@@ -39,6 +39,81 @@ def water_mask(db, water_db, weak_db=None):
     return water, valid
 
 
+KI_RANGE_DB = (-35.0, 5.0)
+KI_BINS = 400
+MIXED_SHARE = (0.2, 0.8)   # a tile is mixed when this share of its pixels is below the prior threshold
+MIN_TILE_VALID = 0.9
+MAX_POOLED = 2_000_000
+
+
+def ki_threshold(values, lo=KI_RANGE_DB[0], hi=KI_RANGE_DB[1], bins=KI_BINS):
+    """Kittler-Illingworth minimum-error threshold of `values` (dB): each class is modelled as a Gaussian and the cut
+    minimises J(t) = 1 + 2 (P1 ln s1 + P2 ln s2) - 2 (P1 ln P1 + P2 ln P2). NaN when no cut leaves two classes."""
+    v = values[np.isfinite(values)]
+    if v.size < 2:
+        return float("nan")
+    hist, edges = np.histogram(v, bins=bins, range=(lo, hi))
+    x = (edges[:-1] + edges[1:]) / 2
+    p = hist / max(1, hist.sum())
+    p1 = np.cumsum(p)
+    p2 = 1.0 - p1
+    m1 = np.cumsum(p * x)
+    s1_sq = np.cumsum(p * x * x)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mu1, mu2 = m1 / p1, (m1[-1] - m1) / p2
+        var1 = s1_sq / p1 - mu1 ** 2
+        var2 = (s1_sq[-1] - s1_sq) / p2 - mu2 ** 2
+        j = 1 + p1 * np.log(var1) + p2 * np.log(var2) - 2 * (p1 * np.log(p1) + p2 * np.log(p2))
+    j[~np.isfinite(j) | (var1 <= 0) | (var2 <= 0)] = np.inf
+    if not np.isfinite(j).any():
+        return float("nan")
+    # an empty gap between the classes gives a plateau of equal J: take its middle, not the edge next to the water
+    best = np.flatnonzero(j <= j.min() + 1e-9 * max(1.0, abs(j.min())))
+    return float((edges[best[0] + 1] + edges[best[-1] + 1]) / 2)
+
+
+def mixed_tiles(db, tile_px, prior_db):
+    """Slices of the tiles that hold both water and land: valid on at least MIN_TILE_VALID of their pixels and with
+    MIXED_SHARE of them below prior_db (their histogram is bimodal, so a threshold can be measured there)."""
+    out = []
+    for a in range(0, db.shape[0] - tile_px + 1, tile_px):
+        for b in range(0, db.shape[1] - tile_px + 1, tile_px):
+            t = db[a:a + tile_px, b:b + tile_px]
+            ok = np.isfinite(t)
+            if ok.mean() < MIN_TILE_VALID:
+                continue
+            share = float((t[ok] < prior_db).mean())
+            if MIXED_SHARE[0] <= share <= MIXED_SHARE[1]:
+                out.append((slice(a, a + tile_px), slice(b, b + tile_px)))
+    return out
+
+
+def pass_thresholds(area, db):
+    """(strong_db, weak_db, info) of one pass. Fixed (water_db, water_db_weak) unless the area has
+    "water_db_adaptive" {range_db, tile_m, min_tiles}: then the Kittler-Illingworth threshold of the pixels of the
+    mixed tiles (split-based selection, Martinis et al. 2009), clamped to range_db, with the weak threshold kept at
+    the same offset. Too few mixed tiles: the fixed threshold."""
+    strong, weak = area["water_db"], area.get("water_db_weak")
+    cfg = area.get("water_db_adaptive")
+    if not cfg:
+        return strong, weak, {"source": "fixed", "strong_db": strong, "weak_db": weak}
+    tiles = mixed_tiles(db, max(8, int(round(cfg["tile_m"] / area["px_m"]))), strong)
+    info = {"source": "fixed", "tiles": len(tiles)}
+    if len(tiles) >= cfg["min_tiles"]:
+        pooled = np.concatenate([db[t][np.isfinite(db[t])] for t in tiles])
+        if pooled.size > MAX_POOLED:
+            pooled = pooled[:: pooled.size // MAX_POOLED + 1]
+        t = ki_threshold(pooled)
+        if np.isfinite(t):
+            lo, hi = cfg["range_db"]
+            info.update(source="adaptive", measured_db=round(t, 2))
+            offset = None if weak is None else weak - strong
+            strong = float(np.clip(t, lo, hi))
+            weak = None if offset is None else strong + offset
+    info.update(strong_db=round(strong, 2), weak_db=None if weak is None else round(weak, 2))
+    return strong, weak, info
+
+
 def disk(radius_px):
     """Boolean disc of the given radius (pixels), centred in a (2r+1) x (2r+1) array."""
     r = int(math.ceil(radius_px))
