@@ -22,6 +22,21 @@ class TestCommandLine(unittest.TestCase):
         pipeline.reevaluate.assert_called_once_with({"id": "tefe"})
         pipeline.watch.assert_called_once_with({"id": "tefe"}, 1.5, 2)
 
+    def test_benchmark_needs_a_safe_label(self, pipeline, load_area):
+        for argv in (["benchmark"], ["benchmark", "--label", "../x"]):
+            with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+                cli.main(argv)
+        load_area.assert_not_called()
+
+    def test_benchmark_needs_the_cache_and_runs_the_exam(self, pipeline, load_area):
+        a = cli.parse_args(["benchmark", "--label", "m4", "--workers", "3", "--skip-real"])
+        with self.assertRaises(SystemExit):
+            cli.benchmark({"id": "tefe"}, a, environ={})
+        with mock.patch("lifeline.benchmark.exam.run", return_value=({"ok": 1}, "j", "m")) as run, \
+                mock.patch("lifeline.cli.config.log"):
+            self.assertEqual(cli.benchmark({"id": "tefe"}, a, environ={"MONITOR_CACHE_DIR": "/c"}), {"ok": 1})
+        run.assert_called_once_with({"id": "tefe"}, "m4", "/c", 3, skip_real=True)
+
     def test_unknown_command_is_rejected(self, pipeline, load_area):
         with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
             cli.main(["download"])

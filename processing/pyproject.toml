@@ -19,6 +19,10 @@ dependencies = [
     "scipy==1.15.3",
 ]
 
+[project.optional-dependencies]
+# the accuracy benchmark reads Sentinel-2 COGs (python -m pip install -e "processing[benchmark]")
+benchmark = ["rasterio==1.4.3"]
+
 [project.scripts]
 river-monitor = "lifeline.cli:main"
 

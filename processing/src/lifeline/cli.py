@@ -9,6 +9,9 @@ and L-band reaches water under the forest canopy.
   river-monitor update [--area tefe] [--workers 2] [--limit N] [--redo]
   river-monitor reevaluate [--area tefe]    recompute status from stored masks
   river-monitor watch [--area tefe] [--hours 6]
+  river-monitor benchmark --label NAME [--area tefe] [--workers 2] [--skip-real]
+                                            accuracy exam of the current method (needs MONITOR_CACHE_DIR;
+                                            see docs/river-monitor-benchmark.md)
 
 (river-monitor is installed with `pip install -e processing`; `python -m lifeline` is the same.)
 
@@ -35,11 +38,12 @@ per pass, radar.webp, water.png, change.png and water.npz. In the stack the fold
 monitor_data volume and the backend serves it under api/monitor; see docs/river-monitor.md.
 """
 import argparse
+import re
 
-from lifeline import pipeline
+from lifeline import config, pipeline
 from lifeline.geometry.area import load_area
 
-COMMANDS = ("communities", "update", "reevaluate", "watch")
+COMMANDS = ("communities", "update", "reevaluate", "watch", "benchmark")
 
 
 def parse_args(argv=None):
@@ -50,7 +54,22 @@ def parse_args(argv=None):
     ap.add_argument("--limit", type=int, help="process only the N most recent pending passes")
     ap.add_argument("--redo", action="store_true", help="reprocess passes already in the catalog")
     ap.add_argument("--hours", type=float, default=6.0, help="watch: hours between searches")
-    return ap.parse_args(argv)
+    ap.add_argument("--label", help="benchmark: name of the result in the history (letters, digits, - and _)")
+    ap.add_argument("--skip-real", action="store_true", help="benchmark: synthetic scenes only (no real passes)")
+    a = ap.parse_args(argv)
+    if a.command == "benchmark" and not re.fullmatch(r"[A-Za-z0-9_-]+", a.label or ""):
+        ap.error("benchmark needs --label made of letters, digits, - and _")
+    return a
+
+
+def benchmark(area, a, environ=None):
+    from lifeline.benchmark import exam
+    cache = config.cache_dir(environ) if environ is not None else config.cache_dir()
+    if not cache:
+        raise SystemExit("benchmark needs MONITOR_CACHE_DIR: the exam reads every pass from the local cache.")
+    result, json_path, md_path = exam.run(area, a.label, cache, a.workers, skip_real=a.skip_real)
+    config.log(f"benchmark written to {md_path}")
+    return result
 
 
 def main(argv=None):
@@ -62,6 +81,8 @@ def main(argv=None):
         pipeline.update(area, a.workers, a.limit, a.redo)
     elif a.command == "reevaluate":
         pipeline.reevaluate(area)
+    elif a.command == "benchmark":
+        benchmark(area, a)
     else:
         pipeline.watch(area, a.hours, a.workers)
 

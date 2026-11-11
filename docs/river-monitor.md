@@ -128,6 +128,12 @@ The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and
 (low water). With the final settings, places without a route drop from 44 to 18 at high water
 (the rest are mostly streams too narrow to resolve) while 30 remain at low water.
 
+## Accuracy benchmark
+
+`river-monitor benchmark --label <name>` scores the method of the current checkout against synthetic scenes,
+Sentinel-2 water, the river gauge and field checks, and keeps every result in `processing/benchmark/history/`.
+Run it before and after any change to the method; see [river-monitor-benchmark.md](river-monitor-benchmark.md).
+
 ## Validation so far (Tefé, November 2026)
 
 - **River level**: against the official ANA gauge Tefé-Missões (station 12900001, Solimões),

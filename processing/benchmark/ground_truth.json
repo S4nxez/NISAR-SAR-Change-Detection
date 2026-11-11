@@ -1,0 +1,21 @@
+{
+ "description": "Field and report checks of community status. kind = field (a dated observation by people on the ground: civil defence, Instituto Mamirauá, health or school boats, community leaders), report (a dated news or official report naming the community) or sanity (a plausibility check of the team, NOT independent truth). expected = linked (a boat route to the hub exists) or isolated. from/to = the dates the observation covers (inclusive; keep it within a few days of the observation, the river changes fast). Add new checks at the end; the history keeps the old results.",
+ "checks": [
+  {
+   "community": "Caiambé",
+   "expected": "linked",
+   "kind": "sanity",
+   "from": "2026-06-01",
+   "to": "2026-11-30",
+   "source": "Team plausibility check (docs/river-monitor.md): settlement on the Solimões main channel, used as the boat landing in the 2023 and 2024 droughts. Not an observation of 2026."
+  },
+  {
+   "community": "Alvarães",
+   "expected": "linked",
+   "kind": "sanity",
+   "from": "2026-06-01",
+   "to": "2026-11-30",
+   "source": "Team plausibility check (docs/river-monitor.md): municipal seat reached through its port; no 2026 report of the town being cut off was found. Not an observation of 2026."
+  }
+ ]
+}
