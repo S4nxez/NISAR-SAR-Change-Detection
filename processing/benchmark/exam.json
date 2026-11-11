@@ -17,7 +17,7 @@
   "min_clear": 0.3
  },
  "synthetic": {
-  "looks": 4,
+  "looks": 9,
   "seeds": [1, 2, 3, 4, 5]
  }
 }
