@@ -101,12 +101,15 @@ def read_band(url, area, resampling, overview_level=None):
     return out
 
 
-def reflectance(dn, asset):
+def reflectance(dn, asset, offset_applied=False):
     """Surface reflectance from digital numbers with the asset's scale and offset (processing baseline 04.00 and
-    later store reflectance with a -0.1 offset; ignoring it biases MNDWI). Dark water can come out at or slightly
-    below 0 in SWIR, which is kept: no data is decided on the digital numbers (0), not here."""
+    later store reflectance with a -0.1 offset; ignoring it biases MNDWI). When the catalogue already removed that
+    offset from the pixels (Earth Search item property earthsearch:boa_offset_applied), the band metadata still
+    lists it and it must not be applied again: dark forest and water would go negative. Dark water can come out at
+    or slightly below 0 in SWIR, which is kept: no data is decided on the digital numbers (0), not here."""
     band = (asset.get("raster:bands") or [{}])[0]
-    scale, offset = float(band.get("scale", 1e-4)), float(band.get("offset", 0.0))
+    scale = float(band.get("scale", 1e-4))
+    offset = 0.0 if offset_applied else float(band.get("offset", 0.0))
     return (dn * scale + offset).astype(np.float32)
 
 
@@ -128,9 +131,10 @@ def mosaic_date(area, items, read=read_band):
         g_dn = read(a["green"]["href"], area, "average", overview_level=0)
         w_dn = read(a["swir16"]["href"], area, "average")
         take = (scl == 0) & (s > 0) & (g_dn > 0) & (w_dn > 0)   # digital number 0 = no data
+        applied = bool(it["properties"].get("earthsearch:boa_offset_applied", False))
         scl[take] = s[take]
-        green[take] = reflectance(g_dn, a["green"])[take]
-        swir[take] = reflectance(w_dn, a["swir16"])[take]
+        green[take] = reflectance(g_dn, a["green"], applied)[take]
+        swir[take] = reflectance(w_dn, a["swir16"], applied)[take]
     return mndwi_of(green, swir, scl > 0), scl
 
 

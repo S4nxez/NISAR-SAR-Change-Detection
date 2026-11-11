@@ -10,8 +10,9 @@ from ..helpers import FakeResponse, small_area
 SCALE_OFFSET = {"raster:bands": [{"scale": 0.0001, "offset": -0.1}]}
 
 
-def item(date, tile):
-    return {"id": f"S2_{tile}_{date}", "properties": {"datetime": date + "T14:30:00Z"},
+def item(date, tile, offset_applied=False):
+    return {"id": f"S2_{tile}_{date}",
+            "properties": {"datetime": date + "T14:30:00Z", "earthsearch:boa_offset_applied": offset_applied},
             "assets": {k: {"href": f"{k}:{tile}:{date}", **SCALE_OFFSET} for k in ("scl", "green", "swir16")}}
 
 
@@ -26,6 +27,9 @@ class TestReference(unittest.TestCase):
         dn = np.array([0, 1000, 1500, 3000], np.float32)
         np.testing.assert_allclose(optical.reflectance(dn, SCALE_OFFSET), [-0.1, 0.0, 0.05, 0.2], atol=1e-6)
         np.testing.assert_allclose(optical.reflectance(dn, {}), dn * 1e-4, atol=1e-6)
+        # the catalogue already removed the offset: forest green at DN 400 is 0.04, not -0.06
+        np.testing.assert_allclose(optical.reflectance(np.array([400.0]), SCALE_OFFSET, offset_applied=True), [0.04],
+                                   atol=1e-6)
 
     def test_mndwi_is_clipped_and_nan_without_data(self):
         g = np.array([0.05, 0.05, 0.0, 0.2], np.float32)
@@ -80,6 +84,12 @@ class TestScenes(unittest.TestCase):
         self.assertEqual((scl[0, 120], scl[0, 200]), (6, 4))       # overlap: first tile wins
         self.assertAlmostEqual(float(mndwi[0, 0]), (0.06 - 0.005) / (0.06 + 0.005), places=4)
         self.assertLess(float(mndwi[0, 200]), 0)
+
+    def test_mosaic_of_offset_free_scenes_keeps_dark_surfaces_positive(self):
+        one = np.ones(self.shape)
+        bands = {("scl", "A"): one * 4, ("green", "A"): one * 400, ("swir16", "A"): one * 2200}   # forest
+        mndwi, _ = optical.mosaic_date(self.area, [item("2026-08-30", "A", offset_applied=True)], self.fake_read(bands))
+        self.assertAlmostEqual(float(mndwi[0, 0]), (0.04 - 0.22) / (0.04 + 0.22), places=4)
 
     def test_reference_for_pass_picks_the_clearest_date_or_none(self):
         clear_scl = np.full(self.shape, 4, np.uint8)
