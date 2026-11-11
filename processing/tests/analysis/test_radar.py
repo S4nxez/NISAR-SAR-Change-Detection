@@ -1,4 +1,5 @@
 import io
+import tempfile
 import unittest
 
 import numpy as np
@@ -7,9 +8,13 @@ from lifeline.analysis.radar import (
     area_edge,
     block_mean,
     box_sum,
+    granule_window,
     linear_to_db,
+    load_window,
     product_window,
     read_pass,
+    read_window,
+    window_cache_path,
     resample_into,
     speckle_filter,
     speckle_window,
@@ -108,7 +113,7 @@ class TestResample(unittest.TestCase):
 class TestReadPass(unittest.TestCase):
     """read_pass against a synthetic GCOV product in memory (UTM 20S, like Tefé)."""
 
-    def gcov(self, area, with_hh=True):
+    def gcov(self, area, with_hh=True, with_hv=False):
         from pyproj import Transformer
         tr = Transformer.from_crs(4326, 32720, always_xy=True)
         x0, y1 = tr.transform(area["bbox"][0], area["bbox"][3])
@@ -124,16 +129,57 @@ class TestReadPass(unittest.TestCase):
                 hh = np.full((len(ys), len(xs)), 10 ** (-0.5), np.float32)   # land, -5 dB
                 hh[:, : len(xs) // 2] = 10 ** (-2.0)                          # water on the west half, -20 dB
                 fa["HHHH"] = hh
+            if with_hv:
+                fa["HVHV"] = np.full((len(ys), len(xs)), 10 ** (-1.2), np.float32)   # -12 dB
         return buf.getvalue()
 
-    def opener(self, products):
+    def opener(self, products, opened=None):
         class Remote(io.BytesIO):
             """In-memory stand-in for RemoteFile: a file object that counts the megabytes read."""
 
             def __init__(self, url, token):
                 super().__init__(products[url])
                 self.bytes = 1_000_000
+                if opened is not None:
+                    opened.append(url)
         return Remote
+
+    def test_the_cache_is_read_instead_of_the_product_and_gives_the_same_pass(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "https://asf.example/NISAR_G1.h5", "name": "NISAR_G1.h5"}]}
+        products = {ps["granules"][0]["url"]: self.gcov(area, with_hv=True)}
+        direct = read_pass(area, ps, "token", open_remote=self.opener(products))
+        opened = []
+        with tempfile.TemporaryDirectory() as cache:
+            first = read_pass(area, ps, "token", open_remote=self.opener(products, opened), cache_dir=cache)
+            second = read_pass(area, ps, "token", open_remote=self.opener(products, opened), cache_dir=cache)
+            window = load_window(window_cache_path(area, ps["granules"][0], cache))
+        self.assertEqual(len(opened), 1)                       # the second read used the cache only
+        np.testing.assert_array_equal(first[0], direct[0])
+        np.testing.assert_array_equal(second[0], direct[0])
+        self.assertEqual((first[1], second[1], second[2]), (1.0, 0.0, 20.0))
+        self.assertEqual(sorted(window["bands"]), ["HHHH", "HVHV"])   # HV is kept for the methods that need it
+
+    def test_a_granule_without_hh_is_cached_as_empty(self):
+        area = small_area()
+        g = {"url": "u", "name": "NISAR_G2.h5"}
+        opened = []
+        with tempfile.TemporaryDirectory() as cache:
+            for _ in range(2):
+                self.assertIsNone(granule_window(area, g, "t", open_remote=self.opener(
+                    {"u": self.gcov(area, with_hh=False)}, opened), cache_dir=cache))
+        self.assertEqual(opened, ["u"])
+
+    def test_without_a_cache_only_the_asked_bands_are_read(self):
+        area = small_area()
+        w = read_window(area, {"url": "u"}, "t", ("HHHH",), self.opener({"u": self.gcov(area, with_hv=True)}))
+        self.assertEqual(list(w["bands"]), ["HHHH"])
+
+    def test_cache_files_depend_on_the_area_and_the_granule(self):
+        a, b = small_area(), small_area(bbox=[-64.81, -3.44, -64.74, -3.40])
+        g = {"url": "https://x/NISAR_G3.h5", "name": "NISAR_G3.h5"}
+        self.assertNotEqual(window_cache_path(a, g, "/c"), window_cache_path(b, g, "/c"))
+        self.assertTrue(window_cache_path(a, g, "/c").endswith("NISAR_G3.npz"))
 
     def test_reads_the_area_and_resamples_it_to_the_grid(self):
         area = small_area(speckle_m=60)

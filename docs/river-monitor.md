@@ -54,6 +54,9 @@ river-monitor update                       # all passes not processed yet, into 
 Then run the backend with `MONITOR_DATA_DIR` pointing at `processing/output` and open the frontend through it
 (the page reads `api/monitor/...`). `python -m lifeline` is the same command line as `river-monitor`.
 `MONITOR_DATA_DIR` and `MONITOR_AREAS_DIR` change where the record is written and where the area files are read.
+`MONITOR_CACHE_DIR` (optional, unset in the stack) keeps a local copy of the area window of every granule read, with
+all its bands (HH and HV): reprocessing a pass, for example in the benchmark or after a method change, then reads
+nothing remote. It takes about 250 MB per granule for the Tefé area.
 
 In the stack, the `monitor` service runs `river-monitor watch --hours 6` and writes to the `monitor_data` volume.
 A new volume starts empty: the first round processes every pass ASF lists (about one minute per pass on the Pi).
