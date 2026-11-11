@@ -51,6 +51,10 @@ export function mapKey(record, { water, change }) {
   const key = [];
   if (water) key.push(`<span><i class="swatch" style="background:#3d8bff"></i>Water</span>`,
     `<span><i class="swatch" style="background:#ffb020"></i>Channel &lt; ${record.cat.area.safe_width_m} m</span>`);
+  // water under floating plants or flooded forest: drawn in water.png (green) and never counted as a boat route
+  if (water && record.cat.area.vegetated_water) key.push(
+    `<span title="Floating plants or flooded forest over water: not counted as a boat route">` +
+    `<i class="swatch" style="background:#4cc38a"></i>Water under vegetation · not a route</span>`);
   if (change) key.push(`<span><i class="swatch" style="background:#e47759"></i>Water lost</span>`,
     `<span><i class="swatch" style="background:#68d6e6"></i>Water gained</span>`);
   key.push(...ROUTE_STATUSES.map(s => `<span><i class="glyph ${s}"></i>${LABEL[s]}</span>`));

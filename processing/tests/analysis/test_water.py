@@ -13,6 +13,7 @@ from lifeline.analysis.water import (
     near_labels,
     pass_thresholds,
     route_status,
+    vegetated_water,
     water_mask,
     wide_water,
     width_mask,
@@ -72,6 +73,40 @@ class TestPassThreshold(unittest.TestCase):
         land = np.full((400, 400), -7.0, np.float32)
         strong, weak, info = pass_thresholds(self.area(water_db_adaptive=self.ADAPTIVE), land)
         self.assertEqual((strong, weak, info["source"], info["tiles"]), (-15.0, -12.0, "fixed", 0))
+
+
+class TestVegetatedWater(unittest.TestCase):
+    CFG = {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000}
+
+    def scene(self):
+        """100 x 200 px: a river on the left, flooded vegetation beside it, dry forest, and a bright patch far
+        from any water (a town or a field of the same double bounce)."""
+        hh = np.full((100, 200), -7.0, np.float32)
+        hv = np.full((100, 200), -12.5, np.float32)
+        water = np.zeros((100, 200), bool)
+        water[:, :20] = True
+        hh[:, :20], hv[:, :20] = -23.0, -30.0
+        hh[20:60, 20:40], hv[20:60, 20:40] = -1.0, -9.5      # flooded vegetation next to the river
+        hh[20:60, 120:140], hv[20:60, 120:140] = -1.0, -9.5  # same signature 2 km from the water
+        hh[70:90, 60:80], hv[70:90, 60:80] = -1.0, -6.0      # bright but with bright HV: not double bounce
+        hh[5, 30], hv[5, 30] = -1.0, -9.5                    # a single speck
+        return hh, hv, water
+
+    def test_flooded_vegetation_near_water_is_flagged(self):
+        hh, hv, water = self.scene()
+        v = vegetated_water(hh, hv, water, self.CFG, PX)
+        self.assertTrue(v[20:60, 20:40].all())
+        self.assertFalse(v[20:60, 120:140].any())             # too far from open water
+        self.assertFalse(v[70:90, 60:80].any())               # HH - HV only 5 dB
+        self.assertFalse(v[5, 30])                            # specks under 1 ha are dropped
+        self.assertFalse((v & water).any())
+        self.assertFalse(v[:, 45:120].any())                  # dry forest
+
+    def test_no_layer_without_hv_or_without_the_setting(self):
+        hh, hv, water = self.scene()
+        self.assertIsNone(vegetated_water(hh, None, water, self.CFG, PX))
+        self.assertIsNone(vegetated_water(hh, hv, water, None, PX))
+        self.assertFalse(vegetated_water(hh, hv, np.zeros_like(water), self.CFG, PX).any())
 
 
 class TestConnectivity(unittest.TestCase):

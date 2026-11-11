@@ -7,8 +7,8 @@ import traceback
 
 import numpy as np
 
-from lifeline.analysis.radar import read_pass
-from lifeline.analysis.water import pass_thresholds, water_mask
+from lifeline.analysis.radar import read_pass_bands
+from lifeline.analysis.water import pass_thresholds, vegetated_water, water_mask
 from lifeline.config import AREAS_DIR, OUT_ROOT, log
 from lifeline.geometry.area import area_mask
 from lifeline.output.catalog import (
@@ -21,7 +21,7 @@ from lifeline.output.catalog import (
     save_catalog,
     wide_water_of,
 )
-from lifeline.output.layers import load_mask, save_mask, save_radar, save_water
+from lifeline.output.layers import load_mask, load_vegetated, save_mask, save_radar, save_water
 from lifeline.sources import asf, places
 from lifeline.sources.gauge import refresh_gauge
 from lifeline.sources.remote import earthdata_token
@@ -29,22 +29,38 @@ from lifeline.sources.remote import earthdata_token
 ENTRY_KEYS = ("id", "date", "time_utc", "track", "direction", "frames", "modes", "beta")
 
 
+def read_layers(area, ps, token):
+    """The bands the area's method needs: HH, plus HV when the area flags water under vegetation."""
+    bands = ("HHHH", "HVHV") if area.get("vegetated_water") else ("HHHH",)
+    return read_pass_bands(area, ps, token, bands)
+
+
 def process_pass(area, communities, ps, out_root, token, read=None):
-    """Read one pass (with read_pass unless `read` is given), write its layers and return its catalog entry."""
+    """Read one pass (with read_layers unless `read` is given; it returns ({band: db} or the HH array, megabytes,
+    spacing)), write its layers and return its catalog entry."""
     t0 = time.time()
-    db, read_mb, spacing = (read or read_pass)(area, ps, token)
-    db[~area_mask(area)] = np.nan   # outside a circular area: transparent in the images, never water
+    bands, read_mb, spacing = (read or read_layers)(area, ps, token)
+    if not isinstance(bands, dict):
+        bands = {"HHHH": bands}
+    outside = ~area_mask(area)
+    db, hv = bands["HHHH"], bands.get("HVHV")
+    db[outside] = np.nan   # outside a circular area: transparent in the images, never water
+    if hv is not None:
+        hv[outside] = np.nan
     strong_db, weak_db, threshold = pass_thresholds(area, db)
     water, valid = water_mask(db, strong_db, weak_db)
     wide = wide_water_of(area, water)
+    vegetated = vegetated_water(db, hv, water, area.get("vegetated_water"), area["px_m"])
     pdir = pass_dir(area, ps["id"], out_root)
     os.makedirs(pdir, exist_ok=True)
     save_radar(db, os.path.join(pdir, "radar.webp"))
-    save_water(water, wide, os.path.join(pdir, "water.png"))
-    save_mask(water, valid, os.path.join(pdir, "water.npz"))
+    save_water(water, wide, os.path.join(pdir, "water.png"), vegetated)
+    save_mask(water, valid, os.path.join(pdir, "water.npz"), vegetated)
     entry = {k: ps[k] for k in ENTRY_KEYS}
+    pix_km2 = (area["px_m"] / 1000.0) ** 2
     entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"},
-                 threshold=threshold)
+                 threshold=threshold,
+                 vegetated_km2=None if vegetated is None else round(float(vegetated.sum()) * pix_km2, 2))
     evaluate(area, communities, water, valid, wide, entry)
     entry["seconds"] = round(time.time() - t0, 1)
     return entry
@@ -122,7 +138,7 @@ def reevaluate(area, out_root=OUT_ROOT, areas_dir=AREAS_DIR):
             continue
         water, valid = load_mask(path)
         wide = wide_water_of(area, water)
-        save_water(water, wide, os.path.join(pdir, "water.png"))
+        save_water(water, wide, os.path.join(pdir, "water.png"), load_vegetated(path))
         evaluate(area, communities, water, valid, wide, entry)
         log(f"{entry['id']}: re-evaluated")
     refresh_changes(area, cat, out_root)

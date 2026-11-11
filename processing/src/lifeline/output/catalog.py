@@ -17,7 +17,7 @@ from lifeline.geometry.area import area_mask, to_px
 from lifeline.output.layers import load_mask, save_change
 
 AREA_KEYS = ("id", "name", "country", "bbox", "circle", "hub", "river", "access_radius_m", "safe_width_m",
-             "widths_m", "water_db")
+             "widths_m", "water_db", "vegetated_water")
 SOURCES = {"radar": "NISAR L2 GCOV (NASA/ISRO), ASF DAAC", "places": "© OpenStreetMap contributors (ODbL)"}
 CLASSES = ("monitored", "unresolved", "inland", "no_data")
 LINKED = (STATUS["connected"], STATUS["at_risk"])

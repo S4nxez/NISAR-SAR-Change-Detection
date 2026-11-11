@@ -100,6 +100,9 @@ For every pass (all frames of one track on one day):
    (hysteresis): wind roughens stretches of rivers and lakes, which then return a little
    more echo and would otherwise cut the river in two. Specks under 1 ha are dropped and
    holes under 2 ha inside water are filled.
+   **Water under vegetation** (dual-polarisation passes): HH > −4 dB and HH − HV ≥ 7 dB within
+   1 km of open water, the double bounce of floating plants or flooded forest. It is drawn in green
+   and is never a route ([ADR-004](decisions/ADR-004-river-monitor-water-under-vegetation.md)).
 3. **Route**: for each channel width W (40, 60, 100, 200, 400 m), keep only the water whose
    centre is far enough from the shore for a channel at least W wide, and check whether a
    community (within 1 km) and the hub town fall in the same piece of water. The widest W
@@ -177,7 +180,7 @@ in the area file as `gauge`), refreshed on every `update`: the page draws it beh
 so the radar result can be read against the river.
 
 `<MONITOR_DATA_DIR>/<area>/catalog.json` plus, per pass (`passes/<pass>/`), `radar.webp`, `water.png`
-(channels narrower than the safe width in amber), `change.png` and `water.npz` (packed water
+(channels narrower than the safe width in amber, water under vegetation in green), `change.png` and `water.npz` (packed water
 mask used for the change layer and `reevaluate`, never served). The record is data, not code: it
 lives in the volume (or `processing/output/` locally, ignored by git), never in the repository.
 

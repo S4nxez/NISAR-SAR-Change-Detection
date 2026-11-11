@@ -1,9 +1,10 @@
 """Images of a pass for the web page and the stored water mask.
 
   radar.webp   HH backscatter preview at half resolution, -25..0 dB in grey, no data transparent
-  water.png    water mask; channels narrower than the safe width in amber
+  water.png    water mask; channels narrower than the safe width in amber, water under vegetation in green
   change.png   water lost / gained since the previous pass of the same track
-  water.npz    packed water mask and validity (input of the change layer and of `reevaluate`)
+  water.npz    packed water mask, validity and, when known, water under vegetation (input of the change layer
+               and of `reevaluate`)
 """
 import numpy as np
 from PIL import Image
@@ -11,9 +12,10 @@ from PIL import Image
 from lifeline.analysis.radar import block_mean
 
 RADAR_DB_RANGE = (-25.0, 0.0)
-WATER_PALETTE = [0, 0, 0, 61, 139, 255, 255, 176, 32]       # none, wide water (blue), narrow channel (amber)
+# none, wide water (blue), narrow channel (amber), water under vegetation (green: not a route, ADR-004)
+WATER_PALETTE = [0, 0, 0, 61, 139, 255, 255, 176, 32, 76, 195, 138]
 CHANGE_PALETTE = [0, 0, 0, 228, 119, 89, 104, 214, 230]     # none, water lost, water gained
-WATER_WIDE, WATER_NARROW = 1, 2
+WATER_WIDE, WATER_NARROW, WATER_VEGETATED = 1, 2, 3
 CHANGE_LOST, CHANGE_GAINED = 1, 2
 
 
@@ -31,8 +33,10 @@ def save_radar(db, path):
     Image.fromarray(np.dstack([g, ok.astype(np.uint8) * 255]), "LA").convert("RGBA").save(path, "WEBP", quality=78)
 
 
-def save_water(water, wide, path):
+def save_water(water, wide, path, vegetated=None):
     idx = np.zeros(water.shape, np.uint8)
+    if vegetated is not None:
+        idx[vegetated & ~water] = WATER_VEGETATED
     idx[water] = WATER_NARROW
     idx[wide] = WATER_WIDE
     _indexed_png(idx, WATER_PALETTE, path)
@@ -56,8 +60,10 @@ def save_change(prev, cur, path):
     return int((idx == CHANGE_LOST).sum()), int((idx == CHANGE_GAINED).sum())
 
 
-def save_mask(water, valid, path):
-    np.savez_compressed(path, shape=np.array(water.shape), water=np.packbits(water), valid=np.packbits(valid))
+def save_mask(water, valid, path, vegetated=None):
+    extra = {} if vegetated is None else {"vegetated": np.packbits(vegetated)}
+    np.savez_compressed(path, shape=np.array(water.shape), water=np.packbits(water), valid=np.packbits(valid),
+                        **extra)
 
 
 def load_mask(path):
@@ -67,3 +73,12 @@ def load_mask(path):
         n = shape[0] * shape[1]
         return (np.unpackbits(z["water"])[:n].reshape(shape).astype(bool),
                 np.unpackbits(z["valid"])[:n].reshape(shape).astype(bool))
+
+
+def load_vegetated(path):
+    """The water-under-vegetation mask stored by save_mask, or None (single-polarisation pass, older record)."""
+    with np.load(path) as z:
+        if "vegetated" not in z.files:
+            return None
+        shape = tuple(z["shape"])
+        return np.unpackbits(z["vegetated"])[:shape[0] * shape[1]].reshape(shape).astype(bool)

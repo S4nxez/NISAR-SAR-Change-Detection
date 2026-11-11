@@ -114,6 +114,28 @@ def pass_thresholds(area, db):
     return strong, weak, info
 
 
+def vegetated_water(hh, hv, water, cfg, px_m):
+    """
+    Water under vegetation (floating meadows, flooded forest): the double bounce water -> stem -> radar makes HH
+    brighter than dry forest and raises HH much more than HV. Flagged where HH > hh_min_db and HH - HV >=
+    ratio_min_db, outside open water, within near_water_m of it, specks under MIN_WATER_PX dropped.
+    Returns None without HV (single-polarisation pass) or without the area setting. It is shown on the map and is
+    NOT a navigable route: routes use open water only (ADR-004).
+    """
+    if hv is None or not cfg:
+        return None
+    with np.errstate(invalid="ignore"):
+        flagged = (hh > cfg["hh_min_db"]) & ((hh - hv) >= cfg["ratio_min_db"]) & ~water
+    if water.any():
+        flagged &= ndimage.distance_transform_edt(~water) * px_m <= cfg["near_water_m"]
+    else:
+        flagged[:] = False
+    lab, n = ndimage.label(flagged)
+    if n:
+        flagged &= np.bincount(lab.ravel())[lab] >= MIN_WATER_PX
+    return flagged
+
+
 def disk(radius_px):
     """Boolean disc of the given radius (pixels), centred in a (2r+1) x (2r+1) array."""
     r = int(math.ceil(radius_px))

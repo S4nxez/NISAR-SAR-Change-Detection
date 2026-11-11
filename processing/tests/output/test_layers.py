@@ -8,9 +8,11 @@ from lifeline.output.layers import (
     CHANGE_GAINED,
     CHANGE_LOST,
     WATER_NARROW,
+    WATER_VEGETATED,
     WATER_WIDE,
     change_index,
     load_mask,
+    load_vegetated,
     save_change,
     save_mask,
     save_radar,
@@ -42,6 +44,28 @@ class TestLayers(TempDirTest):
             self.assertEqual(img.mode, "P")
             self.assertEqual(img.info.get("transparency"), 0)
         self.assertEqual(idx[0].tolist(), [WATER_WIDE, WATER_NARROW, 0, 0])
+
+    def test_water_under_vegetation_has_its_own_colour_and_never_hides_open_water(self):
+        water = np.zeros((4, 4), bool)
+        water[:, 0] = True
+        vegetated = np.zeros_like(water)
+        vegetated[:, :3] = True                                   # overlaps the open water on column 0
+        path = os.path.join(self.tmp, "water.png")
+        save_water(water, water, path, vegetated)
+        with Image.open(path) as img:
+            idx = np.array(img)
+        self.assertEqual(idx[0].tolist(), [WATER_WIDE, WATER_VEGETATED, WATER_VEGETATED, 0])
+
+    def test_the_vegetated_layer_is_stored_only_when_known(self):
+        water, valid = np.zeros((5, 9), bool), np.ones((5, 9), bool)
+        vegetated = np.zeros_like(water)
+        vegetated[2, 3:6] = True
+        with_veg, without = os.path.join(self.tmp, "a.npz"), os.path.join(self.tmp, "b.npz")
+        save_mask(water, valid, with_veg, vegetated)
+        save_mask(water, valid, without)
+        np.testing.assert_array_equal(load_vegetated(with_veg), vegetated)
+        self.assertIsNone(load_vegetated(without))
+        np.testing.assert_array_equal(load_mask(with_veg)[1], valid)
 
     def test_change_only_where_both_passes_have_data(self):
         prev_w = np.array([[1, 1, 0, 0]], bool)

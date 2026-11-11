@@ -283,23 +283,34 @@ def granule_window(area, granule, token, bands=("HHHH",), open_remote=RemoteFile
     return window
 
 
-def read_pass(area, ps, token, open_remote=RemoteFile, cache_dir=None):
-    """HH backscatter (dB, speckle-filtered) of a pass on the area grid; NaN = no data.
-    Returns (db, megabytes read, product pixel spacing in metres or None).
-    cache_dir defaults to MONITOR_CACHE_DIR (no cache when unset)."""
+def read_pass_bands(area, ps, token, bands=("HHHH",), open_remote=RemoteFile, cache_dir=None):
+    """Backscatter of the asked bands (dB, fill masked, speckle-filtered) of a pass on the area grid; NaN = no data.
+    Returns ({band: db}, megabytes read, product pixel spacing in metres or None). A band no frame of the pass has
+    (HV on single-polarisation passes) is None. cache_dir defaults to MONITOR_CACHE_DIR (no cache when unset)."""
     from pyproj import Transformer
 
     cache_dir = cache_dir if cache_dir is not None else config.cache_dir()
-    out = np.full((area["ny"], area["nx"]), np.nan, np.float32)
+    out = {b: np.full((area["ny"], area["nx"]), np.nan, np.float32) for b in bands}
+    seen = set()
     read_mb, spacing = 0.0, None
     for g in ps["granules"]:
-        w = granule_window(area, g, token, ("HHHH",), open_remote, cache_dir)
+        w = granule_window(area, g, token, bands, open_remote, cache_dir)
         if w is None:
             continue
         read_mb += w["mb"]
         spacing = abs(w["dx"])
-        db = mask_fill(linear_to_db(w["bands"]["HHHH"]), area.get("valid_floor_db", DEFAULT_VALID_FLOOR_DB))
-        db = filter_db(area, db, spacing)
         tr = Transformer.from_crs(4326, w["epsg"], always_xy=True)
-        resample_into(out, db, area, tr, w["x0"], w["y0"], w["dx"], w["dy"])
-    return out, read_mb, spacing
+        for b in bands:
+            if b not in w["bands"]:
+                continue
+            seen.add(b)
+            db = mask_fill(linear_to_db(w["bands"][b]), area.get("valid_floor_db", DEFAULT_VALID_FLOOR_DB))
+            resample_into(out[b], filter_db(area, db, spacing), area, tr, w["x0"], w["y0"], w["dx"], w["dy"])
+    return {b: (out[b] if b in seen or b == "HHHH" else None) for b in bands}, read_mb, spacing
+
+
+def read_pass(area, ps, token, open_remote=RemoteFile, cache_dir=None):
+    """HH backscatter (dB, fill masked, speckle-filtered) of a pass on the area grid; NaN = no data.
+    Returns (db, megabytes read, product pixel spacing in metres or None)."""
+    bands, read_mb, spacing = read_pass_bands(area, ps, token, ("HHHH",), open_remote, cache_dir)
+    return bands["HHHH"], read_mb, spacing

@@ -16,6 +16,7 @@ from lifeline.analysis.radar import (
     mask_fill,
     product_window,
     read_pass,
+    read_pass_bands,
     read_window,
     refined_lee,
     resample_into,
@@ -275,6 +276,15 @@ class TestReadPass(unittest.TestCase):
         valid = db[np.isfinite(db)]
         self.assertGreater(valid.min(), -21.0)                  # nothing darker than the real water came through
         self.assertTrue(np.isfinite(db[-50:]).all())
+
+    def test_hv_is_read_with_hh_and_is_none_on_single_polarisation_passes(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "a"}]}
+        dual, _, _ = read_pass_bands(area, ps, "t", ("HHHH", "HVHV"), self.opener({"a": self.gcov(area, with_hv=True)}))
+        single, _, _ = read_pass_bands(area, ps, "t", ("HHHH", "HVHV"), self.opener({"a": self.gcov(area)}))
+        self.assertAlmostEqual(float(np.nanmedian(dual["HVHV"])), -12.0, places=3)
+        self.assertIsNone(single["HVHV"])
+        np.testing.assert_array_equal(dual["HHHH"], single["HHHH"])
 
     def test_frames_without_hh_are_skipped(self):
         area = small_area()

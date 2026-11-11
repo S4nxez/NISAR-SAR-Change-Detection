@@ -6,11 +6,13 @@ import numpy as np
 
 from lifeline import pipeline
 from lifeline.output.catalog import catalog_path, pass_dir
+from lifeline.output.layers import load_vegetated
 from lifeline.sources.places import communities_collection, save_communities
 
 from .helpers import TempDirTest, river_scene, scene_db, small_area
 
 LON0, LAT1, STEP = -64.80, -3.40, 0.0002
+READ_LAYERS = pipeline.read_layers   # the real one: the tests below patch it
 
 
 def lonlat(row, col):
@@ -59,7 +61,7 @@ class TestPipeline(TempDirTest):
         water, _ = river_scene(channel_px=2)
         self.db = scene_db(water)
         self.read = mock.Mock(return_value=(self.db.copy(), 12.34, 20.0))
-        self.patch_read = mock.patch("lifeline.pipeline.read_pass", self.read)
+        self.patch_read = mock.patch("lifeline.pipeline.read_layers", self.read)
         self.patch_read.start()
         self.addCleanup(self.patch_read.stop)
         self.patch_gauge = mock.patch("lifeline.pipeline.refresh_gauge")
@@ -79,6 +81,26 @@ class TestPipeline(TempDirTest):
         self.assertEqual(entry["threshold"], {"source": "fixed", "strong_db": -15.0, "weak_db": None})
         self.assertTrue(entry["evaluated"])
         self.assertNotIn("granules", entry)
+
+    def test_water_under_vegetation_is_mapped_but_does_not_change_the_routes(self, *_):
+        area = {**self.area, "vegetated_water": {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000}}
+        hh = self.db.copy()
+        hv = np.where(hh < -15, -30.0, -12.5).astype(np.float32)
+        hh[40:80, 30:60], hv[40:80, 30:60] = -1.0, -9.5          # flooded vegetation beside the river
+        plain = pipeline.process_pass(self.area, [], found_pass(), self.tmp, "tok", read=self.read)
+        entry = pipeline.process_pass(area, [], found_pass("2026-10-24_t161A", "2026-10-24"), self.tmp, "tok",
+                                      read=lambda *a: ({"HHHH": hh, "HVHV": hv}, 1.0, 20.0))
+        self.assertGreater(entry["vegetated_km2"], 0)
+        self.assertIsNone(plain["vegetated_km2"])
+        self.assertEqual(entry["water_km2"], plain["water_km2"])
+        stored = load_vegetated(os.path.join(pass_dir(area, "2026-10-24_t161A", self.tmp), "water.npz"))
+        self.assertTrue(stored[40:80, 30:60].all())
+
+    def test_the_reader_asks_for_hv_only_when_the_area_needs_it(self, *_):
+        with mock.patch("lifeline.pipeline.read_pass_bands", return_value=({}, 0, None)) as rpb:
+            READ_LAYERS(self.area, {"granules": []}, "t")
+            READ_LAYERS({**self.area, "vegetated_water": {"hh_min_db": -4}}, {"granules": []}, "t")
+        self.assertEqual([c.args[3] for c in rpb.call_args_list], [("HHHH",), ("HHHH", "HVHV")])
 
     def test_update_processes_new_passes_and_classifies_the_record(self, *_):
         cat = self.update({"2026-10-23_t161A": found_pass()})
