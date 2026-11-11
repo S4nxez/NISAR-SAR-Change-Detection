@@ -91,11 +91,12 @@ def _lee_chunk(lin, ok, cu2):
         (side((-2, 0), (-2, 2), (0, 2)), side((0, -2), (2, -2), (2, 0))),      # north-east | south-west
     ]
     centre = s[0, 0]
-    grads = np.stack([np.abs(b - a) for a, b in sides])
-    direction = np.argmax(np.nan_to_num(grads, nan=-1.0), axis=0)
-    first, second = np.stack([a for a, _ in sides]), np.stack([b for _, b in sides])
-    pick = lambda arr: np.take_along_axis(arr, direction[None], 0)[0]   # noqa: E731
-    d1, d2 = np.abs(pick(first) - centre), np.abs(pick(second) - centre)
+    with np.errstate(invalid="ignore"):   # NaN sides (gaps, image edges) are handled below
+        grads = np.stack([np.abs(b - a) for a, b in sides])
+        direction = np.argmax(np.nan_to_num(grads, nan=-1.0), axis=0)
+        first, second = np.stack([a for a, _ in sides]), np.stack([b for _, b in sides])
+        pick = lambda arr: np.take_along_axis(arr, direction[None], 0)[0]   # noqa: E731
+        d1, d2 = np.abs(pick(first) - centre), np.abs(pick(second) - centre)
     own_side = np.where(np.isnan(d1), 1, np.where(np.isnan(d2) | (d1 <= d2), 0, 1))   # a side without data loses
     choice = 2 * direction + own_side                    # index into LEE_HALVES
     lin0 = np.where(ok, lin, 0.0)
