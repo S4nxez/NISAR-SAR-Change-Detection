@@ -1,0 +1,978 @@
+{
+ "exam_version": 1,
+ "label": "m4-refined-lee",
+ "created_utc": "2026-11-11T20:20:19Z",
+ "commit": "b3859ef",
+ "dirty": false,
+ "method": {
+  "id": "tefe",
+  "name": "Lake Tefé and the Middle Solimões",
+  "country": "Brazil (Amazonas)",
+  "circle": {
+   "lon": -64.75,
+   "lat": -3.4,
+   "radius_km": 55
+  },
+  "step_deg": 0.00018,
+  "gauge": {
+   "name": "Tefé-Missões (Solimões)",
+   "ana_code": "12900001"
+  },
+  "access_radius_m": 1000,
+  "access_snap_m": {
+   "city": 3000,
+   "town": 3000,
+   "village": 500,
+   "hamlet": 500,
+   "default": 300
+  },
+  "min_coverage": 0.8,
+  "min_coverage_shown": 0.05,
+  "valid_floor_db": -40.0,
+  "water_db": -15.0,
+  "water_db_weak": -12.0,
+  "speckle_filter": "refined_lee",
+  "speckle_looks": 9,
+  "speckle_m": 60,
+  "widths_m": [
+   40,
+   60,
+   100,
+   200,
+   400
+  ],
+  "safe_width_m": 60,
+  "communities": "tefe_communities.geojson"
+ },
+ "synthetic": {
+  "looks": 9,
+  "seeds": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "surfaces_db": {
+   "forest": [
+    -7.0,
+    -12.5
+   ],
+   "water": [
+    -23.0,
+    -30.0
+   ],
+   "wind": [
+    -13.0,
+    -26.0
+   ],
+   "flooded_vegetation": [
+    -1.0,
+    -9.5
+   ],
+   "mud": [
+    -17.0,
+    -27.0
+   ]
+  },
+  "lanes": {
+   "channel_20m": {
+    "expected": "narrow",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_40m": {
+    "expected": "narrow",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_60m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_100m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_200m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "zigzag_100m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "vegetation_block": {
+    "expected": "isolated",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "mud_bar": {
+    "expected": "isolated",
+    "grades": {
+     "dangerous": 5
+    }
+   },
+   "wind_stretch": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_400m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   }
+  },
+  "totals": {
+   "correct": 45,
+   "conservative": 0,
+   "dangerous": 5,
+   "no_data": 0
+  },
+  "correct_share": 0.9,
+  "surfaces": {
+   "forest": {
+    "as_water": 0.0124
+   },
+   "water": {
+    "as_water": 0.9997
+   },
+   "wind": {
+    "as_water": 0.9966
+   },
+   "flooded_vegetation": {
+    "as_water": 0.0
+   },
+   "mud": {
+    "as_water": 0.9987
+   }
+  }
+ },
+ "optical": {
+  "rules": {
+   "max_days": 2,
+   "min_clear": 0.3
+  },
+  "summary": {
+   "passes": 7,
+   "iou": 0.8909,
+   "f1": 0.9423,
+   "precision": 0.8998,
+   "recall": 0.989,
+   "recall_by_width": {
+    "narrow_lt60m": 0.7669,
+    "medium_60_200m": 0.9619,
+    "wide_ge200m": 0.9947
+   },
+   "false_water": {
+    "shore": 0.1975,
+    "far": 0.0053
+   },
+   "status_pairs": 455,
+   "status_agreement": 0.8769,
+   "status_kappa_mean": 0.4843,
+   "false_route": 43,
+   "overconfident": 12,
+   "false_isolated": 1
+  },
+  "passes": [
+   {
+    "pass": "2025-11-04_t097D",
+    "s2_date": "2025-11-05",
+    "days_apart": 1,
+    "clear_share": 0.3845,
+    "mndwi_threshold": 0.0537,
+    "common_km2": 3613.9,
+    "water": {
+     "counts": {
+      "tp": 1137716,
+      "fp": 170187,
+      "fn": 8009,
+      "tn": 7700890
+     },
+     "iou": 0.8646,
+     "f1": 0.9274,
+     "precision": 0.8699,
+     "recall": 0.993,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 8605,
+       "recall": 0.8449
+      },
+      "medium_60_200m": {
+       "pixels": 68795,
+       "recall": 0.9475
+      },
+      "wide_ge200m": {
+       "pixels": 1068325,
+       "recall": 0.9971
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 201983,
+       "rate": 0.2702
+      },
+      "far": {
+       "pixels": 7669094,
+       "rate": 0.0151
+      }
+     }
+    },
+    "status": {
+     "n": 15,
+     "agreement": 0.7333,
+     "kappa": 0.5489,
+     "false_route": 3,
+     "overconfident": 1,
+     "false_isolated": 0,
+     "isolated_recall": 0.5,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 7,
+       "at_risk": 1,
+       "isolated": 2
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 1
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 3
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-07-07_t161A",
+    "s2_date": "2026-07-06",
+    "days_apart": 1,
+    "clear_share": 0.5961,
+    "mndwi_threshold": 0.0873,
+    "common_km2": 4734.3,
+    "water": {
+     "counts": {
+      "tp": 1724120,
+      "fp": 127873,
+      "fn": 16851,
+      "tn": 9943291
+     },
+     "iou": 0.9226,
+     "f1": 0.9597,
+     "precision": 0.931,
+     "recall": 0.9903,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 19112,
+       "recall": 0.7666
+      },
+      "medium_60_200m": {
+       "pixels": 148227,
+       "recall": 0.9681
+      },
+      "wide_ge200m": {
+       "pixels": 1573632,
+       "recall": 0.9951
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 473078,
+       "rate": 0.2382
+      },
+      "far": {
+       "pixels": 9598086,
+       "rate": 0.0016
+      }
+     }
+    },
+    "status": {
+     "n": 32,
+     "agreement": 0.7812,
+     "kappa": 0.5447,
+     "false_route": 3,
+     "overconfident": 4,
+     "false_isolated": 0,
+     "isolated_recall": 0.625,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 20,
+       "at_risk": 4,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 3
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 5
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-08-19_t097D",
+    "s2_date": "2026-08-20",
+    "days_apart": 1,
+    "clear_share": 0.7319,
+    "mndwi_threshold": 0.0108,
+    "common_km2": 6931.2,
+    "water": {
+     "counts": {
+      "tp": 1890564,
+      "fp": 162424,
+      "fn": 17800,
+      "tn": 15222586
+     },
+     "iou": 0.913,
+     "f1": 0.9545,
+     "precision": 0.9209,
+     "recall": 0.9907,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 22041,
+       "recall": 0.7988
+      },
+      "medium_60_200m": {
+       "pixels": 174327,
+       "recall": 0.9703
+      },
+      "wide_ge200m": {
+       "pixels": 1711996,
+       "recall": 0.9952
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 607815,
+       "rate": 0.1846
+      },
+      "far": {
+       "pixels": 14777195,
+       "rate": 0.0034
+      }
+     }
+    },
+    "status": {
+     "n": 92,
+     "agreement": 0.9457,
+     "kappa": 0.8764,
+     "false_route": 4,
+     "overconfident": 1,
+     "false_isolated": 0,
+     "isolated_recall": 0.7143,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 65,
+       "at_risk": 1,
+       "isolated": 2
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 12,
+       "isolated": 2
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 10
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-08-24_t161A",
+    "s2_date": "2026-08-25",
+    "days_apart": 1,
+    "clear_share": 0.7953,
+    "mndwi_threshold": 0.0098,
+    "common_km2": 7609.0,
+    "water": {
+     "counts": {
+      "tp": 2095930,
+      "fp": 112366,
+      "fn": 30640,
+      "tn": 16745593
+     },
+     "iou": 0.9361,
+     "f1": 0.967,
+     "precision": 0.9491,
+     "recall": 0.9856,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 25678,
+       "recall": 0.6851
+      },
+      "medium_60_200m": {
+       "pixels": 215724,
+       "recall": 0.9538
+      },
+      "wide_ge200m": {
+       "pixels": 1885168,
+       "recall": 0.9933
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 732781,
+       "rate": 0.138
+      },
+      "far": {
+       "pixels": 16125178,
+       "rate": 0.0007
+      }
+     }
+    },
+    "status": {
+     "n": 117,
+     "agreement": 0.8632,
+     "kappa": 0.6914,
+     "false_route": 13,
+     "overconfident": 2,
+     "false_isolated": 1,
+     "isolated_recall": 0.5517,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 83,
+       "at_risk": 2,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 2,
+       "isolated": 13
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 16
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-08-31_t097D",
+    "s2_date": "2026-08-30",
+    "days_apart": 1,
+    "clear_share": 0.9969,
+    "mndwi_threshold": -0.039,
+    "common_km2": 9473.3,
+    "water": {
+     "counts": {
+      "tp": 2093642,
+      "fp": 262363,
+      "fn": 23305,
+      "tn": 21256692
+     },
+     "iou": 0.8799,
+     "f1": 0.9361,
+     "precision": 0.8886,
+     "recall": 0.989,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 25142,
+       "recall": 0.7467
+      },
+      "medium_60_200m": {
+       "pixels": 188828,
+       "recall": 0.9602
+      },
+      "wide_ge200m": {
+       "pixels": 1902977,
+       "recall": 0.995
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 732590,
+       "rate": 0.1922
+      },
+      "far": {
+       "pixels": 20786465,
+       "rate": 0.0058
+      }
+     }
+    },
+    "status": {
+     "n": 169,
+     "agreement": 0.8698,
+     "kappa": 0.7288,
+     "false_route": 18,
+     "overconfident": 4,
+     "false_isolated": 0,
+     "isolated_recall": 0.64,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 111,
+       "at_risk": 4,
+       "isolated": 3
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 4,
+       "isolated": 15
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 32
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-10-11_t161A",
+    "s2_date": "2026-10-11",
+    "days_apart": 0,
+    "clear_share": 0.5587,
+    "mndwi_threshold": 0.0346,
+    "common_km2": 5345.4,
+    "water": {
+     "counts": {
+      "tp": 537248,
+      "fp": 125430,
+      "fn": 8056,
+      "tn": 12666252
+     },
+     "iou": 0.801,
+     "f1": 0.8895,
+     "precision": 0.8107,
+     "recall": 0.9852,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 13751,
+       "recall": 0.8178
+      },
+      "medium_60_200m": {
+       "pixels": 77461,
+       "recall": 0.9686
+      },
+      "wide_ge200m": {
+       "pixels": 454092,
+       "recall": 0.9931
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 222770,
+       "rate": 0.2456
+      },
+      "far": {
+       "pixels": 12568912,
+       "rate": 0.0056
+      }
+     }
+    },
+    "status": {
+     "n": 19,
+     "agreement": 0.9474,
+     "kappa": 0.0,
+     "false_route": 1,
+     "overconfident": 0,
+     "false_isolated": 0,
+     "isolated_recall": 0.9474,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 1
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 18
+      }
+     }
+    }
+   },
+   {
+    "pass": "2026-10-23_t161A",
+    "s2_date": "2026-10-21",
+    "days_apart": 2,
+    "clear_share": 0.4433,
+    "mndwi_threshold": 0.0677,
+    "common_km2": 4241.1,
+    "water": {
+     "counts": {
+      "tp": 440942,
+      "fp": 143630,
+      "fn": 5601,
+      "tn": 9991477
+     },
+     "iou": 0.7471,
+     "f1": 0.8553,
+     "precision": 0.7543,
+     "recall": 0.9875,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 5668,
+       "recall": 0.8622
+      },
+      "medium_60_200m": {
+       "pixels": 48689,
+       "recall": 0.9657
+      },
+      "wide_ge200m": {
+       "pixels": 392186,
+       "recall": 0.992
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 177420,
+       "rate": 0.2578
+      },
+      "far": {
+       "pixels": 9957687,
+       "rate": 0.0098
+      }
+     }
+    },
+    "status": {
+     "n": 11,
+     "agreement": 0.9091,
+     "kappa": 0.0,
+     "false_route": 1,
+     "overconfident": 0,
+     "false_isolated": 0,
+     "isolated_recall": 0.9091,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 1
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 10
+      }
+     }
+    }
+   }
+  ]
+ },
+ "gauge": {
+  "available": true,
+  "source": "ANA telemetry, station 12900001",
+  "passes": [
+   {
+    "pass": "2025-11-04_t097D",
+    "level_cm": 1105.5,
+    "water_km2": 945.54,
+    "lost_route": 16
+   },
+   {
+    "pass": "2026-06-25_t161A",
+    "level_cm": 1869.0,
+    "water_km2": 995.25,
+    "lost_route": 16
+   },
+   {
+    "pass": "2026-07-07_t161A",
+    "level_cm": 1863.5,
+    "water_km2": 1002.93,
+    "lost_route": 19
+   },
+   {
+    "pass": "2026-07-19_t161A",
+    "level_cm": 1821.0,
+    "water_km2": 970.01,
+    "lost_route": 16
+   },
+   {
+    "pass": "2026-08-19_t097D",
+    "level_cm": 1528.0,
+    "water_km2": 950.01,
+    "lost_route": 21
+   },
+   {
+    "pass": "2026-08-24_t161A",
+    "level_cm": 1454.5,
+    "water_km2": 932.69,
+    "lost_route": 25
+   },
+   {
+    "pass": "2026-08-31_t097D",
+    "level_cm": 1338.0,
+    "water_km2": 952.24,
+    "lost_route": 21
+   },
+   {
+    "pass": "2026-09-05_t161A",
+    "level_cm": 1254.0,
+    "water_km2": 912.82,
+    "lost_route": 24
+   },
+   {
+    "pass": "2026-09-12_t097D",
+    "level_cm": 1147.0,
+    "water_km2": 915.92,
+    "lost_route": 21
+   },
+   {
+    "pass": "2026-09-17_t161A",
+    "level_cm": 1056.0,
+    "water_km2": 896.47,
+    "lost_route": 21
+   },
+   {
+    "pass": "2026-09-24_t097D",
+    "level_cm": 946.0,
+    "water_km2": 925.53,
+    "lost_route": 20
+   },
+   {
+    "pass": "2026-09-29_t161A",
+    "level_cm": 932.5,
+    "water_km2": 889.34,
+    "lost_route": 21
+   },
+   {
+    "pass": "2026-10-06_t097D",
+    "level_cm": 951.0,
+    "water_km2": 911.69,
+    "lost_route": 20
+   },
+   {
+    "pass": "2026-10-11_t161A",
+    "level_cm": 929.5,
+    "water_km2": 886.15,
+    "lost_route": 22
+   },
+   {
+    "pass": "2026-10-23_t161A",
+    "level_cm": 797.0,
+    "water_km2": 882.56,
+    "lost_route": 24
+   }
+  ],
+  "water_vs_level": {
+   "rho": 0.9107,
+   "n": 15
+  },
+  "lost_route_vs_level": {
+   "rho": -0.4005,
+   "n": 15
+  }
+ },
+ "field": {
+  "checks": [
+   {
+    "community": "Caiambé",
+    "expected": "linked",
+    "kind": "sanity",
+    "source": "Team plausibility check (docs/river-monitor.md): settlement on the Solimões main channel, used as the boat landing in the 2023 and 2024 droughts. Not an observation of 2026.",
+    "found": true,
+    "passes": [
+     {
+      "pass": "2026-06-25_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-07_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-19_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-19_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-24_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-31_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-05_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-12_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-17_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-24_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-29_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-06_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-11_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-23_t161A",
+      "status": 1,
+      "correct": true
+     }
+    ]
+   },
+   {
+    "community": "Alvarães",
+    "expected": "linked",
+    "kind": "sanity",
+    "source": "Team plausibility check (docs/river-monitor.md): municipal seat reached through its port; no 2026 report of the town being cut off was found. Not an observation of 2026.",
+    "found": true,
+    "passes": [
+     {
+      "pass": "2026-06-25_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-07_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-19_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-19_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-24_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-31_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-05_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-12_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-17_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-24_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-29_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-06_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-11_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-23_t161A",
+      "status": 1,
+      "correct": true
+     }
+    ]
+   }
+  ],
+  "by_kind": {
+   "sanity": {
+    "checks": 2,
+    "judged": 28,
+    "correct": 28
+   }
+  },
+  "correct_share": 1.0
+ },
+ "classes": {
+  "monitored": 133,
+  "unresolved": 45,
+  "inland": 26,
+  "no_data": 0
+ },
+ "scorecard": {
+  "synthetic_correct_share": 0.9,
+  "synthetic_dangerous": 5,
+  "synthetic_conservative": 0,
+  "optical_iou": 0.8909,
+  "optical_recall_narrow": 0.7669,
+  "optical_false_water_shore": 0.1975,
+  "status_agreement": 0.8769,
+  "false_route": 43,
+  "false_isolated": 1,
+  "gauge_rho_lost_route": -0.4005,
+  "field_correct_share": 1.0
+ }
+}
