@@ -9,6 +9,7 @@ from lifeline.sources.remote import RemoteFile
 GRID = "science/LSAR/GCOV/grids"
 CACHED_BANDS = ("HHHH", "HVHV")   # every band a method may use, so a cached window is never read again
 DEFAULT_SPECKLE_M = 100.0
+DEFAULT_VALID_FLOOR_DB = -40.0   # below it a pixel is fill, not a measurement (ADR-001)
 ROWS_PER_CHUNK = 256
 
 
@@ -17,6 +18,15 @@ def linear_to_db(a):
     with np.errstate(divide="ignore", invalid="ignore"):
         db = 10.0 * np.log10(np.asarray(a, dtype=np.float32))
     db[~np.isfinite(db)] = np.nan
+    return db
+
+
+def mask_fill(db, floor_db):
+    """Values below floor_db are not measurements: GCOV windows carry near-zero fill (down to -170 dB) at the
+    edge of the imaged swath, far below NISAR's noise floor (about -25 dB). They become NaN (no data) so they are
+    neither water nor averaged into their neighbours by the speckle filter. Works in place and returns db."""
+    with np.errstate(invalid="ignore"):
+        db[db < floor_db] = np.nan
     return db
 
 
@@ -180,7 +190,8 @@ def read_pass(area, ps, token, open_remote=RemoteFile, cache_dir=None):
             continue
         read_mb += w["mb"]
         spacing = abs(w["dx"])
-        db = speckle_filter(linear_to_db(w["bands"]["HHHH"]), speckle_window(area, spacing))
+        db = mask_fill(linear_to_db(w["bands"]["HHHH"]), area.get("valid_floor_db", DEFAULT_VALID_FLOOR_DB))
+        db = speckle_filter(db, speckle_window(area, spacing))
         tr = Transformer.from_crs(4326, w["epsg"], always_xy=True)
         resample_into(out, db, area, tr, w["x0"], w["y0"], w["dx"], w["dy"])
     return out, read_mb, spacing

@@ -87,7 +87,9 @@ takes `index.html?area=<id>`.
 
 For every pass (all frames of one track on one day):
 
-1. **Read**: HH backscatter of the area from the NISAR L2 GCOV product (ASF DAAC), speckle
+1. **Read**: HH backscatter of the area from the NISAR L2 GCOV product (ASF DAAC). Values
+   below −40 dB (`valid_floor_db`) are swath-edge fill, not measurements, and become no data
+   ([ADR-001](decisions/ADR-001-river-monitor-fill-is-no-data.md)). Then speckle
    filtered over ~60 m (a wider window erases channels two or three pixels wide) and
    resampled to a fixed lon/lat grid shared by all passes.
 2. **Water**: filtered HH below −15 dB, plus pixels below −12 dB that touch that water

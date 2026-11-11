@@ -11,6 +11,7 @@ from lifeline.analysis.radar import (
     granule_window,
     linear_to_db,
     load_window,
+    mask_fill,
     product_window,
     read_pass,
     read_window,
@@ -34,6 +35,12 @@ class TestBackscatterHelpers(unittest.TestCase):
         db = linear_to_db([1.0, 0.1, 0.0, -1.0, np.inf])
         np.testing.assert_allclose(db[:2], [0.0, -10.0], atol=1e-6)
         self.assertTrue(np.isnan(db[2:]).all())
+
+    def test_fill_below_the_floor_becomes_no_data(self):
+        db = np.array([-12.0, -39.9, -40.0, -57.0, -150.0, np.nan], np.float32)
+        out = mask_fill(db, -40.0)
+        np.testing.assert_array_equal(np.isnan(out), [False, False, False, True, True, True])
+        self.assertIs(out, db)
 
     def test_box_sum_matches_a_brute_force_sum_clipped_at_the_edges(self):
         rng = np.random.default_rng(1)
@@ -113,7 +120,7 @@ class TestResample(unittest.TestCase):
 class TestReadPass(unittest.TestCase):
     """read_pass against a synthetic GCOV product in memory (UTM 20S, like Tefé)."""
 
-    def gcov(self, area, with_hh=True, with_hv=False):
+    def gcov(self, area, with_hh=True, with_hv=False, fill_rows=0):
         from pyproj import Transformer
         tr = Transformer.from_crs(4326, 32720, always_xy=True)
         x0, y1 = tr.transform(area["bbox"][0], area["bbox"][3])
@@ -128,6 +135,7 @@ class TestReadPass(unittest.TestCase):
             if with_hh:
                 hh = np.full((len(ys), len(xs)), 10 ** (-0.5), np.float32)   # land, -5 dB
                 hh[:, : len(xs) // 2] = 10 ** (-2.0)                          # water on the west half, -20 dB
+                hh[:fill_rows] = 1e-10                                        # swath-edge fill, -100 dB
                 fa["HHHH"] = hh
             if with_hv:
                 fa["HVHV"] = np.full((len(ys), len(xs)), 10 ** (-1.2), np.float32)   # -12 dB
@@ -190,6 +198,15 @@ class TestReadPass(unittest.TestCase):
         self.assertAlmostEqual(float(np.nanmedian(db[:, :100])), -20.0, places=3)
         self.assertAlmostEqual(float(np.nanmedian(db[:, -100:])), -5.0, places=3)
         self.assertEqual((read_mb, spacing), (1.0, 20.0))
+
+    def test_swath_edge_fill_is_no_data_and_does_not_leak_into_the_filter(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "a"}]}
+        db, _, _ = read_pass(area, ps, "token", open_remote=self.opener({"a": self.gcov(area, fill_rows=60)}))
+        self.assertTrue(np.isnan(db[:5]).all())                 # the north rows fall in the fill
+        valid = db[np.isfinite(db)]
+        self.assertGreater(valid.min(), -21.0)                  # nothing darker than the real water came through
+        self.assertTrue(np.isfinite(db[-50:]).all())
 
     def test_frames_without_hh_are_skipped(self):
         area = small_area()
