@@ -67,10 +67,12 @@ class TestScenes(unittest.TestCase):
         self.area = small_area()
         self.shape = (self.area["ny"], self.area["nx"])
 
-    def fake_read(self, bands):
-        """read_band stand-in: bands[(asset, tile)] -> array."""
+    def fake_read(self, bands, log=None):
+        """read_band stand-in: bands[(asset, tile)] -> array; the URLs read go to `log`."""
         def read(url, area, resampling, overview_level=None):
             asset, tile, _ = url.split(":")
+            if log is not None:
+                log.append((asset, tile))
             return bands[(asset, tile)].astype(np.float32)
         return read
 
@@ -103,10 +105,12 @@ class TestScenes(unittest.TestCase):
         items = [item("2026-08-29", "C"), item("2026-08-31", "A")]
         post = lambda url, json, timeout: FakeResponse(json_data={"features": items})   # noqa: E731
         mask = np.ones(self.shape, bool)
+        reads = []
         with tempfile.TemporaryDirectory() as cache:
             ref = optical.reference_for_pass(self.area, "2026-08-30", mask, cache, 2, 0.3, post,
-                                             self.fake_read(bands))
+                                             self.fake_read(bands, reads))
             self.assertEqual((ref["date"], ref["days_apart"], ref["clear_share"]), ("2026-08-31", 1, 1.0))
+            self.assertNotIn(("green", "C"), reads)                  # the cloudy date's bands are never read
             self.assertTrue(ref["water"][:, :50].all() and not ref["water"][:, 60:].any())
             only_cloudy = lambda url, json, timeout: FakeResponse(json_data={"features": items[:1]})   # noqa: E731
             self.assertIsNone(optical.reference_for_pass(self.area, "2026-08-30", mask, cache, 2, 0.3,

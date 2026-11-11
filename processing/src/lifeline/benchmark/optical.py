@@ -120,6 +120,17 @@ def mndwi_of(green, swir, ok):
     return np.clip(m, -1.0, 1.0).astype(np.float32)
 
 
+def mosaic_scl(area, items, read=read_band):
+    """Scene classification of one date mosaicked onto the area grid (first tile wins). Cheap: one 20 m byte band
+    per tile, enough to rank the dates by clear share before reading the reflectance bands."""
+    scl = np.zeros((area["ny"], area["nx"]), np.uint8)
+    for it in items:
+        s = read(it["assets"]["scl"]["href"], area, "nearest").astype(np.uint8)
+        take = (scl == 0) & (s > 0)
+        scl[take] = s[take]
+    return scl
+
+
 def mosaic_date(area, items, read=read_band):
     """(mndwi, scl) of one date: the tiles of that date mosaicked onto the area grid (first tile wins)."""
     green = np.zeros((area["ny"], area["nx"]), np.float32)
@@ -138,34 +149,51 @@ def mosaic_date(area, items, read=read_band):
     return mndwi_of(green, swir, scl > 0), scl
 
 
+def _cached(path, build):
+    """The arrays stored at path, else build() stored there first ({name: array})."""
+    if os.path.exists(path):
+        with np.load(path) as z:
+            return {k: z[k] for k in z.files}
+    arrays = build()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    np.savez_compressed(path + ".tmp.npz", **arrays)
+    os.replace(path + ".tmp.npz", path)
+    return arrays
+
+
+def cached_scl(area, date, items, cache_dir, read=read_band):
+    path = os.path.join(cache_dir, "sentinel2", area["id"], date + "_scl.npz")
+    return _cached(path, lambda: {"scl": mosaic_scl(area, items, read)})["scl"]
+
+
 def cached_date(area, date, items, cache_dir, read=read_band):
     """mosaic_date through a cache file (cache_dir/sentinel2/<area>/<date>.npz)."""
     path = os.path.join(cache_dir, "sentinel2", area["id"], date + ".npz")
-    if os.path.exists(path):
-        with np.load(path) as z:
-            return z["mndwi"].astype(np.float32), z["scl"]
-    mndwi, scl = mosaic_date(area, items, read)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    np.savez_compressed(path + ".tmp.npz", mndwi=mndwi.astype(np.float16), scl=scl)
-    os.replace(path + ".tmp.npz", path)
-    return mndwi, scl
+
+    def build():
+        mndwi, scl = mosaic_date(area, items, read)
+        return {"mndwi": mndwi.astype(np.float16), "scl": scl}
+    z = _cached(path, build)
+    return z["mndwi"].astype(np.float32), z["scl"]
 
 
 def reference_for_pass(area, pass_date, in_area, cache_dir, max_days, min_clear, post, read=read_band):
     """The best Sentinel-2 reference near a pass: the date with the largest clear share of the area within
-    max_days (ties: the closest date). None when no date reaches min_clear. Returns
-    {date, days_apart, clear_share, threshold, water, valid}."""
+    max_days (ties: the closest date), ranked on the scene classification alone; only that date's reflectance is
+    read. None when no date reaches min_clear. Returns {date, days_apart, clear_share, threshold, water, valid}."""
     day = dt.date.fromisoformat(pass_date)
-    best = None
+    n_area = max(1, int(in_area.sum()))
+    ranked = []
     for date, items in sorted(by_date(search_scenes(area, day, max_days, post)).items()):
-        mndwi, scl = cached_date(area, date, items, cache_dir, read)
-        clear = clear_mask(scl)
-        share = float((clear & in_area).sum() / max(1, in_area.sum()))
-        gap = abs((dt.date.fromisoformat(date) - day).days)
-        if best is None or (share, -gap) > (best["clear_share"], -best["days_apart"]):
-            water, valid, t = reference_water(mndwi, clear, in_area)
-            best = {"date": date, "days_apart": gap, "clear_share": round(share, 4), "threshold": t,
-                    "water": water, "valid": valid}
-    if best is None or best["clear_share"] < min_clear:
+        share = float((clear_mask(cached_scl(area, date, items, cache_dir, read)) & in_area).sum() / n_area)
+        ranked.append((share, -abs((dt.date.fromisoformat(date) - day).days), date, items))
+    if not ranked:
         return None
-    return best
+    share, neg_gap, date, items = max(ranked, key=lambda r: (r[0], r[1]))
+    if share < min_clear:
+        return None
+    mndwi, scl = cached_date(area, date, items, cache_dir, read)
+    clear = clear_mask(scl)
+    water, valid, t = reference_water(mndwi, clear, in_area)
+    return {"date": date, "days_apart": -neg_gap, "clear_share": round(float((clear & in_area).sum() / n_area), 4),
+            "threshold": t, "water": water, "valid": valid}
