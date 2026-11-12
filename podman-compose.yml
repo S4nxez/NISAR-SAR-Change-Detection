@@ -38,8 +38,33 @@ services:
       DB_USER: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_PROFILES_ACTIVE: spring
+      # River lifeline record written by the monitor worker, served under /api/monitor
+      MONITOR_DATA_DIR: /data/monitor
+    volumes:
+      - monitor_data:/data/monitor:ro
     networks:
       - NisarSar-net
+
+  # River lifeline monitor worker (processing/): searches ASF for new NISAR passes every 6 hours and writes the record
+  # to the monitor_data volume, which the backend serves. Reading NISAR products needs a NASA Earthdata token
+  # (EARTHDATA_TOKEN in .env); without it the worker logs the failed round and tries again on the next one.
+  # See docs/river-monitor.md.
+  monitor:
+    image: ghcr.io/s4nxez/nisar-sar-change-detection-processing:${NISAR_IMAGE_TAG:-latest}
+    restart: always
+    command: ["watch", "--hours", "6"]
+    environment:
+      EARTHDATA_TOKEN: ${EARTHDATA_TOKEN:-}
+      MONITOR_DATA_DIR: /data/monitor
+    volumes:
+      - monitor_data:/data/monitor
+    networks:
+      - NisarSar-net
+    # Public resolvers: on the Pi, the network's own DNS (aardvark, rootless with pasta) does not forward outside names,
+    # and the worker only talks to outside services (ASF, Earthdata, ANA, OpenStreetMap), never to the other containers
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
 
   frontend:
     image: ghcr.io/s4nxez/nisar-sar-change-detection-front:${NISAR_IMAGE_TAG:-latest}
@@ -64,6 +89,7 @@ services:
 
 volumes:
   mysql_data:
+  monitor_data:
   caddy_data:
   caddy_config:
 

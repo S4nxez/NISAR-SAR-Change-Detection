@@ -1,0 +1,5 @@
+# Not served by nginx: tests and the files that only exist to run them
+tests/
+package.json
+package-lock.json
+node_modules/

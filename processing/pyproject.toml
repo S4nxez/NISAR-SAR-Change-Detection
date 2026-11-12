@@ -1,0 +1,32 @@
+# River lifeline monitor: NISAR radar processing that publishes the record the backend serves under api/monitor.
+# An application, not a library: dependencies are pinned so the CI, the container image and local runs use the same
+# versions. Install for development with `python -m pip install -e processing` (see docs/river-monitor.md).
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lifeline"
+version = "0.1.0"
+description = "River lifeline monitor: riverside communities' water routes from NISAR GCOV passes"
+requires-python = ">=3.12"
+dependencies = [
+    "h5py==3.13.0",
+    "numpy==2.2.6",
+    "pillow==11.2.1",
+    "pyproj==3.7.1",
+    "requests==2.32.3",
+    "scipy==1.15.3",
+]
+
+[project.scripts]
+river-monitor = "lifeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.isort]
+known-first-party = ["lifeline"]

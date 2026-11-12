@@ -3,73 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101b25">
+  <meta name="theme-color" content="#0b1222">
+  <!-- Relative icons: without them browsers request /favicon.ico at the site root, outside the app's path prefix -->
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./favicon.ico" sizes="any">
-  <meta name="description" content="SAR Observatory — explore satellite radar observations and surface change.">
-  <title>SAR Observatory | Earth Change Explorer</title>
-  <link rel="preconnect" href="https://unpkg.com">
+  <meta name="description" content="River Lifeline — which riverside communities around Lake Tefé still have a water route to town, checked on every NISAR radar pass.">
+  <title>River Lifeline · NISAR over Lake Tefé</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Martian+Mono:wght@400;600&family=Saira+Stencil+One&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="./src/styles/main.css">
-  <link rel="stylesheet" href="./src/styles/components.css">
-  <link rel="stylesheet" href="./src/styles/responsive.css">
-  <link rel="stylesheet" href="./src/styles/details.css">
-  <link rel="stylesheet" href="./src/styles/overrides.css">
+  <link rel="stylesheet" href="./src/styles/main.css">
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="SAR Observatory home"><span class="brand-mark">S</span><span><strong>SAR OBSERVATORY</strong><small>EARTH CHANGE EXPLORER</small></span></a>
-      <div class="mission-status"><span class="status-dot"></span> INTERACTIVE DEMO <span class="status-divider">/</span> SENTINEL-1 SAR</div>
-    </header>
+  <a class="skip" href="#roster">Skip to the community list</a>
 
-    <main>
-      <section class="intro">
-        <div><p class="eyebrow">SPACE APPS CHALLENGE · 2026</p><h1>Earth is always<br class="mobile-break"> <span>changing.</span></h1>
-        <p class="intro-copy">Explore radar observations to spot surface changes — through clouds, day or night.</p></div>
-        <div class="intro-note"><span class="note-icon">↗</span><div><strong>Radar, not a photograph</strong><p>Synthetic Aperture Radar measures backscatter to reveal changes in the surface.</p></div></div>
-      </section>
+  <header class="mast">
+    <div class="mast-id">
+      <span class="wordmark">River Lifeline</span>
+      <span class="mast-mission" id="mast-mission">NISAR L-band radar · Lake Tefé, Middle Solimões</span>
+    </div>
+    <div class="clock" role="group" aria-label="Choose the day to show">
+      <label class="clock-label" for="date-input">Situation on</label>
+      <button type="button" class="clock-step" id="prev-pass" aria-label="Previous pass">&lsaquo;</button>
+      <input type="date" id="date-input">
+      <button type="button" class="clock-step" id="next-pass" aria-label="Next pass">&rsaquo;</button>
+      <button type="button" class="clock-play" id="play" aria-pressed="false">Play record</button>
+    </div>
+  </header>
 
-      <section class="stats-grid" aria-label="Overview metrics">
-        <article class="stat-card"><span class="stat-label">AREAS MONITORED</span><strong id="stat-areas">04</strong><span class="stat-foot">Example study sites</span></article>
-        <article class="stat-card"><span class="stat-label">CHANGE SIGNALS</span><strong id="stat-signals">12</strong><span class="stat-foot"><i class="dot dot-amber"></i> Illustrative detections</span></article>
-        <article class="stat-card"><span class="stat-label">LATEST OBSERVATION</span><strong class="stat-date">18 <small>SEP 2026</small></strong><span class="stat-foot">Demo timestamp</span></article>
-        <article class="stat-card"><span class="stat-label">DATA SOURCE</span><strong class="stat-source">Sentinel-1</strong><span class="stat-foot">C-band radar · ESA / Copernicus</span></article>
-      </section>
-
-      <section class="workspace">
-        <div class="map-panel panel">
-          <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2>Change map</h2></div><span class="live-label"><span class="status-dot"></span> STUDY AREAS</span></div>
-          <div class="map-key"><span><i class="key-dot key-high"></i>High change</span><span><i class="key-dot key-medium"></i>Moderate change</span><span><i class="key-dot key-low"></i>Low change</span></div>
-          <div id="map" role="img" aria-label="Map showing example SAR study areas around the world"></div>
-          <div class="map-footer"><span><span class="map-pin">●</span> Select a site on the map or in the list</span><span class="demo-tag">SAMPLE DATA</span></div>
+  <main>
+    <section class="scene" aria-label="Radar map of the area">
+      <div class="scene-map">
+        <div class="headline" id="headline" aria-live="polite">
+          <div>
+            <p class="headline-meta" id="headline-meta">Loading the record…</p>
+            <h1 id="headline-text">&nbsp;</h1>
+          </div>
+          <p class="headline-sub" id="headline-sub"></p>
         </div>
 
-        <aside class="site-panel panel">
-          <div class="panel-heading"><div><p class="eyebrow">02 / SITE SELECTION</p><h2>Study areas</h2></div><span class="count-pill" id="site-count">04 SITES</span></div>
-          <div id="site-list" class="site-list"></div>
-          <div class="selected-summary" id="selected-summary" aria-live="polite"></div>
-        </aside>
-      </section>
+        <div class="map-frame">
+        <div id="map" role="application" aria-label="Map: radar image, detected water and communities"></div>
 
-      <section class="analysis-grid">
-        <article class="panel analysis-panel">
-          <div class="panel-heading"><div><p class="eyebrow">03 / TEMPORAL SIGNAL</p><h2>Backscatter trend</h2></div><span class="unit-label">RELATIVE dB</span></div>
-          <p class="section-copy">Illustrative radar response across recent observations for the selected site.</p>
-          <div class="chart-wrap"><canvas id="trend-chart" aria-label="Backscatter trend chart"></canvas></div>
-          <div class="chart-legend"><span><i class="legend-line"></i> VV polarisation</span><span><i class="legend-line legend-blue"></i> VH polarisation</span></div>
-        </article>
-        <article class="panel insight-panel">
-          <div class="panel-heading"><div><p class="eyebrow">04 / CHANGE INTERPRETATION</p><h2>What stands out</h2></div><span class="insight-symbol">⌁</span></div>
-          <div id="insight-content"></div>
-          <div class="method-note"><strong>How to read this</strong><p>Radar changes are signals, not proof of a specific event. Compare acquisitions and validate with contextual data before drawing conclusions.</p></div>
-        </article>
-      </section>
-      <footer class="footer"><span>SAR OBSERVATORY <span class="footer-sep">/</span> SPACE APPS 2026</span><span>Prototype interface · illustrative data only · not an operational alert system</span></footer>
-    </main>
-  </div>
+        <fieldset class="layers">
+          <legend class="sr-only">Map layers</legend>
+          <div class="layers-base" role="group" aria-label="Background">
+            <button type="button" data-base="radar" class="is-on">Radar</button>
+            <button type="button" data-base="none">Basemap</button>
+          </div>
+          <label><input type="checkbox" id="toggle-water" checked> Water</label>
+          <label><input type="checkbox" id="toggle-change"> Change since last pass</label>
+          <label><input type="checkbox" id="toggle-other"> Places not monitored</label>
+          <label class="layers-opacity">Water opacity <input type="range" id="opacity" min="0" max="100" value="70"></label>
+        </fieldset>
+
+        <p class="plate" id="plate"></p>
+        <div class="map-key" id="map-key"></div>
+        </div>
+      </div>
+
+      <aside class="roster" id="roster" aria-labelledby="roster-title">
+        <div class="roster-head">
+          <h2 id="roster-title">Communities</h2>
+          <span class="roster-count" id="roster-count"></span>
+        </div>
+        <input type="search" id="search" placeholder="Find a community" aria-label="Find a community">
+        <div class="filters" role="group" aria-label="Show">
+          <button type="button" class="filter is-on" data-filter="all">All</button>
+          <button type="button" class="filter" data-filter="isolated">Isolated</button>
+          <button type="button" class="filter" data-filter="at_risk">At risk</button>
+          <button type="button" class="filter" data-filter="changed">Changed</button>
+        </div>
+        <ol class="roster-list" id="community-list"></ol>
+        <div class="roster-foot">
+          <span>Download this day</span>
+          <button type="button" id="export-csv">CSV</button>
+          <button type="button" id="export-geojson">GeoJSON</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="log" aria-labelledby="log-title">
+      <div class="log-head">
+        <div>
+          <h2 id="log-title">Pass log</h2>
+          <p>Every NISAR pass over the area. Each strip leans the way the satellite was flying and is split by how many communities were connected, at risk or isolated. The line is the official river level at <span id="gauge-name">the town gauge</span>.</p>
+        </div>
+        <p class="next-pass" id="next-pass-note"></p>
+      </div>
+      <div class="swath-wrap"><svg id="swath" role="group" aria-label="Pass log: one strip per NISAR pass"></svg></div>
+      <ul class="log-key">
+        <li><i class="k k-isolated"></i>Isolated</li>
+        <li><i class="k k-at_risk"></i>At risk</li>
+        <li><i class="k k-connected"></i>Connected</li>
+        <li><i class="k k-partial"></i>Pass covers part of the area: image only</li>
+        <li><i class="k k-gauge"></i>River level (cm)</li>
+      </ul>
+    </section>
+
+    <section class="desk">
+      <div class="ledger" aria-labelledby="ledger-title">
+        <h2 id="ledger-title">On this pass</h2>
+        <dl id="ledger"></dl>
+      </div>
+      <div class="dossier" aria-live="polite">
+        <h2 id="dossier-title">Pick a community</h2>
+        <div id="dossier">
+          <p class="quiet">Select a community on the map or in the list to see its water route on every pass.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="method" aria-labelledby="method-title">
+      <h2 id="method-title">How the radar decides</h2>
+      <div class="method-cols">
+        <p>Calm water reflects the radar pulse away from the satellite and shows up dark. On every pass we map that water at 20&nbsp;m, look for a continuous water path from each community's landing to Tefé, and measure the narrowest point of that path.</p>
+        <p>A community counts as isolated only when two passes in a row show no water route. Places that never show a route the radar can resolve, and places away from any water, are left out of the counts.</p>
+        <p>The radar sees water, not depth. A channel can still be there and be too shallow for boats, which is why routes narrower than 60&nbsp;m are flagged as at risk. Check against river gauges and local reports before acting.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="foot-sources">Radar: NISAR L2 GCOV (NASA/ISRO), ASF DAAC · Places: © OpenStreetMap contributors</span>
+    <span id="foot-search"></span>
+    <span>Prototype for NASA Space Apps 2026 · not an official alert system</span>
+  </footer>
 </body>
 </html>

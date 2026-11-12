@@ -23,6 +23,10 @@
 # share the develop stack's MySQL without writing into develop's data. Previews never touch production: they only
 # join the develop stack's network, and every name they use carries the pull request number (containers, tag pr-<N>).
 #
+# The river lifeline record (api/monitor) is the develop stack's: the preview's backend mounts its monitor_data volume
+# read-only, the one develop's monitor worker writes. Previews run no worker. While develop has no such volume the
+# preview starts without a record and its monitor page says the area is not published yet.
+#
 # Exits 1 if the command fails, 2 on usage errors. Needs podman.
 #
 # PR preview runs it on the Raspberry Pi from stdin (ssh ... bash -s -- COMMAND N): no command may read stdin, it
@@ -48,9 +52,12 @@ annotate() {
   fi
 }
 
+# On stderr: it also fails inside $(...) (develop_container, preview_containers), whose stdout is captured
 fail() {
-  printf '[FAIL] %s\n' "$1"
-  annotate error "$1"
+  {
+    printf '[FAIL] %s\n' "$1"
+    annotate error "$1"
+  } >&2
   exit 1
 }
 
@@ -117,6 +124,11 @@ cmd_deploy() {
     || fail "The develop stack's Caddy does not route PR previews: set NISAR_PR_PREVIEWS=true in $DEPLOY_DIR/.env, update its Caddyfile and podman-compose.yml (git pull) and run podman-compose up -d caddy there (tools/ci/README.md)"
   network="$(podman inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' "$caddy" | head -n 1)"
   [[ -n "$network" ]] || fail "Could not find the network of the develop stack's Caddy"
+  # The develop stack's river record, named as podman-compose names the volumes: <project>_monitor_data
+  local project record_volume
+  project="$(podman inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$caddy")"
+  [[ -n "$project" ]] || fail "Could not find the podman-compose project of the develop stack's Caddy"
+  record_volume="${project}_monitor_data"
 
   # Room for it: the other previews, and the disk production uses too
   others="$(podman ps -a --filter "label=$LABEL" --format "{{index .Labels \"$LABEL\"}}" | grep -vxF "$PR" | sort -u | paste -sd ' ' || true)"
@@ -172,9 +184,16 @@ cmd_deploy() {
     "$mysql" "$(sed -n 's/^MYSQL_ROOT_PASSWORD=//p' "$ENV_FILE")" >> "$ENV_FILE"
   local env_files=(--env-file "$ENV_FILE")
   if [[ -f "$DEPLOY_DIR/server/.env" ]]; then env_files=(--env-file "$DEPLOY_DIR/server/.env" "${env_files[@]}"); fi
+  local record=()
+  if podman volume exists "$record_volume"; then
+    record=(-e MONITOR_DATA_DIR=/data/monitor -v "$record_volume:/data/monitor:ro")
+    echo "river record: $record_volume (the develop stack's), read-only"
+  else
+    echo "river record: none, the develop stack has no $record_volume volume yet (its monitor worker writes it): the monitor page says the area is not published"
+  fi
 
   podman run -d --name "nisar-pr-$PR-backend" --network "$network" --restart on-failure:5 \
-    --label "$LABEL=$PR" "${env_files[@]}" "${REPOSITORY[backend]}:$TAG" >/dev/null \
+    --label "$LABEL=$PR" "${env_files[@]}" "${record[@]}" "${REPOSITORY[backend]}:$TAG" >/dev/null \
     || fail "Could not start the backend of the preview (see the error above)"
   podman run -d --name "nisar-pr-$PR-frontend" --network "$network" --restart always \
     --label "$LABEL=$PR" "${REPOSITORY[frontend]}:$TAG" >/dev/null \
