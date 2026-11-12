@@ -1,6 +1,6 @@
 # ADR-005: Water thresholds tuned for the refined Lee filter
 
-- Status: proposed (2026-11-12), pending the full benchmark run
+- Status: proposed (2026-11-12), benchmarked; pending the project lead's decision on the wind trade-off
 - Component: river lifeline monitor, area keys `water_db` and `water_db_weak` (`processing/areas/tefe.json`)
 
 ## Context
@@ -39,6 +39,27 @@ those variants the one that keeps the most narrow channels.
 
 Compared with the method before M4, false routes fall from 20 to 8 and false isolated stay level (12 → 13); the
 cost is fewer narrow channels found (recall under 60 m 0.545 → 0.497).
+
+## Benchmark result
+
+Full exam (`lee-thresholds-16-14`, commit `f8ec2a9`), against M4 with the old thresholds (`m4-m1-no-m2`) and the
+method before M4 (`fill-as-no-data`):
+
+| Metric | Before M4 | M4, −15/−12 | M4, −16/−14 |
+|---|---|---|---|
+| Synthetic correct | 0.800 | 0.900 | 0.800 |
+| Water IoU vs Sentinel-2 | 0.901 | 0.891 | **0.909** |
+| Recall < 60 m | 0.545 | 0.767 | 0.497 |
+| False water at shore | 0.109 | 0.198 | 0.136 |
+| Status agreement (kappa) | 0.919 | 0.877 (0.484) | **0.937 (0.670)** |
+| False routes | 20 | 43 | **8** |
+| False isolated | 12 | 1 | 13 |
+| Gauge rho (lost routes vs level) | −0.735 | −0.401 | **−0.767** |
+
+The real-pass numbers match the diagnostic. The synthetic `wind_stretch` lane turns from correct to conservative
+in all 5 draws: wind-roughened water at −13 dB is now mapped as water on 1.6 % of its pixels (99.7 % before), so an
+800 m stretch of it cuts the route. It is the safe-side error, and −13 dB is an assumption of the exam, not a
+measurement over Tefé.
 
 ## Risks
 
