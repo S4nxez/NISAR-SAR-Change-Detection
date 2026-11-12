@@ -31,10 +31,12 @@ describe("buildRecord", () => {
 });
 
 describe("status of a community", () => {
-  test("not monitored communities show their class", () => {
+  test("not monitored communities show their class, or no data on a pass that did not see them", () => {
     const { record, byId, com } = setup();
     assert.equal(statusOf(record, byId["2026-07-07_t161A"], com.c), "inland");
     assert.equal(statusOf(record, byId["2026-07-07_t161A"], com.d), "unresolved");
+    assert.equal(statusOf(record, byId["2026-08-19_t097D"], com.c), "no_data");
+    assert.equal(statusOf(record, byId["2026-08-12_t169D"], com.d), "no_data");
   });
 
   test("codes, missing results and unconfirmed isolation", () => {

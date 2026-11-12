@@ -136,6 +136,8 @@ describe("dossier", () => {
     const { record, byId, com } = setup();
     assert.match(panels.dossier(record, byId["2026-07-07_t161A"], com.c), /No water within 1000 m on any pass/);
     assert.match(panels.dossier(record, byId["2026-07-07_t161A"], com.d), /streams here are too narrow/);
+    assert.ok(!panels.dossier(record, byId["2026-07-07_t161A"], com.c).includes("did not see"));
+    assert.match(panels.dossier(record, byId["2026-08-19_t097D"], com.c), /No data on this pass: the radar did not see/);
   });
 
   test("monitored community: facts, confirmation note and route history", () => {

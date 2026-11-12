@@ -40,7 +40,8 @@ export function fakeLeaflet() {
   };
   return { overlays, markers, flown: [],
     map() { const self = this; return { createPane: () => ({ style: {} }), fitBounds() {}, getZoom: () => 9,
-      flyTo(ll) { self.flown.push(ll); } }; },
+      flyTo(ll) { self.flown.push(ll); }, on() {}, latLngToContainerPoint: ([, lon]) => ({ x: lon * 10, y: 0 }),
+      getContainer: () => ({ classList: { toggle() {} } }) }; },
     tileLayer: u => layer("tile", [u]), layerGroup: () => layer("group", []), circle: () => layer("circle", []),
     marker: ll => layer("marker", [ll]), divIcon: o => o, imageOverlay: url => layer("overlay", [url]) };
 }

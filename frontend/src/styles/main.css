@@ -566,6 +566,9 @@ button { cursor: pointer; }
 .leaflet-tooltip.tip::before { display: none; }
 .leaflet-top.leaflet-left { top: auto; bottom: 64px; }
 .basemap-dark { filter: invert(1) hue-rotate(180deg) brightness(.72) contrast(.9) saturate(.3); }
+/* zoomed in past one image pixel per screen pixel (mapView.imagesMagnified): sharp pixel edges instead of a blur */
+.sharp-images .leaflet-radar-pane img, .sharp-images .leaflet-water-pane img,
+.sharp-images .leaflet-change-pane img { image-rendering: pixelated; }
 
 /* ------------------------------------------------------------ small screens */
 @media (max-width: 1100px) {

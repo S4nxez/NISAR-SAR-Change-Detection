@@ -111,13 +111,15 @@ export function ledger(record, pass, prev) {
   return out.join("");
 }
 
-function notMonitoredDossier(record, c) {
+function notMonitoredDossier(record, pass, c) {
+  const unseen = statusOf(record, pass, c) === "no_data"
+    ? `<p class="quiet" style="margin-top:10px">${LABEL.no_data} on this pass: the radar did not see this place.</p>` : "";
   const why = c.class === "inland"
     ? `No water within ${record.cat.area.access_radius_m} m on any pass: this place does not depend on the river, so it is not monitored.`
     : "No pass shows a water route to the hub that the radar can resolve at 20 m: the streams here are too narrow. Its status would be a guess, so it is left out of the counts.";
   return `<p class="name">${esc(c.name)}</p>
       <p class="status-line"><i class="glyph ${c.class}"></i>${LABEL[c.class] || LABEL.no_data}</p>
-      <p class="quiet" style="margin-top:10px">${why}</p>`;
+      <p class="quiet" style="margin-top:10px">${why}</p>${unseen}`;
 }
 
 // Bars of the route width on every evaluated pass, taller for wider routes.
@@ -132,7 +134,7 @@ function historyBars(record, c, pass) {
 
 // HTML of the selected community's dossier on a pass.
 export function dossier(record, pass, c) {
-  if (c.class !== "monitored") return notMonitoredDossier(record, c);
+  if (c.class !== "monitored") return notMonitoredDossier(record, pass, c);
   const s = statusOf(record, pass, c), r = pass.status?.[c.id];
   const hist = record.evaluated;
   const linked = lastLinked(record, c, pass.date);

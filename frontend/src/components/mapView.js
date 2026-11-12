@@ -4,6 +4,11 @@ import { SEVERITY } from "../config.js";
 import { esc } from "../utils/format.js";
 
 const PANES = { radar: 330, water: 340, change: 350 };
+
+// True when one pixel of the pass images covers at least one screen pixel: from there on the images are drawn with
+// sharp pixel edges (CSS class "sharp-images") instead of blurred, so a 20 m channel or the swath edge stays crisp.
+// Zoomed out they stay smoothed, which keeps thin channels visible when many pixels share one screen pixel.
+export const imagesMagnified = (screenWidthPx, gridWidthPx) => !!gridWidthPx && screenWidthPx >= gridWidthPx;
 const ROUTE_GLYPH = new Set(["connected", "at_risk", "isolated"]);
 
 export function glyphIcon(L, status, selected) {
@@ -20,12 +25,19 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
     attribution: "© OpenStreetMap contributors · NISAR: NASA/ISRO, ASF DAAC", maxZoom: 18, className: "basemap-dark"
   }).addTo(map);
   for (const [pane, z] of Object.entries(PANES)) map.createPane(pane).style.zIndex = z;
-  const otherLayer = L.layerGroup();
   const markerLayer = L.layerGroup().addTo(map);
   const markers = {};
   const overlays = {};
   const bounds = cat.grid.bounds;
   map.fitBounds(bounds);
+
+  function sharpen() {
+    const west = map.latLngToContainerPoint([bounds[0][0], bounds[0][1]]);
+    const east = map.latLngToContainerPoint([bounds[0][0], bounds[1][1]]);
+    map.getContainer().classList.toggle("sharp-images", imagesMagnified(Math.abs(east.x - west.x), cat.grid.nx));
+  }
+  map.on("zoomend", sharpen);
+  sharpen();
 
   // the edge of the monitored area, drawn like a sensor footprint
   const circ = cat.area.circle;
@@ -40,11 +52,11 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
     zIndexOffset: 1000, keyboard: false })
     .bindTooltip(`<strong>${esc(hub.name)}</strong><br>Hub town: routes are traced to here`, { className: "tip" }).addTo(map);
 
-  // Monitored communities on the main layer, the rest on the optional one. Classes come from the
-  // whole record, so they can change when new passes arrive.
+  // Every community is always on the map: monitored ones with their route status, the others with their class, and
+  // any of them as "no data" on a pass that did not see it. Classes come from the whole record, so they can change
+  // when new passes arrive.
   function placeMarkers(communities) {
     markerLayer.clearLayers();
-    otherLayer.clearLayers();
     for (const c of communities) {
       let m = markers[c.id];
       if (!m) {
@@ -53,7 +65,7 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
           .on("click", () => onCommunityClick(c.id));
         markers[c.id] = m;
       }
-      (c.class === "monitored" ? markerLayer : otherLayer).addLayer(m);
+      markerLayer.addLayer(m);
     }
   }
 
@@ -72,11 +84,10 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
   }
 
   // images: {radar, water, change} urls (or null); options: which layers are on and the water opacity.
-  function showLayers(images, { radar, water, change, other, opacity }) {
+  function showLayers(images, { radar, water, change, opacity }) {
     setOverlay("radar", images.radar, 1, radar);
     setOverlay("water", images.water, opacity, water);
     setOverlay("change", images.change, 1, change);
-    if (other) otherLayer.addTo(map); else otherLayer.remove();
   }
 
   // markerState(c) -> {status, tooltip, selected}

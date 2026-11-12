@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 
-import { createMapView, glyphIcon } from "../../src/components/mapView.js";
+import { createMapView, glyphIcon, imagesMagnified } from "../../src/components/mapView.js";
 import { catalog } from "../helpers/fixtures.js";
 
 // A recording stand-in for the parts of Leaflet the map view uses.
@@ -18,9 +18,12 @@ function fakeLeaflet() {
       clearLayers() { o.children = []; return o; }, addLayer(m) { o.children.push(m); return o; } };
     return o;
   };
-  const map = { panes: {}, fitted: null, flown: null,
+  const map = { panes: {}, fitted: null, flown: null, handlers: {}, classes: new Set(), pxPerDeg: 1000,
     createPane(name) { return (map.panes[name] = { style: {} }); }, fitBounds(b) { map.fitted = b; },
-    flyTo(ll, zoom, opts) { map.flown = [ll, zoom, opts]; }, getZoom: () => 9 };
+    flyTo(ll, zoom, opts) { map.flown = [ll, zoom, opts]; }, getZoom: () => 9,
+    on(evt, fn) { map.handlers[evt] = fn; },
+    latLngToContainerPoint: ([, lon]) => ({ x: lon * map.pxPerDeg, y: 0 }),
+    getContainer: () => ({ classList: { toggle: (c, on) => (on ? map.classes.add(c) : map.classes.delete(c)) } }) };
   const made = { markers: [], groups: [], circles: [] };
   const L = {
     log, map: () => map, made,
@@ -63,11 +66,11 @@ describe("map view", () => {
     assert.deepEqual(f.L.made.markers[0].args[0], [-3.36, -64.72]);
   });
 
-  test("monitored communities on the main layer, the rest on the optional one; markers are reused", () => {
-    const [other, main] = L.made.groups;
+  test("every community is on the map, monitored or not; markers are reused", () => {
+    assert.equal(L.made.groups.length, 1);
+    const [main] = L.made.groups;
     view.placeMarkers(cat.communities);
-    assert.equal(main.children.length, 2);
-    assert.equal(other.children.length, 2);
+    assert.equal(main.children.length, 4);
     const first = main.children[0];
     view.placeMarkers(cat.communities);
     assert.equal(main.children[0], first);
@@ -77,14 +80,13 @@ describe("map view", () => {
 
   test("layers: the same image only changes opacity, switched off images are removed", () => {
     const images = { radar: "r.webp", water: "w.png", change: null };
-    view.showLayers(images, { radar: true, water: true, change: true, other: false, opacity: 0.7 });
+    view.showLayers(images, { radar: true, water: true, change: true, opacity: 0.7 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay").map(e => `${e[0]} ${e[2]}`), ["add r.webp", "add w.png"]);
     L.log.length = 0;
-    view.showLayers(images, { radar: true, water: true, change: true, other: true, opacity: 0.4 });
+    view.showLayers(images, { radar: true, water: true, change: true, opacity: 0.4 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay"), [["opacity", "overlay", 0.4]]);
-    assert.ok(L.log.some(e => e[0] === "add" && e[1] === "group"));
     L.log.length = 0;
-    view.showLayers({ ...images, water: "w2.png" }, { radar: false, water: true, change: false, other: false, opacity: 0.4 });
+    view.showLayers({ ...images, water: "w2.png" }, { radar: false, water: true, change: false, opacity: 0.4 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay").map(e => `${e[0]} ${e[2]}`),
       ["remove r.webp", "remove w.png", "add w2.png"]);
   });
@@ -98,6 +100,19 @@ describe("map view", () => {
     assert.equal(byLatLon.b.z, 100);
     assert.match(byLatLon.b.icon.html, /mk connected is-selected/);
     assert.equal(byLatLon.a.tooltip, "tip a");
+  });
+
+  test("images get sharp pixels once one image pixel covers a screen pixel", () => {
+    assert.equal(imagesMagnified(900, 4500), false);
+    assert.equal(imagesMagnified(4500, 4500), true);
+    assert.equal(imagesMagnified(900, undefined), false);
+    const f = fakeLeaflet();
+    const c = { ...catalog(), grid: { ...catalog().grid, nx: 4500 } };   // 0.9 degrees wide
+    createMapView(f.L, { element: "map", cat: c, onCommunityClick() {} });
+    assert.ok(!f.map.classes.has("sharp-images"));                    // 900 px on screen
+    f.map.pxPerDeg = 6000;                                           // zoomed in: 5400 px on screen
+    f.map.handlers.zoomend();
+    assert.ok(f.map.classes.has("sharp-images"));
   });
 
   test("fly to a community, never zooming out", () => {
