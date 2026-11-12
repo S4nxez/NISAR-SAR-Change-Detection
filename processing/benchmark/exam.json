@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "description": "Accuracy exam of the river lifeline monitor over Tefé. Change any value below only together with the version: results of different versions are not comparable.",
  "passes": [
   "2025-11-02_t060A", "2025-11-04_t097D", "2026-01-08_t169D",
@@ -15,6 +15,20 @@
  "optical": {
   "max_days": 2,
   "min_clear": 0.3
+ },
+ "references": {
+  "dswx_hls": {"max_days": 2},
+  "dswx_s1": {"max_days": 3}
+ },
+ "causes": {
+  "cloud_near_m": 500,
+  "level_change_cm": 20,
+  "seasonal_occurrence": [5, 90],
+  "permanent_occurrence": 90,
+  "swath_edge_m": 1000,
+  "mixed_px": 1,
+  "threshold_margin_db": 1.0,
+  "max_bridge_px": 250
  },
  "synthetic": {
   "looks": 9,

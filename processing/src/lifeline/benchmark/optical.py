@@ -180,7 +180,8 @@ def cached_date(area, date, items, cache_dir, read=read_band):
 def reference_for_pass(area, pass_date, in_area, cache_dir, max_days, min_clear, post, read=read_band):
     """The best Sentinel-2 reference near a pass: the date with the largest clear share of the area within
     max_days (ties: the closest date), ranked on the scene classification alone; only that date's reflectance is
-    read. None when no date reaches min_clear. Returns {date, days_apart, clear_share, threshold, water, valid}."""
+    read. None when no date reaches min_clear. Returns {date, days_apart, clear_share, threshold, water, valid,
+    cloudy}; `cloudy` marks the clouds, cirrus and shadows themselves (no margin)."""
     day = dt.date.fromisoformat(pass_date)
     n_area = max(1, int(in_area.sum()))
     ranked = []
@@ -196,4 +197,4 @@ def reference_for_pass(area, pass_date, in_area, cache_dir, max_days, min_clear,
     clear = clear_mask(scl)
     water, valid, t = reference_water(mndwi, clear, in_area)
     return {"date": date, "days_apart": -neg_gap, "clear_share": round(float((clear & in_area).sum() / n_area), 4),
-            "threshold": t, "water": water, "valid": valid}
+            "threshold": t, "water": water, "valid": valid, "cloudy": np.isin(scl, CLOUDY_SCL) & in_area}

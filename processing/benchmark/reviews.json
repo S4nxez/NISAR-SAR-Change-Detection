@@ -1,0 +1,4 @@
+{
+ "description": "Verdicts of people who checked a disagreement of the exam (see docs/river-monitor-benchmark.md, Manual review). verdict: nisar (the method was right), reference (the reference was right), undecidable. cause: optional, one of the causes of the exam report.",
+ "reviews": []
+}

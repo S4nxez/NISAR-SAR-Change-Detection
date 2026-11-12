@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# the accuracy benchmark reads Sentinel-2 COGs (python -m pip install -e "processing[benchmark]")
+# the accuracy benchmark reads Sentinel-2, OPERA DSWx and static-map COGs (python -m pip install -e "processing[benchmark]")
 benchmark = ["rasterio==1.4.3"]
 
 [project.scripts]

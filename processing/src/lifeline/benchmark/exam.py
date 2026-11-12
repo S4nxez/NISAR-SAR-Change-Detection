@@ -3,6 +3,11 @@ checks, all on the method of the current checkout. Writes one result (JSON + Mar
 
 The exam definition (processing/benchmark/exam.json) fixes the passes, the reference rules and the synthetic
 settings, so two results of the same exam version are comparable: only the method changed between them.
+
+Exam version 1 scores against Sentinel-2 alone (`optical_section`). From version 2 (`reference_section`) the
+reference is the consensus of Sentinel-2, OPERA DSWx-HLS and OPERA DSWx-S1, each trusted only where it can see
+(benchmark.consensus); every disagreement gets a probable cause, the cases a person has to check are listed with
+links (benchmark.causes), and the verdicts of those checks (processing/benchmark/reviews.json) are counted.
 """
 import datetime as dt
 import json
@@ -15,7 +20,7 @@ import requests
 
 from lifeline import pipeline
 from lifeline.analysis.water import connectivity
-from lifeline.benchmark import optical, report, synthetic
+from lifeline.benchmark import causes, consensus, opera, optical, report, reviews, static_layers, synthetic
 from lifeline.benchmark.scoring import (
     LINKED,
     add_counts,
@@ -27,10 +32,12 @@ from lifeline.benchmark.scoring import (
     water_scores,
 )
 from lifeline.config import AREAS_DIR, PROCESSING_DIR, STATUS, log
+from lifeline.output.layers import load_backscatter
 from lifeline.geometry.area import area_mask, to_px
 from lifeline.geometry.geo import fold
 from lifeline.output.catalog import hub_target, pass_dir
 from lifeline.sources import asf, places
+from lifeline.sources.remote import earthdata_token
 
 BENCHMARK_DIR = os.path.join(PROCESSING_DIR, "benchmark")
 HISTORY_DIR = os.path.join(BENCHMARK_DIR, "history")
@@ -81,7 +88,8 @@ def run_record(area, passes, cache_dir, run_dir, workers, areas_dir=AREAS_DIR, u
     """Process the exam's passes with the current method into run_dir (emptied first) and return the catalog.
     Windows come from the cache; the Earthdata token is only needed for the ones still missing."""
     shutil.rmtree(run_dir, ignore_errors=True)
-    with synthetic.environment(MONITOR_CACHE_DIR=cache_dir):
+    # the backscatter of every pass is kept to explain the disagreements (benchmark.causes)
+    with synthetic.environment(MONITOR_CACHE_DIR=cache_dir, MONITOR_KEEP_BACKSCATTER="1"):
         return update(area, workers=workers, out_root=run_dir, areas_dir=areas_dir, search=lambda a: passes,
                       token=lambda: os.environ.get("EARTHDATA_TOKEN", ""))
 
@@ -143,6 +151,193 @@ def optical_section(area, cat, communities, run_dir, cache_dir, rules, post=requ
     return {"rules": rules, "summary": summary, "passes": rows}
 
 
+def targets_of(area, communities):
+    return [to_px(area, *(c.get("access") or (c["lon"], c["lat"]))) for c in communities]
+
+
+def optional_token(token=earthdata_token):
+    """The Earthdata token, or None: without it the OPERA files not in the cache yet are skipped, not the exam."""
+    try:
+        return token()
+    except SystemExit:
+        return None
+
+
+def pass_sources(area, date, in_mask, cache_dir, refs, token, get, opera_ref=opera.reference_for_pass):
+    """{product: reference or None} of the OPERA products of exam["references"] for one pass. A product that cannot
+    be read (network, token) is None for this run and the reason is logged."""
+    out = {}
+    for product, cfg in refs.items():
+        if product not in opera.PRODUCTS:
+            continue
+        try:
+            out[product] = opera_ref(product, area, date, in_mask, cache_dir, cfg["max_days"], token, get)
+        except (requests.RequestException, PermissionError, OSError) as e:
+            log(f"benchmark: {product} skipped for {date}: {e}")
+            out[product] = None
+    return out
+
+
+def source_votes(s2, refs, statics):
+    """Votes of every reference of a pass (benchmark.consensus), each with its blind spots removed."""
+    blind = None if statics is None else static_layers.optical_blind(statics["worldcover"])
+    out = [consensus.votes("sentinel2", "optical", s2["water"], s2["valid"] & ~s2["water"], blind)]
+    for product, ref in refs.items():
+        if ref is not None:
+            optical_family = opera.PRODUCTS[product]["family"] == "optical"
+            out.append(consensus.votes(product, opera.PRODUCTS[product]["family"], ref["water"], ref["land"],
+                                       blind if optical_family else None))
+    return out
+
+
+def level_change_cm(gauge, date_a, date_b):
+    """River level on date_a minus on date_b (cm), None when either is unknown."""
+    if not gauge:
+        return None
+    a, b = gauge_level(gauge["series"], date_a), gauge_level(gauge["series"], date_b)
+    return None if a is None or b is None else round(a - b, 1)
+
+
+def pass_thresholds_of(area, p):
+    """(strong, weak) water thresholds the pass used (catalog entry), else the area's."""
+    th = p.get("threshold") or {}
+    return th.get("strong_db", area["water_db"]), th.get("weak_db", area.get("water_db_weak"))
+
+
+def _count(items, key):
+    out = {}
+    for it in items:
+        out[it[key]] = out.get(it[key], 0) + 1
+    return out
+
+
+def _pool(dst, counts):
+    for k, v in counts.items():
+        dst[k] = dst.get(k, 0) + v
+    return dst
+
+
+def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=None, statics=None, review_list=(),
+                      token=None, post=requests.post, get=requests.get, reference=None, opera_ref=None):
+    """Every evaluated pass against the consensus of the references of exam["references"] (exam version 2)."""
+    reference = reference or optical.reference_for_pass
+    opera_ref = opera_ref or opera.reference_for_pass
+    rules, crules = exam["optical"], exam["causes"]
+    in_mask = area_mask(area)
+    ids = [c["id"] for c in communities]
+    targets, hub = targets_of(area, communities), hub_target(area)
+    px = area["px_m"]
+    km2 = (px / 1000) ** 2
+    pooled, pooled_s2 = {"tp": 0, "fp": 0, "fn": 0, "tn": 0}, {"tp": 0, "fp": 0, "fn": 0, "tn": 0}
+    width_pooled, false_pooled, source_pooled = {}, {}, {}
+    cause_pooled = {"commission": {}, "omission": {}}
+    rows, all_cases, status_pooled, undecided_total = [], [], [], 0
+    for p in sorted(cat["passes"], key=lambda p: p["date"]):
+        if not p.get("evaluated"):
+            continue
+        s2 = reference(area, p["date"], in_mask, cache_dir, rules["max_days"], rules["min_clear"], post)
+        if s2 is None:
+            continue
+        refs = pass_sources(area, p["date"], in_mask, cache_dir, exam.get("references", {}), token, get, opera_ref)
+        votes = source_votes(s2, refs, statics)
+        cons = consensus.combine(votes, in_mask)
+        pdir = pass_dir(area, p["id"], run_dir)
+        layers = unpack_layers(os.path.join(pdir, "water.npz"))
+        nisar, nvalid = layers["water"], layers["valid"]
+        hh, _ = load_backscatter(os.path.join(pdir, "backscatter.npz"))
+        common = nvalid & (cons["water"] | cons["land"]) & in_mask
+        w = water_scores(nisar, cons["water"], common, px)
+        w_s2 = water_scores(nisar, s2["water"], nvalid & s2["valid"] & in_mask, px)
+
+        def status_of(water, known):
+            return reference_status(area, communities, water, known, in_mask)
+        decided, _, _ = consensus.status_bounds(status_of, cons)
+        ref_st = {cid: r for cid, r in decided.items() if r is not None}
+        pred = p.get("status") or {}
+        undecided = [cid for cid, r in decided.items()
+                     if r is None and pred.get(cid) and pred[cid][0] != STATUS["no_data"]]
+        st = status_scores(pred, ref_st, ids, area["access_radius_m"])
+        strong, weak = pass_thresholds_of(area, p)
+        s1 = refs.get("dswx_s1")
+        ctx = {"ref_water": cons["water"], "ref_known": cons["known"], "nisar_valid": nvalid, "in_area": in_mask,
+               "hh": hh, "strong_db": strong, "weak_db": weak, "cloudy": s2.get("cloudy"),
+               "occurrence": None if statics is None else statics["occurrence"],
+               "worldcover": None if statics is None else statics["worldcover"],
+               "vegetated": layers.get("vegetated"), "s1_vegetated": None if s1 is None else s1["vegetated"],
+               "level_change_cm": level_change_cm(gauge, p["date"], s2["date"])}
+        cond = causes.conditions(ctx, crules, px)
+        pix = {kind: causes.cause_counts(causes.pixel_causes(kind, mask, cond)) for kind, mask in
+               (("commission", nisar & cons["land"] & common), ("omission", cons["water"] & ~nisar & common))}
+        found = causes.cases(area, communities, pred, ref_st, nisar, cons["water"], cond, targets, hub, s2["date"],
+                             None if s1 is None else s1["date"], crules["max_bridge_px"])
+        reviews.attach(p["id"], found, review_list)
+        for c in found:
+            c["pass"] = p["id"]
+        all_cases += found
+        undecided_total += len(undecided)
+        agree = consensus.agreement_by_source(votes, cons)
+        for name, a in agree.items():
+            sp = source_pooled.setdefault(name, {"family": a["family"], "passes": 0, "voted_px": 0, "agree_px": 0})
+            sp["passes"] += 1
+            sp["voted_px"] += a["voted_px"]
+            sp["agree_px"] += round((a["agrees_share"] or 0) * a["voted_px"])
+        pooled = add_counts(pooled, w["counts"])
+        pooled_s2 = add_counts(pooled_s2, w_s2["counts"])
+        status_pooled.append(st)
+        for k, v in w["recall_by_width"].items():
+            hit = 0 if v["recall"] is None else round(v["recall"] * v["pixels"])
+            width_pooled[k] = add_counts(width_pooled.get(k, {}), {"hit": hit, "n": v["pixels"]})
+        for k, v in w["false_water"].items():
+            bad = 0 if v["rate"] is None else round(v["rate"] * v["pixels"])
+            false_pooled[k] = add_counts(false_pooled.get(k, {}), {"bad": bad, "n": v["pixels"]})
+        for kind, counts in pix.items():
+            _pool(cause_pooled[kind], counts)
+        rows.append({
+            "pass": p["id"], "s2_date": s2["date"], "days_apart": s2["days_apart"], "clear_share": s2["clear_share"],
+            "sources": {name: (None if r is None else {"date": r["date"], "days_apart": r["days_apart"],
+                                                       "coverage": r["coverage"]}) for name, r in refs.items()},
+            "source_agreement": agree,
+            "consensus": {"known_km2": round(float(cons["known"].sum()) * km2, 1),
+                          "disputed_km2": round(float(cons["disputed"].sum()) * km2, 3),
+                          "two_families_share": ratio(int((cons["families"] >= 2).sum()),
+                                                      int((cons["water"] | cons["land"]).sum()))},
+            "level_change_cm": ctx["level_change_cm"], "backscatter": hh is not None,
+            "water": w, "water_s2_only": {k: w_s2[k] for k in ("iou", "precision", "recall")}, "status": st,
+            "undecided": undecided, "pixel_causes": pix, "cases": len(found)})
+        log(f"benchmark: {p['id']} vs consensus (S2 {s2['date']}, "
+            f"{', '.join(k for k, r in refs.items() if r) or 'no OPERA'}): IoU {w['iou']}, "
+            f"status agreement {st['agreement']}, {len(found)} cases, {len(undecided)} undecided")
+    n = sum(s["n"] for s in status_pooled)
+    kappas = [s["kappa"] for s in status_pooled if s["kappa"] is not None]
+    summary = {"passes": len(rows), "px_m": px, **rates(pooled), "s2_only": rates(pooled_s2),
+               "recall_by_width": {k: ratio(v["hit"], v["n"]) for k, v in width_pooled.items()},
+               "false_water": {k: ratio(v["bad"], v["n"]) for k, v in false_pooled.items()},
+               "status_pairs": n,
+               "status_agreement": ratio(sum(round((s["agreement"] or 0) * s["n"]) for s in status_pooled), n),
+               "status_kappa_mean": round(float(np.mean(kappas)), 4) if kappas else None,
+               "false_route": sum(s["false_route"] for s in status_pooled),
+               "overconfident": sum(s["overconfident"] for s in status_pooled),
+               "false_isolated": sum(s["false_isolated"] for s in status_pooled),
+               "undecided": undecided_total,
+               "sources": {k: {**v, "agrees_share": ratio(v["agree_px"], v["voted_px"])}
+                           for k, v in source_pooled.items()},
+               "pixel_causes": cause_pooled,
+               "pixel_families": {k: causes.by_family(v) for k, v in cause_pooled.items()},
+               "case_causes": _count(all_cases, "cause"), "case_families": _count(all_cases, "family"),
+               "reviews": reviews.summary(all_cases),
+               "review_needed": sum(1 for c in all_cases if c["review"])}
+    return {"rules": {"optical": rules, "references": exam.get("references", {}), "causes": crules},
+            "summary": summary, "passes": rows, "cases": all_cases}
+
+
+def load_gauge(area, cat, cache_dir):
+    """The gauge series of the catalog (saved to the cache), else the cached one, else None."""
+    path = os.path.join(cache_dir, f"gauge_{area['id']}.json")
+    if cat.get("gauge"):
+        save_json(path, cat["gauge"])
+    return cat.get("gauge") or (load_json(path) if os.path.exists(path) else None)
+
+
 def gauge_level(series, date, max_days=1):
     """Gauge level on `date`, else the closest day within max_days, else None."""
     levels = dict(series)
@@ -158,10 +353,7 @@ def gauge_section(area, cat, cache_dir):
     """Rank correlation of the record with the river level: detected water should rise with it (rho > 0) and the
     communities that lost their route should fall with it (rho < 0). The series is kept in the cache so a run
     without the ANA service still scores against the same data."""
-    path = os.path.join(cache_dir, f"gauge_{area['id']}.json")
-    if cat.get("gauge"):
-        save_json(path, cat["gauge"])
-    gauge = cat.get("gauge") or (load_json(path) if os.path.exists(path) else None)
+    gauge = load_gauge(area, cat, cache_dir)
     if not gauge:
         return {"available": False}
     rows = []
@@ -209,7 +401,8 @@ def field_section(cat, communities, truth):
 
 def scorecard(result):
     """The headline numbers of one result, the ones the history index shows."""
-    syn, opt = result["synthetic"], result.get("optical", {}).get("summary", {})
+    syn = result["synthetic"]
+    opt = (result.get("reference") or result.get("optical") or {}).get("summary", {})
     gauge, field = result.get("gauge", {}), result.get("field", {})
     return {
         "synthetic_correct_share": syn["correct_share"],
@@ -223,11 +416,30 @@ def scorecard(result):
         "false_isolated": opt.get("false_isolated"),
         "gauge_rho_lost_route": (gauge.get("lost_route_vs_level") or {}).get("rho"),
         "field_correct_share": field.get("correct_share"),
+        "status_undecided": opt.get("undecided"),
+        "review_needed": opt.get("review_needed"),
+        "false_route_confirmed": ((opt.get("reviews") or {}).get("false_route") or {}).get("confirmed"),
     }
 
 
+def run_reference(area, cat, communities, run_dir, cache_dir, exam, reviews_path=None, token=earthdata_token,
+                  load_statics=static_layers.load):
+    """reference_section with its inputs: static maps (skipped if they cannot be read), the gauge, the reviews and
+    the Earthdata token (None: OPERA files not cached yet are skipped)."""
+    statics = None
+    try:
+        statics = load_statics(area, cache_dir)
+    except Exception as e:   # rasterio and GDAL raise their own error types: run on without the static maps
+        log(f"benchmark: static maps skipped: {e}")
+    tok = optional_token(token)
+    if tok is None:
+        log("benchmark: no EARTHDATA_TOKEN: OPERA files missing from the cache are skipped")
+    return reference_section(area, cat, communities, run_dir, cache_dir, exam, load_gauge(area, cat, cache_dir),
+                             statics, reviews.load(reviews_path or os.path.join(BENCHMARK_DIR, "reviews.json")), tok)
+
+
 def run(area, label, cache_dir, workers=2, exam_path=None, truth_path=None, history_dir=HISTORY_DIR,
-        skip_real=False, now=None):
+        skip_real=False, now=None, reviews_path=None, token=earthdata_token):
     """Run the whole exam and write its result to history_dir. Returns (result, json path, markdown path)."""
     exam = load_json(exam_path or os.path.join(BENCHMARK_DIR, "exam.json"))
     truth = load_json(truth_path or os.path.join(BENCHMARK_DIR, "ground_truth.json"))
@@ -244,7 +456,10 @@ def run(area, label, cache_dir, workers=2, exam_path=None, truth_path=None, hist
         log(f"benchmark: real record ({len(exam['passes'])} passes)")
         cat = run_record(area, frozen_passes(area, exam, cache_dir), cache_dir, run_dir, workers)
         communities = places.load_communities(area)
-        result["optical"] = optical_section(area, cat, communities, run_dir, cache_dir, exam["optical"])
+        if "references" in exam:
+            result["reference"] = run_reference(area, cat, communities, run_dir, cache_dir, exam, reviews_path, token)
+        else:
+            result["optical"] = optical_section(area, cat, communities, run_dir, cache_dir, exam["optical"])
         result["gauge"] = gauge_section(area, cat, cache_dir)
         result["field"] = field_section(cat, communities, truth)
         result["classes"] = cat.get("community_classes")
