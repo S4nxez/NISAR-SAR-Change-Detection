@@ -153,6 +153,32 @@ class TestCases(unittest.TestCase):
         self.assertEqual(causes.explain_case("overconfident", np.zeros_like(nisar), nisar, ref, cond),
                          ("narrow_channel", {}))
 
+    def test_cases_are_grouped_into_sites_named_after_the_nearest_community(self):
+        def case(cid, name, kind, lon, lat, pass_id, review=True, cause="swath_edge"):
+            return {"community_id": cid, "community": name, "kind": kind, "lon": lon, "lat": lat, "pass": pass_id,
+                    "cause": cause, "review": review, "links": {"sentinel2": f"s2-{pass_id}"}}
+        communities = [{"id": "i", "name": "Itauba", "lon": -64.320, "lat": -3.585},
+                       {"id": "p", "name": "Prainha", "lon": -64.36, "lat": -3.53},
+                       {"id": "f", "name": "Far", "lon": -64.80, "lat": -3.40}]
+        found = [case("i", "Itauba", "false_route", -64.316, -3.587, "p1"),
+                 case("p", "Prainha", "false_route", -64.3165, -3.5872, "p2"),
+                 case("m", "Marajo", "overconfident", -64.3170, -3.5875, "p2", cause="cloud_edge"),
+                 case("x", "Acapu", "false_isolated", -64.317, -3.587, "p1", review=False, cause="narrow_channel"),
+                 case("f", "Far", "false_route", -64.80, -3.40, "p1")]
+        got = causes.sites(found, communities)
+        self.assertEqual(len(got), 3)
+        first = got[0]
+        self.assertEqual((first["near"], first["side"], first["cases"], first["cause"]),
+                         ("Itauba", "dangerous", 3, "swath_edge"))
+        self.assertEqual(first["communities"], ["Itauba", "Marajo", "Prainha"])
+        self.assertEqual(first["passes"], ["p1", "p2"])
+        self.assertEqual(first["links"], {"p1": {"sentinel2": "s2-p1"}, "p2": {"sentinel2": "s2-p2"}})
+        self.assertLess(first["distance_km"], 1.0)
+        self.assertEqual(got[-1]["side"], "safe")                 # same place, other side, no review: last
+        self.assertFalse(got[-1]["review"])
+        self.assertAlmostEqual(causes.distance_m(-64.0, -3.0, -64.0, -3.01), 1105.4, places=1)
+        self.assertEqual(causes.nearest_community(0, 0, []), (None, None))
+
     def test_copernicus_link(self):
         url = causes.copernicus_link(-64.75, -3.4, "2026-08-24", "S2_L2A_CDAS", "1_TRUE_COLOR")
         self.assertTrue(url.startswith(causes.COPERNICUS_BROWSER + "?zoom=15&lat=-3.40000&lng=-64.75000"))

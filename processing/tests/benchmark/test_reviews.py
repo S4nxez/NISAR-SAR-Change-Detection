@@ -28,6 +28,17 @@ class TestReviews(TempDirTest):
         self.assertFalse(found[0]["review"])
         self.assertNotIn("reviewed", found[1])   # the review of b is for another pass
 
+    def test_one_review_covers_every_pass_and_community_of_a_site(self):
+        path = self.write_json("r.json", {"reviews": [
+            {"passes": ["p1", "p2"], "community_ids": ["a", "b"], "verdict": "reference"}]})
+        rs = reviews.load(path)
+        self.assertEqual(reviews.pairs(rs[0]), [("p1", "a"), ("p1", "b"), ("p2", "a"), ("p2", "b")])
+        found = reviews.attach("p2", [case("a"), case("b"), case("c")], rs)
+        self.assertEqual([("reviewed" in c) for c in found], [True, True, False])
+        bad = self.write_json("bad.json", {"reviews": [{"passes": ["p1"], "verdict": "nisar"}]})
+        with self.assertRaises(ValueError):
+            reviews.load(bad)
+
     def test_summary_counts_verdicts_per_kind(self):
         cs = [case("a"), case("b"), case("c"), case("d", kind="false_isolated")]
         cs[0]["reviewed"] = {"verdict": "reference"}

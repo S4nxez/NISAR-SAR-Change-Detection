@@ -190,8 +190,20 @@ class TestReference(TempDirTest):
         self.assertEqual((result["scorecard"]["false_route"], result["scorecard"]["false_route_confirmed"]), (1, 1))
         text = report.markdown(result)
         for part in ("## Real passes against the reference consensus", "## Disagreements and probable causes",
-                     "## Manual review", "| shore_mixed_pixel | resolution |", "| reference |"):
+                     "## Manual review", "| shore_mixed_pixel | resolution |", "| reference |",
+                     "Other places with disagreements"):
             self.assertIn(part, text)
+        self.assertEqual((out["summary"]["sites"], out["summary"]["sites_to_review"]), (1, 0))
+
+    def test_the_manual_review_lists_places_with_a_verdict_to_paste(self, _log):
+        out = self.section(self.gap)
+        site = out["sites"][0]
+        self.assertEqual((site["near"], site["communities"], site["passes"]), ("A", ["A"], ["2026-08-24_t1"]))
+        lines = report.site_block(1, site)
+        text = " ".join(lines)
+        self.assertIn("### 1. Near A: route the reference does not have", text)
+        self.assertIn('"passes": ["2026-08-24_t1"], "community_ids": ["a"]', text)
+        self.assertIn("datasetId=S2_L2A_CDAS", text)
 
     def test_pass_sources_skip_unknown_products_and_failures(self, _log):
         def broken(product, *a):

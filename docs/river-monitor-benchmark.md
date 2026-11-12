@@ -147,7 +147,10 @@ look at it. A case needs a person when it is a false route (the dangerous error)
 
 ### Manual review
 
-The report's "Manual review" section lists the cases to check, each with links:
+The report's "Manual review" section lists the **places** to check. Cases of the same side (a route shown that the
+reference does not have, or a route missed) whose culprit pixels lie within 1.5 km of one another are one place, named
+after the nearest community ("Near Itauba", with the distance), so it can be found by name on any map. Each place
+lists the communities and passes it explains and has, for each pass, links that open the map on the culprit point:
 
 - **Sentinel-2** and **Sentinel-1** in the [Copernicus Browser](https://browser.dataspace.copernicus.eu/) (free; an
   account, also free, unlocks more tools), opened on the place and on the reference date. If the layer does not show,
@@ -167,19 +170,21 @@ How to decide:
 5. A thin dark line of water that Sentinel-2 at 20 m blurs: NISAR may be right.
 6. If the community or the place is not visible or the images contradict each other: undecidable.
 
-Record the verdict in `processing/benchmark/reviews.json` and commit it; the next exam attaches it to the case and
-counts confirmed and rejected errors:
+Every place in the report ends with a verdict ready to paste: copy it into `processing/benchmark/reviews.json`,
+fill in the verdict, your initials, the date and a note, and commit it. One verdict covers every pass and community of
+the place; the next exam attaches it to each case and counts confirmed and rejected errors:
 
 ```json
 {"reviews": [
- {"pass": "2026-08-24_t161A", "community_id": "osm-node-123", "kind": "false_route", "verdict": "reference",
-  "cause": "smooth_ground", "reviewer": "initials", "date": "2026-11-12",
-  "note": "sandbar across the channel on the Sentinel-2 image of 25 August"}
+ {"passes": ["2025-11-04_t097D", "2026-08-19_t097D"], "community_ids": ["osm-node-123", "osm-node-456"],
+  "verdict": "reference", "cause": "smooth_ground", "reviewer": "initials", "date": "2026-11-12",
+  "note": "sandbar across the channel on the Sentinel-2 image of 20 August"}
 ]}
 ```
 
 `verdict`: `nisar` (the method was right), `reference` (the reference was right: a confirmed error) or `undecidable`.
-`cause` is optional and replaces the cause the rules found.
+`cause` is optional and replaces the cause the rules found. A single case can also be reviewed with `pass` and
+`community_id`.
 
 ### River gauge
 

@@ -14,6 +14,8 @@ Two levels:
 The rules are evidence, not proof: the cases flagged `review` are the ones a person has to check (docs/
 river-monitor-benchmark.md, "Manual review").
 """
+import math
+
 import numpy as np
 from scipy import ndimage
 
@@ -64,6 +66,8 @@ NEEDS_REVIEW = {c[0]: c[2] for c in CAUSES}
 MEANING = {c[0]: c[5] for c in CAUSES}
 
 COPERNICUS_BROWSER = "https://browser.dataspace.copernicus.eu/"
+SITE_MERGE_M = 1500     # cases whose culprit pixels lie closer than this are one site to look at
+DANGEROUS = ("false_route", "overconfident")
 
 
 def _distance_m(mask, px_m):
@@ -291,6 +295,62 @@ def review_links(lon, lat, s2_date, s1_date=None):
     if s1_date:
         links["sentinel1"] = copernicus_link(lon, lat, s1_date, "S1_CDAS_IW_VVVH")
     return links
+
+
+def distance_m(lon0, lat0, lon1, lat1):
+    """Ground distance (m) between two nearby points (equirectangular: exact enough within an area)."""
+    kx = 111320.0 * math.cos(math.radians((lat0 + lat1) / 2))
+    return math.hypot((lon1 - lon0) * kx, (lat1 - lat0) * 110540.0)
+
+
+def nearest_community(lon, lat, communities):
+    """(name, distance in m) of the community closest to a point."""
+    best = None
+    for c in communities:
+        clon, clat = c.get("access") or (c["lon"], c["lat"])
+        d = distance_m(lon, lat, clon, clat)
+        if best is None or d < best[1]:
+            best = (c.get("name", c["id"]), d)
+    return best or (None, None)
+
+
+def sites(found, communities, merge_m=SITE_MERGE_M):
+    """Cases grouped into the places to look at: cases of the same side (dangerous: false route or overconfident;
+    safe: false isolated or underconfident) whose culprit locations are within merge_m of one another (single
+    linkage). Each site is named after the nearest community, lists every community and pass it explains and
+    keeps the links of each pass. Sorted with the sites that need a person first, then by size."""
+    groups = []
+    for c in found:
+        side = "dangerous" if c["kind"] in DANGEROUS else "safe"
+        hits = [g for g in groups if g["side"] == side and
+                any(distance_m(c["lon"], c["lat"], o["lon"], o["lat"]) <= merge_m for o in g["cases"])]
+        merged = {"side": side, "cases": [c]}
+        for g in hits:
+            merged["cases"] += g["cases"]
+            groups.remove(g)
+        groups.append(merged)
+    out = []
+    for g in groups:
+        cs = g["cases"]
+        lon = sum(c["lon"] for c in cs) / len(cs)
+        lat = sum(c["lat"] for c in cs) / len(cs)
+        name, d = nearest_community(lon, lat, communities)
+        cause_n = {}
+        for c in cs:
+            cause_n[c["cause"]] = cause_n.get(c["cause"], 0) + 1
+        cause = max(cause_n.items(), key=lambda kv: (kv[1], -CODE.get(kv[0], 99)))[0]
+        by_pass = {}
+        for c in cs:
+            by_pass.setdefault(c["pass"], c["links"])
+        out.append({"near": name, "distance_km": None if d is None else round(d / 1000, 1),
+                    "lon": round(lon, 5), "lat": round(lat, 5), "side": g["side"],
+                    "kinds": sorted({c["kind"] for c in cs}), "cause": cause, "family": FAMILY.get(cause, "unexplained"),
+                    "communities": sorted({c["community"] for c in cs}),
+                    "community_ids": sorted({c["community_id"] for c in cs}),
+                    "passes": sorted(by_pass), "links": by_pass, "cases": len(cs),
+                    "review": any(c["review"] for c in cs),
+                    "verdicts": sorted({(c.get("reviewed") or {}).get("verdict") for c in cs} - {None})})
+    return sorted(out, key=lambda s: (not s["review"], s["side"] != "dangerous", -s["cases"]))
 
 
 def cases(area, communities, pred, ref_status, nisar, ref_water, cond, targets, hub, s2_date, s1_date=None,

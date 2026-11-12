@@ -35,9 +35,33 @@ def status_name(code):
     return STATUS_NAME.get(code, str(code))
 
 
+KIND_TEXT = {"false_route": "route the reference does not have", "overconfident": "route wider than the reference's",
+             "false_isolated": "isolated while the reference links it",
+             "underconfident": "route narrower than the reference's"}
+
+
 def link_list(links):
     names = {"sentinel2": "Sentinel-2", "sentinel1": "Sentinel-1", "openstreetmap": "map"}
     return " · ".join(f"[{names.get(k, k)}]({v})" for k, v in links.items())
+
+
+def site_block(i, s):
+    """One site of the manual review: where, what, which communities and passes, links and a review to paste."""
+    kinds = "; ".join(KIND_TEXT.get(k, k) for k in s["kinds"])
+    near = f"{s['distance_km']} km from {s['near']}" if s["distance_km"] else f"at {s['near']}"
+    lines = [f"### {i}. Near {s['near']}: {kinds}", "",
+             f"- Where: {near} ({s['lon']}, {s['lat']}); the links open the map on that point.",
+             f"- Probable cause: `{s['cause']}` ({FAMILY.get(s['cause'], s['family'])}): {MEANING.get(s['cause'], '')}",
+             f"- Communities: {', '.join(s['communities'])}",
+             f"- Passes ({s['cases']} cases): {', '.join(s['passes'])}"]
+    lines += [f"  - {p}: {link_list(links)}" for p, links in s["links"].items()]
+    if s.get("verdicts"):
+        lines.append(f"- Reviewed: {', '.join(s['verdicts'])}")
+    review = {"passes": s["passes"], "community_ids": s["community_ids"], "verdict": "nisar | reference | undecidable",
+              "cause": s["cause"], "reviewer": "", "date": "", "note": ""}
+    lines += ["- Verdict to add to `processing/benchmark/reviews.json`:", "", "```json",
+              json.dumps(review, ensure_ascii=False), "```", ""]
+    return lines
 
 
 def reference_markdown(ref):
@@ -101,16 +125,21 @@ def reference_markdown(ref):
         lines += [table(["Kind", "Cases", "Confirmed", "Rejected", "Undecidable", "Pending"],
                         [(k, v["cases"], v["confirmed"], v["rejected"], v["undecidable"], v["pending"])
                          for k, v in rv.items()]), ""]
-    todo = [c for c in cases if c["review"]]
+    todo = [s for s in ref.get("sites", []) if s["review"]]
+    n_cases = sum(1 for c in cases if c["review"])
     lines += ["## Manual review", "",
-              f"{len(todo)} cases need a person: every false route (the dangerous error) and every case whose cause "
-              "says the reference may be wrong, points at our processing or is unexplained. How to check one and "
-              "record the verdict in `processing/benchmark/reviews.json`: docs/river-monitor-benchmark.md, "
-              "\"Manual review\".", ""]
-    if todo:
-        lines += [table(["Pass", "Community", "Kind", "Cause", "Look at"],
-                        [(c["pass"], c["community"], c["kind"], c["cause"], link_list(c["links"])) for c in todo]),
-                  ""]
+              f"{n_cases} cases need a person (every false route, the dangerous error, and every case whose cause says "
+              f"the reference may be wrong, points at our processing or is unexplained). They come from {len(todo)} "
+              "places, each named after the nearest community. How to check a place: docs/river-monitor-benchmark.md, "
+              "\"Manual review\"; one verdict covers every community and pass of the place.", ""]
+    for i, s in enumerate(todo, 1):
+        lines += site_block(i, s)
+    rest = [s for s in ref.get("sites", []) if not s["review"]]
+    if rest:
+        lines += ["Other places with disagreements (cause known, no review needed):", "",
+                  table(["Near", "Kinds", "Cause", "Communities", "Passes"],
+                        [(s["near"], ", ".join(s["kinds"]), s["cause"], ", ".join(s["communities"]),
+                          ", ".join(s["passes"])) for s in rest]), ""]
     return lines
 
 

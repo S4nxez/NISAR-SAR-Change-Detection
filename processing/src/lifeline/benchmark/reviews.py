@@ -1,6 +1,7 @@
 """Verdicts of people who looked at a disagreement (processing/benchmark/reviews.json).
 
-Each review names a pass and a community and says who was right:
+Each review names a pass and a community ("pass", "community_id"), or a whole site of the report ("passes",
+"community_ids": every pair of them), and says who was right:
   "nisar"        the method was right, the reference wrong (the case is not an error of the method)
   "reference"    the reference was right (a confirmed error of the method)
   "undecidable"  the images do not tell
@@ -22,15 +23,25 @@ def load(path):
     with open(path, encoding="utf-8") as f:
         reviews = json.load(f).get("reviews", [])
     for r in reviews:
+        if not pairs(r):
+            raise ValueError(f"review {r}: give pass and community_id, or passes and community_ids")
         if r.get("verdict") not in VERDICTS:
             raise ValueError(f"review of {r.get('pass')} / {r.get('community_id')}: verdict must be one of "
                              f"{VERDICTS}, not {r.get('verdict')!r}")
     return reviews
 
 
+def pairs(review):
+    """The (pass, community id) pairs a review covers."""
+    passes = review.get("passes") or ([review["pass"]] if review.get("pass") else [])
+    ids = review.get("community_ids") or ([review["community_id"]] if review.get("community_id") else [])
+    return [(p, c) for p in passes for c in ids]
+
+
 def attach(pass_id, cases, reviews):
-    """Put the review of each case (same pass and community) on it, as `reviewed`; a review's cause wins."""
-    index = {(r["pass"], r["community_id"]): r for r in reviews}
+    """Put the review of each case (same pass and community) on it, as `reviewed`; a review's cause wins. A later
+    review of the same pair replaces an earlier one."""
+    index = {pair: r for r in reviews for pair in pairs(r)}
     for c in cases:
         r = index.get((pass_id, c["community_id"]))
         if r is None:

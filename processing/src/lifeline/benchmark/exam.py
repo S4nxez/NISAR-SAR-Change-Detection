@@ -326,8 +326,11 @@ def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=No
                "case_causes": _count(all_cases, "cause"), "case_families": _count(all_cases, "family"),
                "reviews": reviews.summary(all_cases),
                "review_needed": sum(1 for c in all_cases if c["review"])}
+    found_sites = causes.sites(all_cases, communities)
+    summary["sites"] = len(found_sites)
+    summary["sites_to_review"] = sum(1 for s in found_sites if s["review"])
     return {"rules": {"optical": rules, "references": exam.get("references", {}), "causes": crules},
-            "summary": summary, "passes": rows, "cases": all_cases}
+            "summary": summary, "passes": rows, "cases": all_cases, "sites": found_sites}
 
 
 def load_gauge(area, cat, cache_dir):
