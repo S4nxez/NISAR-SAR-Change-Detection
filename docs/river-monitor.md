@@ -94,8 +94,8 @@ For every pass (all frames of one track on one day):
    [ADR-002](decisions/ADR-002-river-monitor-refined-lee-filter.md); the older box filter,
    `speckle_filter: "box"`, averages over ~60 m and narrows every channel), and resampled to a fixed
    lon/lat grid shared by all passes.
-2. **Water**: filtered HH below the pass threshold (−15 dB fixed, or measured on the pass with
-   `water_db_adaptive`, see [ADR-003](decisions/ADR-003-river-monitor-per-pass-threshold.md), proposed), plus
+2. **Water**: filtered HH below −15 dB (a threshold measured on every pass, `water_db_adaptive`, exists but is
+   off: see [ADR-003](decisions/ADR-003-river-monitor-per-pass-threshold.md), rejected), plus
    pixels below the threshold + 3 dB (−12 dB) that touch that water
    (hysteresis): wind roughens stretches of rivers and lakes, which then return a little
    more echo and would otherwise cut the river in two. Specks under 1 ha are dropped and

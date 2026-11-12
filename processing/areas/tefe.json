@@ -14,7 +14,6 @@
   "valid_floor_db": -40.0,
   "water_db": -15.0,
   "water_db_weak": -12.0,
-  "water_db_adaptive": {"range_db": [-20.0, -13.0], "tile_m": 4000, "min_tiles": 5},
   "vegetated_water": {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000},
   "speckle_filter": "refined_lee",
   "speckle_looks": 9,

@@ -1,6 +1,6 @@
 # ADR-003: Water threshold measured on every pass (M2)
 
-- Status: **proposed**, pending the project lead's decision with the benchmark results (2026-11-11)
+- Status: **rejected** (2026-11-12): the method stays in the code, but no area enables it
 - Component: river lifeline monitor, `processing/src/lifeline/analysis/water.py` (`pass_thresholds`,
   `ki_threshold`, `mixed_tiles`), area key `water_db_adaptive`
 
@@ -37,5 +37,13 @@ shores, smooth mud and wind-roughened water also join more easily, which can cre
 
 ## Decision
 
-Pending. The benchmark compares A (`m2-adaptive-threshold`) with C (`m4-refined-lee`); B gives C's result on the
-current data.
+C: no per-pass threshold. Tefé keeps the fixed −15 dB and `water_db_adaptive` is removed from `tefe.json`; the
+code stays, so an area can still enable it.
+
+The benchmark (exam version 1, `processing/benchmark/history/`) compared A (`m2-adaptive-threshold`, on top of M4)
+with C (`m4-refined-lee`). A finds more narrow channels (recall under 60 m 0.767 → 0.909) but makes everything
+that matters worse: false water at the shore 0.198 → 0.265, false routes 43 → 61, status agreement 0.877 → 0.842,
+water IoU against Sentinel-2 0.891 → 0.859. A false route is the dangerous error, so A is rejected.
+
+B gives C's result on the current data. It is worth revisiting when the validated reprocessing of NISAR shifts the
+calibration, together with a new exam version.
