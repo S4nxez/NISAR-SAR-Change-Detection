@@ -8,7 +8,7 @@ import traceback
 import numpy as np
 
 from lifeline.analysis.radar import read_pass_bands, trim_swath_edge
-from lifeline.analysis.water import pass_thresholds, vegetated_water, water_mask
+from lifeline.analysis.water import low_water_route, pass_thresholds, vegetated_water, water_mask
 from lifeline.config import AREAS_DIR, OUT_ROOT, keep_backscatter, log
 from lifeline.geometry.area import area_mask
 from lifeline.output.catalog import (
@@ -23,7 +23,8 @@ from lifeline.output.catalog import (
 )
 from lifeline.output.layers import load_mask, load_vegetated, save_backscatter, save_mask, save_radar, save_water
 from lifeline.sources import asf, places
-from lifeline.sources.gauge import refresh_gauge
+from lifeline.sources.gauge import level_on, refresh_gauge
+from lifeline.sources.occurrence import fetch_occurrence, load_occurrence, save_occurrence
 from lifeline.sources.remote import earthdata_token
 
 ENTRY_KEYS = ("id", "date", "time_utc", "track", "direction", "frames", "modes", "beta")
@@ -35,9 +36,34 @@ def read_layers(area, ps, token):
     return read_pass_bands(area, ps, token, bands)
 
 
-def process_pass(area, communities, ps, out_root, token, read=None):
+def river_state(area, cat, date, areas_dir=AREAS_DIR):
+    """What the low-water rule needs for a pass: {"level_cm": gauge level that day or None, "areas_dir": where the
+    occurrence layer is}. None when the area has no low-water rule."""
+    if not area.get("low_water"):
+        return None
+    return {"level_cm": level_on((cat.get("gauge") or {}).get("series"), date), "areas_dir": areas_dir}
+
+
+def route_water_of(area, water, river):
+    """(water that may carry a route, True when the low-water rule applied); the layer is read only when needed."""
+    rule = area.get("low_water")
+    if not river or not rule or river["level_cm"] is None or river["level_cm"] > rule["gauge_max_cm"]:
+        return water, False
+    return low_water_route(water, load_occurrence(area, river["areas_dir"]), river["level_cm"], rule, area["px_m"])
+
+
+def describe_river(entry, river, applied):
+    """Record the river level of the pass and whether the low-water rule changed its routes."""
+    entry.pop("river_level_cm", None)
+    entry.pop("low_water", None)
+    if river:
+        entry["river_level_cm"] = river["level_cm"]
+        entry["low_water"] = applied
+
+
+def process_pass(area, communities, ps, out_root, token, read=None, river=None):
     """Read one pass (with read_layers unless `read` is given; it returns ({band: db} or the HH array, megabytes,
-    spacing)), write its layers and return its catalog entry."""
+    spacing)), write its layers and return its catalog entry. `river` (river_state) turns on the low-water rule."""
     t0 = time.time()
     bands, read_mb, spacing = (read or read_layers)(area, ps, token)
     if not isinstance(bands, dict):
@@ -64,16 +90,18 @@ def process_pass(area, communities, ps, out_root, token, read=None):
     entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"},
                  threshold=threshold,
                  vegetated_km2=None if vegetated is None else round(float(vegetated.sum()) * pix_km2, 2))
-    evaluate(area, communities, water, valid, wide, entry)
+    route, applied = route_water_of(area, water, river)
+    evaluate(area, communities, water, valid, wide, entry, route)
+    describe_river(entry, river, applied)
     entry["seconds"] = round(time.time() - t0, 1)
     return entry
 
 
 def _process_job(job):
     """process_pass in a worker process: (pass id, entry or None, error text or None)."""
-    area, communities, ps, out_root, token = job
+    area, communities, ps, out_root, token, river = job
     try:
-        return ps["id"], process_pass(area, communities, ps, out_root, token), None
+        return ps["id"], process_pass(area, communities, ps, out_root, token, river=river), None
     except Exception:  # keep the batch running; the pass is retried on the next update
         return ps["id"], None, traceback.format_exc(limit=3)
 
@@ -108,9 +136,11 @@ def update(area, workers=2, limit=None, redo=False, out_root=OUT_ROOT, areas_dir
     todo = pending_passes(found, cat, redo, limit)
     log(f"{len(found)} passes found, {len(todo)} to process")
     cat["last_search"] = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # the river level of every pass is known before it is evaluated (the low-water rule needs it)
+    refresh_gauge(area, cat, dates=[ps["date"] for ps in todo])
     if todo:
         tok = token()
-        jobs = [(area, communities, ps, out_root, tok) for ps in todo]
+        jobs = [(area, communities, ps, out_root, tok, river_state(area, cat, ps["date"], areas_dir)) for ps in todo]
         with executor(max_workers=max(1, workers)) as ex:
             for pid, entry, err in ex.map(_process_job, jobs):
                 if err:
@@ -123,7 +153,6 @@ def update(area, workers=2, limit=None, redo=False, out_root=OUT_ROOT, areas_dir
                 save_catalog(area, cat, out_root)
     refresh_changes(area, cat, out_root)
     classify_communities(area, cat)
-    refresh_gauge(area, cat)
     save_catalog(area, cat, out_root)
     log(f"Catalog: {catalog_path(area, out_root)} ({len(cat['passes'])} passes); "
         f"communities {cat['community_classes']}")
@@ -142,13 +171,23 @@ def reevaluate(area, out_root=OUT_ROOT, areas_dir=AREAS_DIR):
         water, valid = load_mask(path)
         wide = wide_water_of(area, water)
         save_water(water, wide, os.path.join(pdir, "water.png"), load_vegetated(path))
-        evaluate(area, communities, water, valid, wide, entry)
+        river = river_state(area, cat, entry["date"], areas_dir)
+        route, applied = route_water_of(area, water, river)
+        evaluate(area, communities, water, valid, wide, entry, route)
+        describe_river(entry, river, applied)
         log(f"{entry['id']}: re-evaluated")
     refresh_changes(area, cat, out_root)
     classify_communities(area, cat)
     save_catalog(area, cat, out_root)
     log(f"Catalog: {len(cat['passes'])} passes; communities {cat['community_classes']}")
     return cat
+
+
+def occurrence(area, areas_dir=AREAS_DIR, fetch=fetch_occurrence):
+    """Read the water occurrence layer of the area once and save it next to the area file (needs rasterio)."""
+    path = save_occurrence(area, fetch(area), areas_dir)
+    log(f"water occurrence layer saved to {path}")
+    return path
 
 
 def communities(area, areas_dir=AREAS_DIR, query=places.overpass):

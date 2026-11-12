@@ -109,6 +109,15 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(entry["counts"], {"no_data": 0, "connected": 1, "at_risk": 1, "isolated": 1})
         self.assertEqual(entry["hub_link"][0], STATUS["connected"])
 
+    def test_routes_use_the_route_water_and_statistics_all_the_water(self):
+        route = self.water.copy()
+        route[60:140, 200:260] = False   # the lake left out by the low-water rule
+        entry = {}
+        evaluate(self.area, self.communities, self.water, self.valid, self.wide, entry, route)
+        self.assertAlmostEqual(entry["water_km2"], round(self.water.sum() * 0.0004, 2))
+        self.assertEqual(entry["status"]["lake"][0], STATUS["isolated"])
+        self.assertEqual(entry["status"]["river"][0], STATUS["connected"])
+
     def test_partial_pass_is_shown_but_not_evaluated(self):
         valid = self.valid.copy()
         valid[:, 100:] = False

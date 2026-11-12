@@ -4,7 +4,7 @@ from unittest import mock
 
 import requests
 
-from lifeline.sources.gauge import parse_gauge, refresh_gauge
+from lifeline.sources.gauge import level_on, parse_gauge, refresh_gauge
 
 from ..helpers import FakeResponse
 
@@ -62,11 +62,32 @@ class TestRefreshGauge(unittest.TestCase):
         refresh_gauge(AREA, cat, get=get)
         self.assertEqual(cat["gauge"]["name"], "old")
 
+    def test_new_passes_extend_the_series_back(self, _log):
+        seen = {}
+
+        def get(url, params, timeout, headers):
+            seen.update(params)
+            return FakeResponse(content=ana_xml([("2025-11-04 07:00:00", "1105.5")]))
+        cat = {"passes": []}
+        refresh_gauge(AREA, cat, get=get, today=dt.date(2026, 11, 8), dates=["2025-11-04"])
+        self.assertEqual(seen["dataInicio"], "20/10/2025")
+        self.assertEqual(cat["gauge"]["series"], [["2025-11-04", 1105.5]])
+
     def test_nothing_to_do_without_gauge_or_passes(self, _log):
         get = mock.Mock()
         refresh_gauge({}, self.cat(), get=get)
         refresh_gauge(AREA, {"passes": []}, get=get)
         get.assert_not_called()
+
+
+class TestLevelOn(unittest.TestCase):
+    def test_the_day_else_the_closest_within_max_days(self):
+        series = [["2026-08-30", 900.0], ["2026-09-01", 880.0]]
+        self.assertEqual(level_on(series, "2026-08-30"), 900.0)
+        self.assertIn(level_on(series, "2026-08-31"), (900.0, 880.0))
+        self.assertIsNone(level_on(series, "2026-09-05"))
+        self.assertEqual(level_on(series, "2026-09-05", max_days=4), 880.0)
+        self.assertIsNone(level_on(None, "2026-08-30"))
 
 
 if __name__ == "__main__":

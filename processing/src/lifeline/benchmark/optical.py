@@ -11,6 +11,8 @@ import os
 import numpy as np
 from scipy import ndimage
 
+from lifeline.geometry.area import area_transform  # noqa: F401  (opera and static_layers import it from here)
+
 STAC_SEARCH = "https://earth-search.aws.element84.com/v1/search"
 COLLECTION = "sentinel-2-l2a"
 CLEAR_SCL = (2, 4, 5, 6, 7)       # dark area, vegetation, bare soil, water, unclassified
@@ -79,12 +81,6 @@ def reference_water(mndwi, clear, in_area):
     if n:
         water &= np.bincount(lab.ravel())[lab] >= MIN_REF_WATER_PX
     return water, valid, round(t, 4)
-
-
-def area_transform(area):
-    from rasterio.transform import from_origin
-    lon0, _, _, lat1 = area["bbox"]
-    return from_origin(lon0, lat1, area["step_deg"], area["step_deg"])
 
 
 def read_band(url, area, resampling, overview_level=None):

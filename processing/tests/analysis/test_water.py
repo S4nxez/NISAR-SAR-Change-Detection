@@ -9,10 +9,12 @@ from lifeline.analysis.water import (
     coverage_around,
     disk,
     ki_threshold,
+    low_water_route,
     mixed_tiles,
     near_labels,
     pass_thresholds,
     route_status,
+    seasonal_ground,
     vegetated_water,
     water_mask,
     wide_water,
@@ -286,6 +288,45 @@ class TestWideWater(unittest.TestCase):
         self.assertFalse(wide[97, 120])       # 40 m channel
         self.assertTrue(wide[100, 230])       # lake
         self.assertFalse((wide & ~water).any())
+
+
+class TestLowWaterRoute(unittest.TestCase):
+    RULE = {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60}
+
+    def setUp(self):
+        # the river and a lake joined by a channel; the lake is a bed that drains at low water (60 % of the months)
+        self.water, _ = river_scene(channel_px=3)
+        self.occ = np.full(self.water.shape, 98, np.uint8)
+        self.occ[60:140, 200:260] = 60
+
+    def test_seasonal_ground_is_the_band_between_rarely_and_always_water(self):
+        occ = np.array([[0, 29, 30, 60, 89, 90, 100, 255]], np.uint8)
+        np.testing.assert_array_equal(seasonal_ground(occ, 30, 90),
+                                      [[False, False, True, True, True, False, False, False]])
+
+    def test_a_drained_bed_leaves_the_routes_at_low_water(self):
+        route, applied = low_water_route(self.water, self.occ, 800.0, self.RULE, PX)
+        self.assertTrue(applied)
+        self.assertFalse(route[63:137, 203:257].any())   # an opening may leave a few corner pixels of the bed
+        self.assertLess(route[60:140, 200:260].sum(), 0.02 * 80 * 60)
+        np.testing.assert_array_equal(route[:, :200], self.water[:, :200])   # river and channel kept
+
+    def test_nothing_changes_at_high_water_or_without_a_rule_layer_or_level(self):
+        for occ, level, rule in ((self.occ, 1500.0, self.RULE), (self.occ, 1200.0 + 0.1, self.RULE),
+                                 (None, 800.0, self.RULE), (self.occ, None, self.RULE), (self.occ, 800.0, None)):
+            route, applied = low_water_route(self.water, occ, level, rule, PX)
+            self.assertFalse(applied)
+            self.assertIs(route, self.water)
+        self.assertTrue(low_water_route(self.water, self.occ, 1200.0, self.RULE, PX)[1])   # the limit is included
+
+    def test_thin_seasonal_banks_new_channels_and_unknown_ground_are_kept(self):
+        occ = np.full(self.water.shape, 98, np.uint8)
+        occ[:, 10:12] = 60      # a 40 m seasonal fringe along the river bank: not a broad bed
+        occ[:, 15:25] = 10      # the river now runs over ground that was rarely water: a new channel
+        occ[60:140, 200:260] = 255   # no occurrence data on the lake
+        route, applied = low_water_route(self.water, occ, 800.0, self.RULE, PX)
+        self.assertTrue(applied)
+        np.testing.assert_array_equal(route, self.water)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ import numpy as np
 from lifeline import pipeline
 from lifeline.output.catalog import catalog_path, pass_dir
 from lifeline.output.layers import load_backscatter, load_vegetated
+from lifeline.sources.occurrence import NO_DATA, save_occurrence
 from lifeline.sources.places import communities_collection, save_communities
 
 from .helpers import TempDirTest, river_scene, scene_db, small_area
@@ -150,6 +151,58 @@ class TestPipeline(TempDirTest):
                            "2026-10-23_t161A": found_pass()})
         self.assertEqual([p["id"] for p in cat["passes"]], ["2026-10-23_t161A"])
 
+    def low_water_area(self):
+        """The scene with the low-water rule: the lake (and only it) is a bed that drains at low water."""
+        area = dict(self.area, low_water={"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60})
+        occ = np.full((area["ny"], area["nx"]), 98, np.uint8)
+        occ[60:140, 200:260] = 60
+        occ[0, 0] = NO_DATA
+        save_occurrence(area, occ, self.tmp)
+        return area
+
+    def set_level(self, cm):
+        self.gauge.side_effect = lambda area, cat, **k: cat.update(gauge={"series": [["2026-10-23", cm]]})
+
+    def test_update_applies_the_low_water_rule_with_the_level_of_the_pass(self, *_):
+        area = self.low_water_area()
+        self.set_level(800.0)
+        cat = pipeline.update(area, out_root=self.tmp, areas_dir=self.tmp, search=lambda a: {"2026-10-23_t161A": found_pass()},
+                              token=lambda: "tok", executor=SyncExecutor)
+        p = cat["passes"][0]
+        self.assertEqual((p["river_level_cm"], p["low_water"]), (800.0, True))
+        self.assertEqual({k: v[0] for k, v in p["status"].items()}, {"osm1": 1, "osm2": 3})   # the lake is cut off
+        self.assertEqual(self.gauge.call_args.kwargs["dates"], ["2026-10-23"])
+
+    def test_high_water_or_unknown_level_keeps_every_route(self, *_):
+        area = self.low_water_area()
+        for level in (None, 1500.0):   # no level first: a stored series would be kept
+            if level is None:
+                self.gauge.side_effect = None
+            else:
+                self.set_level(level)
+            cat = pipeline.update(area, out_root=self.tmp, areas_dir=self.tmp, redo=True, executor=SyncExecutor,
+                                  search=lambda a: {"2026-10-23_t161A": found_pass()}, token=lambda: "tok")
+            p = cat["passes"][0]
+            self.assertEqual((p["river_level_cm"], p["low_water"]), (level, False))
+            self.assertEqual(p["status"]["osm2"][0], 2)
+
+    def test_areas_without_the_rule_record_no_river_level(self, *_):
+        self.set_level(800.0)
+        p = self.update({"2026-10-23_t161A": found_pass()})["passes"][0]
+        self.assertNotIn("river_level_cm", p)
+        self.assertNotIn("low_water", p)
+        self.assertIsNone(pipeline.river_state(self.area, {}, "2026-10-23"))
+
+    def test_reevaluate_applies_the_rule_with_the_stored_gauge(self, *_):
+        area = self.low_water_area()
+        self.update({"2026-10-23_t161A": found_pass()})   # first without a level: the lake keeps its route
+        cat = pipeline.load_catalog(area, [], self.tmp)
+        cat["gauge"] = {"series": [["2026-10-23", 790.0]]}
+        pipeline.save_catalog(area, cat, self.tmp)
+        cat = pipeline.reevaluate(area, out_root=self.tmp, areas_dir=self.tmp)
+        self.assertTrue(cat["passes"][0]["low_water"])
+        self.assertEqual(cat["passes"][0]["status"]["osm2"][0], 3)
+
     def test_reevaluate_rebuilds_the_record_from_stored_masks(self, *_):
         self.update({"2026-10-11_t161A": found_pass("2026-10-11_t161A", "2026-10-11"),
                      "2026-10-23_t161A": found_pass()})
@@ -186,6 +239,13 @@ class TestCommunitiesAndWatch(TempDirTest):
         self.assertEqual(fc["features"][0]["properties"]["access_source"], "pier")
         self.assertEqual(self.read_json("test_communities.geojson")["features"][0]["properties"]["name"], "Alpha")
 
+    def test_occurrence_saves_the_layer_next_to_the_area_file(self, _log):
+        area = small_area()
+        layer = np.full((area["ny"], area["nx"]), 42, np.uint8)
+        path = pipeline.occurrence(area, self.tmp, fetch=lambda a: layer)
+        self.assertEqual(path, os.path.join(self.tmp, "test_occurrence.png"))
+        self.assertTrue(os.path.exists(path))
+
     def test_watch_keeps_going_after_a_failed_round(self, _log):
         run = mock.Mock(side_effect=[RuntimeError("ASF down"), None])
         sleep = mock.Mock()
@@ -198,7 +258,7 @@ class TestCommunitiesAndWatch(TempDirTest):
 class TestProcessJob(unittest.TestCase):
     def test_errors_become_text_so_the_batch_keeps_running(self):
         with mock.patch("lifeline.pipeline.process_pass", side_effect=ValueError("bad product")):
-            pid, entry, err = pipeline._process_job(({}, [], {"id": "p"}, "/tmp", "tok"))
+            pid, entry, err = pipeline._process_job(({}, [], {"id": "p"}, "/tmp", "tok", None))
         self.assertEqual((pid, entry), ("p", None))
         self.assertIn("bad product", err)
 

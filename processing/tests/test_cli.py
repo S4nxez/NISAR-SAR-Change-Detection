@@ -15,10 +15,12 @@ class TestCommandLine(unittest.TestCase):
 
     def test_default_area_and_other_commands(self, pipeline, load_area):
         cli.main(["communities"])
+        cli.main(["occurrence"])
         cli.main(["reevaluate"])
         cli.main(["watch", "--hours", "1.5"])
         load_area.assert_called_with("tefe")
         pipeline.communities.assert_called_once_with({"id": "tefe"})
+        pipeline.occurrence.assert_called_once_with({"id": "tefe"})
         pipeline.reevaluate.assert_called_once_with({"id": "tefe"})
         pipeline.watch.assert_called_once_with({"id": "tefe"}, 1.5, 2)
 

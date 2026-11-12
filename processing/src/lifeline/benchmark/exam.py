@@ -37,6 +37,7 @@ from lifeline.geometry.area import area_mask, to_px
 from lifeline.geometry.geo import fold
 from lifeline.output.catalog import hub_target, pass_dir
 from lifeline.sources import asf, places
+from lifeline.sources.gauge import level_on
 from lifeline.sources.remote import earthdata_token
 
 BENCHMARK_DIR = os.path.join(PROCESSING_DIR, "benchmark")
@@ -341,15 +342,7 @@ def load_gauge(area, cat, cache_dir):
     return cat.get("gauge") or (load_json(path) if os.path.exists(path) else None)
 
 
-def gauge_level(series, date, max_days=1):
-    """Gauge level on `date`, else the closest day within max_days, else None."""
-    levels = dict(series)
-    day = dt.date.fromisoformat(date)
-    for k in range(max_days + 1):
-        for d in {day - dt.timedelta(days=k), day + dt.timedelta(days=k)}:
-            if d.isoformat() in levels:
-                return levels[d.isoformat()]
-    return None
+gauge_level = level_on
 
 
 def gauge_section(area, cat, cache_dir):

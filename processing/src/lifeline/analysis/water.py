@@ -5,6 +5,7 @@ import numpy as np
 from scipy import ndimage
 
 from lifeline.config import STATUS
+from lifeline.sources.occurrence import NO_DATA as OCCURRENCE_NO_DATA
 
 MIN_WATER_PX = 25      # 1 ha at 20 m
 MIN_HOLE_PX = 50       # 2 ha at 20 m
@@ -250,3 +251,29 @@ def wide_water(water, inside_m, safe_m, px_m):
     """Water pixels that belong to channels at least safe_m wide."""
     core = inside_m >= (safe_m + px_m) / 2.0
     return water & ndimage.binary_dilation(core, structure=disk(safe_m / 2.0 / px_m + 1))
+
+
+def seasonal_ground(occurrence, low_pct, high_pct):
+    """Pixels whose water occurrence (sources.occurrence) is known and in [low_pct, high_pct): ground that is water
+    only part of the year, such as the bed of a lake or side channel that drains at low water. Ground below low_pct
+    was rarely water in 1984-2021: water there now is usually a channel the river has cut since (meanders move), not
+    a drained bed, so it is not seasonal ground."""
+    return (occurrence != OCCURRENCE_NO_DATA) & (occurrence >= low_pct) & (occurrence < high_pct)
+
+
+def low_water_route(water, occurrence, level_cm, rule, px_m):
+    """The water a route may use on a pass, and whether the low-water rule applied.
+
+    At low water (river level at the gauge at most rule["gauge_max_cm"]) the radar reads the wet, smooth bed of a
+    drained lake, bay or side channel as dark as open water, so a pass can show a wide route over mud. Then the water
+    on seasonal ground (rule["seasonal_pct"], see seasonal_ground) is left out of the routes where it forms broad
+    patches, those that hold a disc of rule["patch_radius_m"]: a drained bed is hundreds of metres across, while the
+    one or two mixed pixels along the banks of a permanent river are not removed. A community whose route crosses
+    such a bed gets the status of the permanent water (a narrower route or none). Without a rule, a layer or a level,
+    the water is used as it is."""
+    if not rule or occurrence is None or level_cm is None or level_cm > rule["gauge_max_cm"]:
+        return water, False
+    low, high = rule["seasonal_pct"]
+    seasonal = water & seasonal_ground(occurrence, low, high)
+    beds = ndimage.binary_opening(seasonal, structure=disk(rule["patch_radius_m"] / px_m))
+    return water & ~beds, True

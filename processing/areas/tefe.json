@@ -21,5 +21,7 @@
   "speckle_m": 60,
   "widths_m": [40, 60, 100, 200, 400],
   "safe_width_m": 60,
+  "occurrence": "tefe_occurrence.png",
+  "low_water": {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60},
   "communities": "tefe_communities.geojson"
 }
