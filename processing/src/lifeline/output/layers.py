@@ -5,7 +5,10 @@
   change.png   water lost / gained since the previous pass of the same track
   water.npz    packed water mask, validity and, when known, water under vegetation (input of the change layer
                and of `reevaluate`)
+  backscatter.npz  filtered HH (and HV) in float16, only with MONITOR_KEEP_BACKSCATTER=1 (the benchmark)
 """
+import os
+
 import numpy as np
 from PIL import Image
 
@@ -64,6 +67,20 @@ def save_mask(water, valid, path, vegetated=None):
     extra = {} if vegetated is None else {"vegetated": np.packbits(vegetated)}
     np.savez_compressed(path, shape=np.array(water.shape), water=np.packbits(water), valid=np.packbits(valid),
                         **extra)
+
+
+def save_backscatter(hh, hv, path):
+    """Filtered backscatter (dB) of a pass in float16 (about 0.01 dB steps at -20 dB), HV only when given."""
+    extra = {} if hv is None else {"hv": hv.astype(np.float16)}
+    np.savez_compressed(path, hh=hh.astype(np.float16), **extra)
+
+
+def load_backscatter(path):
+    """(hh, hv or None) float32 arrays stored by save_backscatter, or (None, None) when the file is missing."""
+    if not os.path.exists(path):
+        return None, None
+    with np.load(path) as z:
+        return z["hh"].astype(np.float32), (z["hv"].astype(np.float32) if "hv" in z.files else None)
 
 
 def load_mask(path):

@@ -9,7 +9,7 @@ import numpy as np
 
 from lifeline.analysis.radar import read_pass_bands
 from lifeline.analysis.water import pass_thresholds, vegetated_water, water_mask
-from lifeline.config import AREAS_DIR, OUT_ROOT, log
+from lifeline.config import AREAS_DIR, OUT_ROOT, keep_backscatter, log
 from lifeline.geometry.area import area_mask
 from lifeline.output.catalog import (
     catalog_path,
@@ -21,7 +21,7 @@ from lifeline.output.catalog import (
     save_catalog,
     wide_water_of,
 )
-from lifeline.output.layers import load_mask, load_vegetated, save_mask, save_radar, save_water
+from lifeline.output.layers import load_mask, load_vegetated, save_backscatter, save_mask, save_radar, save_water
 from lifeline.sources import asf, places
 from lifeline.sources.gauge import refresh_gauge
 from lifeline.sources.remote import earthdata_token
@@ -56,6 +56,8 @@ def process_pass(area, communities, ps, out_root, token, read=None):
     save_radar(db, os.path.join(pdir, "radar.webp"))
     save_water(water, wide, os.path.join(pdir, "water.png"), vegetated)
     save_mask(water, valid, os.path.join(pdir, "water.npz"), vegetated)
+    if keep_backscatter():
+        save_backscatter(db, hv, os.path.join(pdir, "backscatter.npz"))
     entry = {k: ps[k] for k in ENTRY_KEYS}
     pix_km2 = (area["px_m"] / 1000.0) ** 2
     entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"},

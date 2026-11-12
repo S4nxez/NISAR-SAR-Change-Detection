@@ -5,6 +5,8 @@ import numpy as np
 from PIL import Image, features
 
 from lifeline.output.layers import (
+    load_backscatter,
+    save_backscatter,
     CHANGE_GAINED,
     CHANGE_LOST,
     WATER_NARROW,
@@ -31,6 +33,17 @@ class TestLayers(TempDirTest):
         w2, v2 = load_mask(path)
         np.testing.assert_array_equal(w2, water)
         np.testing.assert_array_equal(v2, valid)
+
+    def test_backscatter_round_trip_and_missing_file(self):
+        hh = np.array([[-20.0, np.nan], [-5.25, -14.9]], np.float32)
+        path = os.path.join(self.tmp, "b.npz")
+        save_backscatter(hh, None, path)
+        got, hv = load_backscatter(path)
+        np.testing.assert_allclose(got, hh, atol=0.02)
+        self.assertIsNone(hv)
+        save_backscatter(hh, hh - 7, path)
+        self.assertEqual(load_backscatter(path)[1].dtype, np.float32)
+        self.assertEqual(load_backscatter(os.path.join(self.tmp, "none.npz")), (None, None))
 
     def test_water_png_marks_wide_water_and_narrow_channels(self):
         water = np.zeros((4, 4), bool)

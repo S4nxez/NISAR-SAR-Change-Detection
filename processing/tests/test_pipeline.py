@@ -6,7 +6,7 @@ import numpy as np
 
 from lifeline import pipeline
 from lifeline.output.catalog import catalog_path, pass_dir
-from lifeline.output.layers import load_vegetated
+from lifeline.output.layers import load_backscatter, load_vegetated
 from lifeline.sources.places import communities_collection, save_communities
 
 from .helpers import TempDirTest, river_scene, scene_db, small_area
@@ -81,6 +81,13 @@ class TestPipeline(TempDirTest):
         self.assertEqual(entry["threshold"], {"source": "fixed", "strong_db": -15.0, "weak_db": None})
         self.assertTrue(entry["evaluated"])
         self.assertNotIn("granules", entry)
+
+    def test_the_backscatter_is_stored_only_when_asked(self, *_):
+        with mock.patch.dict(os.environ, {"MONITOR_KEEP_BACKSCATTER": "1"}):
+            pipeline.process_pass(self.area, [], found_pass(), self.tmp, "tok", read=self.read)
+        hh, hv = load_backscatter(os.path.join(pass_dir(self.area, "2026-10-23_t161A", self.tmp), "backscatter.npz"))
+        np.testing.assert_allclose(hh, self.db, atol=0.02)
+        self.assertIsNone(hv)
 
     def test_water_under_vegetation_is_mapped_but_does_not_change_the_routes(self, *_):
         area = {**self.area, "vegetated_water": {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000}}

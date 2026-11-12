@@ -23,6 +23,12 @@ def cache_dir(environ=os.environ):
     return environ.get("MONITOR_CACHE_DIR") or None
 
 
+def keep_backscatter(environ=os.environ):
+    """True when every processed pass also stores its filtered backscatter (backscatter.npz): MONITOR_KEEP_BACKSCATTER
+    = 1. The benchmark sets it to explain its disagreements; the published record does not need it."""
+    return environ.get("MONITOR_KEEP_BACKSCATTER", "") == "1"
+
+
 AREAS_DIR = areas_dir()
 OUT_ROOT = data_dir()
 
