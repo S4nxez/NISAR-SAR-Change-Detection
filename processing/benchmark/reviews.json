@@ -1,4 +1,102 @@
 {
  "description": "Verdicts of people who checked a disagreement of the exam (see docs/river-monitor-benchmark.md, Manual review). verdict: nisar (the method was right), reference (the reference was right), undecidable. cause: optional, one of the causes of the exam report.",
- "reviews": []
+ "reviews": [
+  {
+   "passes": [
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm3924302373",
+    "osm3924302377",
+    "osm3924302381",
+    "osm3924302382",
+    "osm3924302383",
+    "osm416757398"
+   ],
+   "verdict": "nisar",
+   "cause": "cloud_edge",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "Parana Copea continuous and over 100 m wide on the clear Sentinel-2 image of 21 Oct, also at the bend at -3.18383, -64.57345 where DSWx-S1 saw land. The Sentinel-2 cloud mask flagged the reach as cloud, so only the 30 m DSWx products voted and narrowed the river to 40-57 m."
+  },
+  {
+   "passes": [
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm3924302370",
+    "osm3924302379",
+    "osm3924302387",
+    "osm3924302396"
+   ],
+   "verdict": "nisar",
+   "cause": "cloud_edge",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "River over 100 m wide at -3.17267, -64.52071 and -3.17321, -64.51927 on Sentinel-1 (10 m) of 20 Oct and Sentinel-2 of 24 Oct. As near Monte Sinai, the Sentinel-2 cloud mask left only the 30 m DSWx products to vote, which narrowed the river to 40-57 m."
+  },
+  {
+   "pass": "2026-08-31_t097D",
+   "community_id": "osm3986860562",
+   "verdict": "nisar",
+   "cause": "narrow_channel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "Water from the bay east of Vista Alegre towards Canaman at least 300 m wide on Sentinel-1 and Sentinel-2 of 30-31 Aug; the reference's narrowing under 60 m at -3.41711, -64.80745 is mixed shore pixels."
+  },
+  {
+   "passes": [
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm3986860562",
+    "osm3986860636"
+   ],
+   "verdict": "reference",
+   "cause": "smooth_ground",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "At low water the bay east of Vista Alegre has almost drained: on Sentinel-2 of 21-24 Oct the channel is broken and mostly under 20 m wide, and Sentinel-1 (10 m) of 20 Oct shows no continuous water. NISAR mapped about 0.7 km2 of water 120 m wide there, probably the wet exposed bed. A confirmed false route."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D"
+   ],
+   "community_ids": [
+    "osm3984711997",
+    "osm3984712031"
+   ],
+   "verdict": "reference",
+   "cause": "smooth_ground",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "Around -3.14027, -64.76461 and -3.12911, -64.76533: Sentinel-2 of 5 Nov (partly cloudy) shows only a channel under 20 m wide, and Sentinel-1 (10 m) of 4 Nov shows no continuous water. NISAR mapped water 80-580 m wide; probably the wet bed at low water."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D"
+   ],
+   "community_ids": [
+    "osm3984833652"
+   ],
+   "verdict": "reference",
+   "cause": "smooth_ground",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "Around -3.66209, -65.03695 and -3.66605, -65.02741: no continuous water on Sentinel-2 of 5 Nov (cloudy) nor on Sentinel-1 (10 m) of 4 Nov, which shows a bright (red) area where NISAR mapped water 180-270 m wide."
+  },
+  {
+   "passes": [
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm8583554431"
+   ],
+   "verdict": "reference",
+   "cause": "smooth_ground",
+   "reviewer": "j-novillo",
+   "date": "2026-11-12",
+   "note": "Around -3.46931, -64.88287 and -3.48389, -64.90033: the river outline is visible on Sentinel-2 of 21 Oct but not as water, and Sentinel-1 (10 m) of 20 Oct shows no continuous water and a large bright (red) area. Low water, as at Nova Jerusalem the same day."
+  }
+ ]
 }
