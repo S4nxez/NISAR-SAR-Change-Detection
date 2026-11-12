@@ -94,11 +94,12 @@ For every pass (all frames of one track on one day):
    [ADR-002](decisions/ADR-002-river-monitor-refined-lee-filter.md); the older box filter,
    `speckle_filter: "box"`, averages over ~60 m and narrows every channel), and resampled to a fixed
    lon/lat grid shared by all passes.
-2. **Water**: filtered HH below −15 dB (a threshold measured on every pass, `water_db_adaptive`, exists but is
-   off: see [ADR-003](decisions/ADR-003-river-monitor-per-pass-threshold.md), rejected), plus
-   pixels below the threshold + 3 dB (−12 dB) that touch that water
+2. **Water**: filtered HH below −16 dB, plus pixels below −14 dB that touch that water
    (hysteresis): wind roughens stretches of rivers and lakes, which then return a little
-   more echo and would otherwise cut the river in two. Specks under 1 ha are dropped and
+   more echo and would otherwise cut the river in two. Both values are tuned for the refined Lee filter
+   ([ADR-005](decisions/ADR-005-river-monitor-thresholds-for-refined-lee.md)); a threshold measured on every pass,
+   `water_db_adaptive`, exists but is off ([ADR-003](decisions/ADR-003-river-monitor-per-pass-threshold.md),
+   rejected). Specks under 1 ha are dropped and
    holes under 2 ha inside water are filled.
    **Water under vegetation** (dual-polarisation passes): HH > −4 dB and HH − HV ≥ 7 dB within
    1 km of open water, the double bounce of floating plants or flooded forest. It is drawn in green
