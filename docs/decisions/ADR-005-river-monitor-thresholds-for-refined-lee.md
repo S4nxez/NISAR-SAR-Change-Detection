@@ -1,6 +1,6 @@
 # ADR-005: Water thresholds tuned for the refined Lee filter
 
-- Status: proposed (2026-11-12), benchmarked; pending the project lead's decision on the wind trade-off
+- Status: accepted (2026-11-12) by the project lead, after the benchmark
 - Component: river lifeline monitor, area keys `water_db` and `water_db_weak` (`processing/areas/tefe.json`)
 
 ## Context

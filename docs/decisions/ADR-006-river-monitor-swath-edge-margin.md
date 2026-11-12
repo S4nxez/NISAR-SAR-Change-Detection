@@ -1,6 +1,6 @@
 # ADR-006: No data along the last kilometre of the swath
 
-- Status: proposed (2026-11-12), benchmarked; pending the project lead's decision
+- Status: accepted (2026-11-12) by the project lead, after the benchmark
 - Component: river lifeline monitor, `processing/src/lifeline/analysis/radar.py` (`trim_swath_edge`), called by
   `pipeline.process_pass`; area key `edge_margin_m`
 
