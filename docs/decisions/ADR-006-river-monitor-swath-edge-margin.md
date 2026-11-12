@@ -1,6 +1,6 @@
 # ADR-006: No data along the last kilometre of the swath
 
-- Status: proposed (2026-11-12), pending the benchmark run
+- Status: proposed (2026-11-12), benchmarked; pending the project lead's decision
 - Component: river lifeline monitor, `processing/src/lifeline/analysis/radar.py` (`trim_swath_edge`), called by
   `pipeline.process_pass`; area key `edge_margin_m`
 
@@ -34,6 +34,22 @@ masked with HH.
 1 km is where the median falls back near the interior's on two of the three passes; the third still reads darker
 at 800–1600 m, partly because real water lies there. The cost is 1 km of coverage at each edge of every pass, which
 other tracks cover.
+
+## Benchmark result
+
+Exam version 2, before (`v2-first-run`, commit `ae84dd9`) and after (`v2-swath-edge-margin`, commit `99bfc68`):
+
+| Metric | Before | After |
+|---|---|---|
+| Water IoU vs consensus | 0.922 | 0.931 |
+| Status agreement (kappa) | 0.947 (0.880) | 0.955 (0.898) |
+| False routes | 13 | 6 |
+| False isolated | 14 | 14 |
+| Undecided pairs | 86 | 85 |
+| Cases to review (places) | 23 | 16 (6) |
+
+The 7 false routes at the edge of track 097D are gone and nothing got worse. The 6 left all lie near clouds of the
+Sentinel-2 reference (`cloud_edge`) and wait for a manual review.
 
 ## Consequences
 
