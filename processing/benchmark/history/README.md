@@ -9,6 +9,7 @@ One row per run of `river-monitor benchmark` (see docs/river-monitor-benchmark.m
 | [m4-refined-lee](20261111T202019Z_m4-refined-lee.md) | 2026-11-11 | 1 | `b3859ef` | 0.900 | 5 | 0.891 | 0.767 | 0.198 | 0.877 | 43 | 1 | -0.401 | 1.000 |
 | [m2-adaptive-threshold](20261111T203501Z_m2-adaptive-threshold.md) | 2026-11-11 | 1 | `03ada68` | 0.900 | 5 | 0.859 | 0.909 | 0.265 | 0.842 | 61 | 0 | -0.416 | 1.000 |
 | [m1-vegetated-water](20261111T225431Z_m1-vegetated-water.md) | 2026-11-11 | 1 | `fa491fc` | 0.900 | 5 | 0.859 | 0.909 | 0.265 | 0.842 | 61 | 0 | -0.416 | 1.000 |
+| [m4-m1-no-m2](20261112T075504Z_m4-m1-no-m2.md) | 2026-11-12 | 1 | `c102d69` | 0.900 | 5 | 0.891 | 0.767 | 0.198 | 0.877 | 43 | 1 | -0.401 | 1.000 |
 
 Columns:
 
