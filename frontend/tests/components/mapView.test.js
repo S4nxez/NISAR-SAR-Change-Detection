@@ -66,11 +66,11 @@ describe("map view", () => {
     assert.deepEqual(f.L.made.markers[0].args[0], [-3.36, -64.72]);
   });
 
-  test("every community is on the map, monitored or not; markers are reused", () => {
-    assert.equal(L.made.groups.length, 1);
-    const [main] = L.made.groups;
+  test("monitored and unresolved communities on the map, inland ones on the optional layer; markers are reused", () => {
+    const [inland, main] = L.made.groups;
     view.placeMarkers(cat.communities);
-    assert.equal(main.children.length, 4);
+    assert.deepEqual(main.children.map(m => m.args[0][0]), [-3.3, -3.4, -3.6]);     // a, b and unresolved d
+    assert.deepEqual(inland.children.map(m => m.args[0][0]), [-3.5]);               // inland c
     const first = main.children[0];
     view.placeMarkers(cat.communities);
     assert.equal(main.children[0], first);
@@ -83,8 +83,9 @@ describe("map view", () => {
     view.showLayers(images, { radar: true, water: true, change: true, opacity: 0.7 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay").map(e => `${e[0]} ${e[2]}`), ["add r.webp", "add w.png"]);
     L.log.length = 0;
-    view.showLayers(images, { radar: true, water: true, change: true, opacity: 0.4 });
+    view.showLayers(images, { radar: true, water: true, change: true, inland: true, opacity: 0.4 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay"), [["opacity", "overlay", 0.4]]);
+    assert.ok(L.log.some(e => e[0] === "add" && e[1] === "group"));                // the inland layer
     L.log.length = 0;
     view.showLayers({ ...images, water: "w2.png" }, { radar: false, water: true, change: false, opacity: 0.4 });
     assert.deepEqual(L.log.filter(e => e[1] === "overlay").map(e => `${e[0]} ${e[2]}`),

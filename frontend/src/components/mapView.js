@@ -25,6 +25,7 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
     attribution: "© OpenStreetMap contributors · NISAR: NASA/ISRO, ASF DAAC", maxZoom: 18, className: "basemap-dark"
   }).addTo(map);
   for (const [pane, z] of Object.entries(PANES)) map.createPane(pane).style.zIndex = z;
+  const inlandLayer = L.layerGroup();
   const markerLayer = L.layerGroup().addTo(map);
   const markers = {};
   const overlays = {};
@@ -52,11 +53,12 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
     zIndexOffset: 1000, keyboard: false })
     .bindTooltip(`<strong>${esc(hub.name)}</strong><br>Hub town: routes are traced to here`, { className: "tip" }).addTo(map);
 
-  // Every community is always on the map: monitored ones with their route status, the others with their class, and
-  // any of them as "no data" on a pass that did not see it. Classes come from the whole record, so they can change
-  // when new passes arrive.
+  // Monitored and unresolved communities are always on the map; places that do not depend on the river (inland) are
+  // on a layer the user can switch on. Any of them shows "no data" on a pass that did not see it. Classes come from
+  // the whole record, so they can change when new passes arrive.
   function placeMarkers(communities) {
     markerLayer.clearLayers();
+    inlandLayer.clearLayers();
     for (const c of communities) {
       let m = markers[c.id];
       if (!m) {
@@ -65,7 +67,7 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
           .on("click", () => onCommunityClick(c.id));
         markers[c.id] = m;
       }
-      markerLayer.addLayer(m);
+      (c.class === "inland" ? inlandLayer : markerLayer).addLayer(m);
     }
   }
 
@@ -84,10 +86,11 @@ export function createMapView(L, { element, cat, onCommunityClick }) {
   }
 
   // images: {radar, water, change} urls (or null); options: which layers are on and the water opacity.
-  function showLayers(images, { radar, water, change, opacity }) {
+  function showLayers(images, { radar, water, change, inland, opacity }) {
     setOverlay("radar", images.radar, 1, radar);
     setOverlay("water", images.water, opacity, water);
     setOverlay("change", images.change, 1, change);
+    if (inland) inlandLayer.addTo(map); else inlandLayer.remove();
   }
 
   // markerState(c) -> {status, tooltip, selected}

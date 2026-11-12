@@ -28,7 +28,8 @@ function refreshLayers() {
   const p = state.pass;
   const water = $("#toggle-water").checked, change = $("#toggle-change").checked;
   mapView.showLayers({ radar: passUrl(p, p.files.radar), water: passUrl(p, p.files.water), change: passUrl(p, p.files.change) },
-    { radar: state.base === "radar", water, change, opacity: Number($("#opacity").value) / 100 });
+    { radar: state.base === "radar", water, change, inland: $("#toggle-inland").checked,
+      opacity: Number($("#opacity").value) / 100 });
   $("#map-key").innerHTML = panels.mapKey(state.record, { water, change });
 }
 
@@ -183,7 +184,7 @@ function bindUi() {
     document.querySelectorAll(".layers-base button").forEach(x => x.classList.toggle("is-on", x === b));
     refreshLayers();
   }));
-  ["#toggle-water", "#toggle-change", "#opacity"].forEach(s => $(s).addEventListener("input", refreshLayers));
+  ["#toggle-water", "#toggle-change", "#toggle-inland", "#opacity"].forEach(s => $(s).addEventListener("input", refreshLayers));
   $("#search").addEventListener("input", e => { state.query = e.target.value; renderRoster(); });
   document.querySelectorAll(".filter").forEach(b => b.addEventListener("click", () => {
     state.filter = b.dataset.filter;
