@@ -31,6 +31,21 @@ def mask_fill(db, floor_db):
     return db
 
 
+def trim_swath_edge(db, in_area, margin_m, px_m):
+    """Pixels within margin_m of the edge of the data (no data inside the area) become NaN. Towards the edge of the
+    swath NISAR's signal rolls off to the noise floor: on Tefe the median HH falls from about -8 dB inside to -25 to
+    -35 dB in the last 100 m, and a band several hundred metres wide reads as water along the edge, a fake channel
+    that links communities (ADR-006). The circular area's own corners are not an edge. Works in place, returns db."""
+    if not margin_m:
+        return db
+    from scipy import ndimage
+    gaps = ~np.isfinite(db) & in_area
+    if gaps.any():
+        near = ndimage.distance_transform_edt(~gaps) * px_m <= margin_m
+        db[near] = np.nan
+    return db
+
+
 def box_sum(a, k):
     """Sum over a k x k window (k odd) with cumulative sums; windows are clipped at the edges."""
     r = k // 2

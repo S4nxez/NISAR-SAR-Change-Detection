@@ -7,7 +7,7 @@ import traceback
 
 import numpy as np
 
-from lifeline.analysis.radar import read_pass_bands
+from lifeline.analysis.radar import read_pass_bands, trim_swath_edge
 from lifeline.analysis.water import pass_thresholds, vegetated_water, water_mask
 from lifeline.config import AREAS_DIR, OUT_ROOT, keep_backscatter, log
 from lifeline.geometry.area import area_mask
@@ -42,11 +42,12 @@ def process_pass(area, communities, ps, out_root, token, read=None):
     bands, read_mb, spacing = (read or read_layers)(area, ps, token)
     if not isinstance(bands, dict):
         bands = {"HHHH": bands}
-    outside = ~area_mask(area)
+    inside = area_mask(area)
     db, hv = bands["HHHH"], bands.get("HVHV")
-    db[outside] = np.nan   # outside a circular area: transparent in the images, never water
+    db[~inside] = np.nan   # outside a circular area: transparent in the images, never water
+    trim_swath_edge(db, inside, area.get("edge_margin_m", 0), area["px_m"])
     if hv is not None:
-        hv[outside] = np.nan
+        hv[~np.isfinite(db)] = np.nan
     strong_db, weak_db, threshold = pass_thresholds(area, db)
     water, valid = water_mask(db, strong_db, weak_db)
     wide = wide_water_of(area, water)

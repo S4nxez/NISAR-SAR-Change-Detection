@@ -93,7 +93,9 @@ For every pass (all frames of one track on one day):
    refined Lee filter (7 × 7 window, edge-aligned half windows, 9 looks: shores are not blurred;
    [ADR-002](decisions/ADR-002-river-monitor-refined-lee-filter.md); the older box filter,
    `speckle_filter: "box"`, averages over ~60 m and narrows every channel), and resampled to a fixed
-   lon/lat grid shared by all passes.
+   lon/lat grid shared by all passes. The last 1 km before the edge of the data (`edge_margin_m`) is also no
+   data: the signal rolls off to the noise floor there and would read as a channel along the edge
+   ([ADR-006](decisions/ADR-006-river-monitor-swath-edge-margin.md)).
 2. **Water**: filtered HH below −16 dB, plus pixels below −14 dB that touch that water
    (hysteresis): wind roughens stretches of rivers and lakes, which then return a little
    more echo and would otherwise cut the river in two. Both values are tuned for the refined Lee filter

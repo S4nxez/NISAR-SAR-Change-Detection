@@ -12,6 +12,7 @@
   "min_coverage": 0.8,
   "min_coverage_shown": 0.05,
   "valid_floor_db": -40.0,
+  "edge_margin_m": 1000,
   "water_db": -16.0,
   "water_db_weak": -14.0,
   "vegetated_water": {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000},

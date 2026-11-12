@@ -82,6 +82,16 @@ class TestPipeline(TempDirTest):
         self.assertTrue(entry["evaluated"])
         self.assertNotIn("granules", entry)
 
+    def test_the_band_along_the_swath_edge_is_no_data(self, *_):
+        db = self.db.copy()
+        db[:, 280:] = np.nan                                  # the swath ends at column 280
+        area = {**self.area, "edge_margin_m": 100}
+        pipeline.process_pass(area, [], found_pass(), self.tmp, "tok", read=lambda *a: (db, 1.0, 20.0))
+        from lifeline.output.layers import load_mask
+        _, valid = load_mask(os.path.join(pass_dir(area, "2026-10-23_t161A", self.tmp), "water.npz"))
+        self.assertFalse(valid[:, 275:].any())                # 5 px = 100 m trimmed
+        self.assertTrue(valid[:, 260:275].all())
+
     def test_the_backscatter_is_stored_only_when_asked(self, *_):
         with mock.patch.dict(os.environ, {"MONITOR_KEEP_BACKSCATTER": "1"}):
             pipeline.process_pass(self.area, [], found_pass(), self.tmp, "tok", read=self.read)

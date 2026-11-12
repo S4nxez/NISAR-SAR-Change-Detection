@@ -6,6 +6,7 @@ from unittest import mock
 import numpy as np
 
 from lifeline.analysis.radar import (
+    trim_swath_edge,
     area_edge,
     block_mean,
     box_sum,
@@ -45,6 +46,21 @@ class TestBackscatterHelpers(unittest.TestCase):
         out = mask_fill(db, -40.0)
         np.testing.assert_array_equal(np.isnan(out), [False, False, False, True, True, True])
         self.assertIs(out, db)
+
+    def test_the_band_along_the_swath_edge_becomes_no_data(self):
+        db = np.full((6, 10), -8.0, np.float32)
+        db[:, 8:] = np.nan                                   # the swath ends at column 8
+        in_area = np.ones_like(db, bool)
+        in_area[0, :3] = False                               # a corner of the circle: not an edge
+        db[0, :3] = np.nan
+        out = trim_swath_edge(db, in_area, 40.0, 20.0)
+        self.assertIs(out, db)
+        self.assertTrue(np.isnan(out[:, 6:]).all())          # 2 px = 40 m from the edge
+        self.assertFalse(np.isnan(out[1:, :6]).any())
+        same = np.full((3, 3), -8.0, np.float32)
+        trim_swath_edge(same, np.ones((3, 3), bool), 0, 20.0)
+        trim_swath_edge(same, np.ones((3, 3), bool), 100.0, 20.0)   # no gap: nothing to trim
+        self.assertFalse(np.isnan(same).any())
 
     def test_box_sum_matches_a_brute_force_sum_clipped_at_the_edges(self):
         rng = np.random.default_rng(1)
