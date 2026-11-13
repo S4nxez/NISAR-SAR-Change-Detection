@@ -1,6 +1,6 @@
 # ADR-007: Sentinel-1 tells drained beds from water at low water
 
-- Status: proposed (2026-11-13)
+- Status: accepted (2026-11-13) by the project lead, after the benchmark
 - Component: river lifeline monitor, `processing/src/lifeline/sources/sentinel1.py`,
   `analysis/water.py` (`low_water_route`), `output/catalog.py` (`hold_unverified`), called by
   `pipeline.judge`; area keys `low_water` and `sentinel1`
