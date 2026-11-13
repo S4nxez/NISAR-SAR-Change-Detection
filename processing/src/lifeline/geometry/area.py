@@ -68,3 +68,10 @@ def area_wkt(area):
     """The area's bbox as a WKT polygon, for the ASF search."""
     lon0, lat0, lon1, lat1 = area["bbox"]
     return f"POLYGON(({lon0} {lat0},{lon1} {lat0},{lon1} {lat1},{lon0} {lat1},{lon0} {lat0}))"
+
+
+def area_transform(area):
+    """Affine transform of the area grid (rasterio; only the commands that read COGs need it)."""
+    from rasterio.transform import from_origin
+    lon0, _, _, lat1 = area["bbox"]
+    return from_origin(lon0, lat1, area["step_deg"], area["step_deg"])

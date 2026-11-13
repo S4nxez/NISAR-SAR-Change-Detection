@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from lifeline.config import PROCESSING_DIR, SCHEMA_VERSION, STATUS, STATUS_NAME, areas_dir, data_dir
+from lifeline.config import PROCESSING_DIR, SCHEMA_VERSION, STATUS, STATUS_NAME, areas_dir, cache_dir, data_dir, keep_backscatter
 
 
 class TestFolders(unittest.TestCase):
@@ -14,6 +14,16 @@ class TestFolders(unittest.TestCase):
         env = {"MONITOR_AREAS_DIR": "/app/areas", "MONITOR_DATA_DIR": "/data/monitor"}
         self.assertEqual(areas_dir(env), "/app/areas")
         self.assertEqual(data_dir(env), "/data/monitor")
+
+    def test_the_window_cache_is_off_unless_set(self):
+        self.assertIsNone(cache_dir({}))
+        self.assertIsNone(cache_dir({"MONITOR_CACHE_DIR": ""}))
+        self.assertEqual(cache_dir({"MONITOR_CACHE_DIR": "/cache"}), "/cache")
+
+    def test_backscatter_is_kept_only_when_asked(self):
+        self.assertFalse(keep_backscatter({}))
+        self.assertFalse(keep_backscatter({"MONITOR_KEEP_BACKSCATTER": "0"}))
+        self.assertTrue(keep_backscatter({"MONITOR_KEEP_BACKSCATTER": "1"}))
 
     def test_an_empty_variable_falls_back_to_the_default(self):
         self.assertEqual(data_dir({"MONITOR_DATA_DIR": ""}), os.path.join(PROCESSING_DIR, "output"))

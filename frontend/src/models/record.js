@@ -25,12 +25,14 @@ export function buildRecord(cat) {
 // it is shown and counted as at risk until the next pass with data agrees.
 export const isUnconfirmed = (pass, community) => !!pass?.unconfirmed?.includes(community.id);
 
-// Status of a community on a pass: its class when it is not monitored, else the pass result.
+// Status of a community on a pass: "no_data" when the pass did not see it (whatever its class), else its class when
+// it is not monitored, else the pass result.
 export function statusOf(record, pass, community) {
-  if (community.class && community.class !== "monitored") return community.class;
   const result = pass?.status?.[community.id];
-  if (!result) return "no_data";
-  return isUnconfirmed(pass, community) ? "at_risk" : record.statusName(result[0]);
+  const name = result ? record.statusName(result[0]) : "no_data";
+  if (name === "no_data") return "no_data";
+  if (community.class && community.class !== "monitored") return community.class;
+  return isUnconfirmed(pass, community) ? "at_risk" : name;
 }
 
 // True when the pass found a water route (connected or at risk) for the community, whatever its confirmation.

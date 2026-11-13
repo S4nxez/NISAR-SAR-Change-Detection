@@ -1,0 +1,165 @@
+{
+ "description": "Verdicts of people who checked a place where NISAR and Sentinel-1 give a community different statuses (exam report, section NISAR and Sentinel-1). verdict: nisar (NISAR was right), sentinel1 (Sentinel-1 was right), undecidable. cause: optional, the zone type if the report got it wrong.",
+ "reviews": [
+  {
+   "passes": [
+    "2025-11-04_t097D",
+    "2026-07-07_t161A"
+   ],
+   "community_ids": [
+    "osm3924267828",
+    "osm3924267833",
+    "osm3924302376",
+    "osm3924302380",
+    "osm3924302384",
+    "osm3924302388",
+    "osm3984711996",
+    "osm3984711997",
+    "osm3984833619",
+    "osm3984833629",
+    "osm3984833630",
+    "osm3984833631",
+    "osm3984833637",
+    "osm3984833638",
+    "osm3984833640",
+    "osm3984833643",
+    "osm3984833646",
+    "osm3984833647",
+    "osm3984833650",
+    "osm3984833653",
+    "osm3984833656",
+    "osm3986860589",
+    "osm3986860610",
+    "osm3986860614",
+    "osm3986860619",
+    "osm3986860634",
+    "osm3986860641",
+    "osm3986860651",
+    "osm415524054"
+   ],
+   "verdict": "nisar",
+   "cause": "narrow_channel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "Channel clear and over 100 m wide on Sentinel-1 (10 m). On Sentinel-2 a cloud cuts the channel right at that point, but it is also over 100 m wide."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D",
+    "2026-10-11_t161A",
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm3984833607",
+    "osm3984833616",
+    "osm3984833618",
+    "osm3984833644",
+    "osm3984833655",
+    "osm3984835457",
+    "osm3984835460",
+    "osm3984835463",
+    "osm3986860568",
+    "osm3986860569",
+    "osm3986860596",
+    "osm3986860644",
+    "osm3986860646"
+   ],
+   "verdict": "nisar",
+   "cause": "shore_mixed_pixel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "Sentinel-2 cloudy on 11 Oct around Santa Luzia do Catuiri. Near Vila Siao, on 4 Nov, Sentinel-2 clouds cut the link to Lake Tefe while Sentinel-1 (10 m) shows it clearly, over 100 m wide."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D",
+    "2026-07-07_t161A"
+   ],
+   "community_ids": [
+    "osm2661355762",
+    "osm3984712000",
+    "osm3984712003",
+    "osm3984712006",
+    "osm3984712016",
+    "osm3984712024",
+    "osm3984712038",
+    "osm3984833608",
+    "osm3984833614",
+    "osm3984833621",
+    "osm3984833628",
+    "osm3984833631",
+    "osm3984833638",
+    "osm3984833653"
+   ],
+   "verdict": "nisar",
+   "cause": "narrow_channel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "The point between Sao Jose and Parauari lies by the Solimoes, over 1 km wide at its narrowest. Across from Assuncao (Jaquiri) the side channel is about 40 m at its narrowest on Sentinel-1 (10 m) and Sentinel-2, but Jaquiri is less than 1 km from the Solimoes and should count as connected."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D"
+   ],
+   "community_ids": [
+    "osm3984833616",
+    "osm3984833655",
+    "osm3986858845",
+    "osm3986860562",
+    "osm3986860568",
+    "osm3986860569",
+    "osm3986860602",
+    "osm3986860627",
+    "osm3986860636",
+    "osm3986860644",
+    "osm3986860652",
+    "osm3986860653",
+    "osm8583188413"
+   ],
+   "verdict": "nisar",
+   "cause": "wind_roughness",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "The point is inside Lake Tefe, far from the shore: open water (Sentinel-1 reads it about -15.5 dB on 4 Nov, wind)."
+  },
+  {
+   "passes": [
+    "2026-10-11_t161A"
+   ],
+   "community_ids": [
+    "osm3924302370",
+    "osm3924302372",
+    "osm3924302373",
+    "osm3924302377",
+    "osm3924302379",
+    "osm3924302381",
+    "osm3924302382",
+    "osm3924302383",
+    "osm3924302387",
+    "osm3924302395",
+    "osm416757398"
+   ],
+   "verdict": "nisar",
+   "cause": "narrow_channel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "Sentinel-2 all cloud that day. The Sentinel-1 (10 m) image is cut right there (scene edge) and leaves a loose piece of river; the channel is at least 100 m wide and continuous, and complete on the 40 m Sentinel-1 image."
+  },
+  {
+   "passes": [
+    "2025-11-04_t097D",
+    "2026-10-11_t161A",
+    "2026-10-23_t161A"
+   ],
+   "community_ids": [
+    "osm2661355762",
+    "osm3984712000"
+   ],
+   "verdict": "nisar",
+   "cause": "narrow_channel",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "Clear link over 100 m wide on Sentinel-1 (10 m); a Sentinel-2 cloud cuts the channel."
+  }
+ ]
+}

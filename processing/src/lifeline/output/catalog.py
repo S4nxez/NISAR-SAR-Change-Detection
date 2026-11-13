@@ -17,7 +17,7 @@ from lifeline.geometry.area import area_mask, to_px
 from lifeline.output.layers import load_mask, save_change
 
 AREA_KEYS = ("id", "name", "country", "bbox", "circle", "hub", "river", "access_radius_m", "safe_width_m",
-             "widths_m", "water_db")
+             "widths_m", "water_db", "vegetated_water", "low_water")
 SOURCES = {"radar": "NISAR L2 GCOV (NASA/ISRO), ASF DAAC", "places": "© OpenStreetMap contributors (ODbL)"}
 CLASSES = ("monitored", "unresolved", "inland", "no_data")
 LINKED = (STATUS["connected"], STATUS["at_risk"])
@@ -81,8 +81,24 @@ def hub_target(area):
     return (*to_px(area, at["lon"], at["lat"]), hub["radius_m"])
 
 
-def evaluate(area, communities, water, valid, wide, entry):
-    """Water statistics and community status of one pass (fills `entry`)."""
+def hold_unverified(results, strict):
+    """Statuses of routes that need unverified water (analysis.water.low_water_route): a community connected with
+    that water but not without it is at risk, never connected. Returns (results, indices of the communities whose
+    route needs the unverified water)."""
+    out, held = [], []
+    for i, (r, s) in enumerate(zip(results, strict, strict=True)):
+        if r[0] in LINKED and s[0] != r[0]:
+            held.append(i)
+            if r[0] == STATUS["connected"]:
+                r = [STATUS["at_risk"], *r[1:]]
+        out.append(r)
+    return out, held
+
+
+def evaluate(area, communities, water, valid, wide, entry, route_water=None, unverified=None):
+    """Water statistics and community status of one pass (fills `entry`). Routes run over `route_water` when given
+    (the water left by the low-water rule, analysis.water.low_water_route), else over all the water. A route that
+    needs `unverified` water is at most at risk; those communities are listed in entry["unverified_route"]."""
     px_m = area["px_m"]
     pix_km2 = (px_m / 1000.0) ** 2
     in_mask = area_mask(area)
@@ -92,16 +108,23 @@ def evaluate(area, communities, water, valid, wide, entry):
                  coverage=round(coverage, 4),
                  shown=coverage >= area.get("min_coverage_shown", 0.0),
                  evaluated=coverage >= area["min_coverage"])
-    for k in ("status", "hub_link", "counts"):
+    for k in ("status", "hub_link", "counts", "unverified_route"):
         entry.pop(k, None)
     if not entry["evaluated"]:
         return
     hub, river = hub_target(area), area["river"]
     # route and distance to water are measured from where people reach the water (see places.assign_access)
     targets = [to_px(area, *(c.get("access") or (c["lon"], c["lat"]))) for c in communities]
-    res = connectivity(water, valid, px_m, hub, targets, area["widths_m"],
+    route = water if route_water is None else route_water
+    res = connectivity(route, valid, px_m, hub, targets, area["widths_m"],
                        area["access_radius_m"], area["safe_width_m"], in_mask)
-    entry["hub_link"] = connectivity(water, valid, px_m, hub, [to_px(area, river["lon"], river["lat"])],
+    if unverified is not None and unverified.any():
+        strict = connectivity(route & ~unverified, valid, px_m, hub, targets, area["widths_m"],
+                              area["access_radius_m"], area["safe_width_m"], in_mask)
+        res, held = hold_unverified(res, strict)
+        if held:
+            entry["unverified_route"] = [communities[i]["id"] for i in held]
+    entry["hub_link"] = connectivity(route, valid, px_m, hub, [to_px(area, river["lon"], river["lat"])],
                                      area["widths_m"], river["radius_m"], area["safe_width_m"], in_mask)[0]
     entry["status"] = {c["id"]: r for c, r in zip(communities, res, strict=True)}
     entry["counts"] = {k: 0 for k in STATUS}

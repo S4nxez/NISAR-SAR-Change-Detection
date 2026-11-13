@@ -1,18 +1,29 @@
 import io
+import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
 from lifeline.analysis.radar import (
+    trim_swath_edge,
     area_edge,
     block_mean,
     box_sum,
+    filter_db,
+    granule_window,
     linear_to_db,
+    load_window,
+    mask_fill,
     product_window,
     read_pass,
+    read_pass_bands,
+    read_window,
+    refined_lee,
     resample_into,
     speckle_filter,
     speckle_window,
+    window_cache_path,
 )
 
 from ..helpers import small_area
@@ -29,6 +40,27 @@ class TestBackscatterHelpers(unittest.TestCase):
         db = linear_to_db([1.0, 0.1, 0.0, -1.0, np.inf])
         np.testing.assert_allclose(db[:2], [0.0, -10.0], atol=1e-6)
         self.assertTrue(np.isnan(db[2:]).all())
+
+    def test_fill_below_the_floor_becomes_no_data(self):
+        db = np.array([-12.0, -39.9, -40.0, -57.0, -150.0, np.nan], np.float32)
+        out = mask_fill(db, -40.0)
+        np.testing.assert_array_equal(np.isnan(out), [False, False, False, True, True, True])
+        self.assertIs(out, db)
+
+    def test_the_band_along_the_swath_edge_becomes_no_data(self):
+        db = np.full((6, 10), -8.0, np.float32)
+        db[:, 8:] = np.nan                                   # the swath ends at column 8
+        in_area = np.ones_like(db, bool)
+        in_area[0, :3] = False                               # a corner of the circle: not an edge
+        db[0, :3] = np.nan
+        out = trim_swath_edge(db, in_area, 40.0, 20.0)
+        self.assertIs(out, db)
+        self.assertTrue(np.isnan(out[:, 6:]).all())          # 2 px = 40 m from the edge
+        self.assertFalse(np.isnan(out[1:, :6]).any())
+        same = np.full((3, 3), -8.0, np.float32)
+        trim_swath_edge(same, np.ones((3, 3), bool), 0, 20.0)
+        trim_swath_edge(same, np.ones((3, 3), bool), 100.0, 20.0)   # no gap: nothing to trim
+        self.assertFalse(np.isnan(same).any())
 
     def test_box_sum_matches_a_brute_force_sum_clipped_at_the_edges(self):
         rng = np.random.default_rng(1)
@@ -104,11 +136,76 @@ class TestResample(unittest.TestCase):
         self.assertEqual(int(np.isfinite(out).sum()), 4)
 
 
+def gamma_db(mean_db, shape, looks, seed=0):
+    rng = np.random.default_rng(seed)
+    return (10 * np.log10(rng.gamma(looks, 1 / looks, shape) * 10 ** (mean_db / 10))).astype(np.float32)
+
+
+class TestRefinedLee(unittest.TestCase):
+    def test_homogeneous_areas_are_smoothed_without_bias(self):
+        db = gamma_db(-10.0, (120, 120), 9)
+        out = refined_lee(db, 9.0)
+        lin_in, lin_out = 10 ** (db / 10), 10 ** (out / 10)
+        enl_in = (lin_in.mean() / lin_in.std()) ** 2
+        enl_out = (lin_out[10:-10, 10:-10].mean() / lin_out[10:-10, 10:-10].std()) ** 2
+        self.assertGreater(enl_out, 4 * enl_in)
+        self.assertAlmostEqual(float(lin_out.mean() / lin_in.mean()), 1.0, delta=0.03)
+
+    def test_a_noiseless_shore_is_kept_and_a_narrow_line_is_less_blurred_than_by_the_box(self):
+        db = np.full((40, 40), -7.0, np.float32)
+        db[:, :20] = -23.0                                         # lake | forest
+        out = refined_lee(db, 9.0)
+        np.testing.assert_allclose(out, db, atol=1e-3)              # an edge is not blurred at all
+        line = np.full((40, 40), -7.0, np.float32)
+        line[:, 19:21] = -23.0                                     # 40 m channel: thinner than the half windows
+        lee, box = refined_lee(line, 9.0)[5:-5, 19:21], speckle_filter(line, 3)[5:-5, 19:21]
+        self.assertTrue((lee < box - 3).all())                     # darker than the box keeps it, not exact
+
+    def test_a_60m_channel_keeps_its_width_where_the_box_filter_shrinks_it(self):
+        mean = np.full((200, 200), -7.0, np.float32)
+        mean[:, 99:102] = -23.0                                    # 3 px = 60 m
+        noisy = mean + gamma_db(0.0, mean.shape, 9, seed=3)
+        lee = refined_lee(noisy, 9.0)[5:-5, 99:102] < -15
+        box = speckle_filter(noisy, 3)[5:-5, 99:102] < -15
+        self.assertGreater(lee.mean(), 0.95)
+        self.assertLess(box.mean(), 0.5)
+
+    def test_a_shore_next_to_a_gap_is_kept(self):
+        db = np.full((40, 40), -7.0, np.float32)
+        db[:, :20] = -23.0
+        db[:6, :] = np.nan                                         # swath edge just north of the shore's end
+        db[:, 36:] = np.nan
+        out = refined_lee(db, 9.0)
+        ok = np.isfinite(db)
+        np.testing.assert_allclose(out[ok], db[ok], atol=1e-3)
+
+    def test_no_data_stays_no_data_and_does_not_spread(self):
+        db = gamma_db(-10.0, (60, 60), 9)
+        db[20:30, 20:30] = np.nan
+        out = refined_lee(db, 9.0)
+        np.testing.assert_array_equal(np.isnan(out), np.isnan(db))
+
+    def test_chunks_give_the_same_result(self):
+        db = gamma_db(-12.0, (90, 50), 9, seed=5)
+        db[:, 20:23] = -23.0
+        whole = refined_lee(db, 9.0)
+        with mock.patch("lifeline.analysis.radar.LEE_CHUNK_ROWS", 7):
+            np.testing.assert_allclose(refined_lee(db, 9.0), whole, atol=1e-5)
+
+    def test_filter_choice_comes_from_the_area(self):
+        db = gamma_db(-10.0, (30, 30), 9)
+        np.testing.assert_array_equal(filter_db({"speckle_m": 60}, db, 20.0), speckle_filter(db, 3))
+        np.testing.assert_array_equal(filter_db({"speckle_filter": "refined_lee", "speckle_looks": 9}, db, 20.0),
+                                      refined_lee(db, 9.0))
+        with self.assertRaises(ValueError):
+            filter_db({"speckle_filter": "median"}, db, 20.0)
+
+
 @unittest.skipIf(h5py is None, "h5py and pyproj are needed to read GCOV products")
 class TestReadPass(unittest.TestCase):
     """read_pass against a synthetic GCOV product in memory (UTM 20S, like Tefé)."""
 
-    def gcov(self, area, with_hh=True):
+    def gcov(self, area, with_hh=True, with_hv=False, fill_rows=0):
         from pyproj import Transformer
         tr = Transformer.from_crs(4326, 32720, always_xy=True)
         x0, y1 = tr.transform(area["bbox"][0], area["bbox"][3])
@@ -123,17 +220,59 @@ class TestReadPass(unittest.TestCase):
             if with_hh:
                 hh = np.full((len(ys), len(xs)), 10 ** (-0.5), np.float32)   # land, -5 dB
                 hh[:, : len(xs) // 2] = 10 ** (-2.0)                          # water on the west half, -20 dB
+                hh[:fill_rows] = 1e-10                                        # swath-edge fill, -100 dB
                 fa["HHHH"] = hh
+            if with_hv:
+                fa["HVHV"] = np.full((len(ys), len(xs)), 10 ** (-1.2), np.float32)   # -12 dB
         return buf.getvalue()
 
-    def opener(self, products):
+    def opener(self, products, opened=None):
         class Remote(io.BytesIO):
             """In-memory stand-in for RemoteFile: a file object that counts the megabytes read."""
 
             def __init__(self, url, token):
                 super().__init__(products[url])
                 self.bytes = 1_000_000
+                if opened is not None:
+                    opened.append(url)
         return Remote
+
+    def test_the_cache_is_read_instead_of_the_product_and_gives_the_same_pass(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "https://asf.example/NISAR_G1.h5", "name": "NISAR_G1.h5"}]}
+        products = {ps["granules"][0]["url"]: self.gcov(area, with_hv=True)}
+        direct = read_pass(area, ps, "token", open_remote=self.opener(products))
+        opened = []
+        with tempfile.TemporaryDirectory() as cache:
+            first = read_pass(area, ps, "token", open_remote=self.opener(products, opened), cache_dir=cache)
+            second = read_pass(area, ps, "token", open_remote=self.opener(products, opened), cache_dir=cache)
+            window = load_window(window_cache_path(area, ps["granules"][0], cache))
+        self.assertEqual(len(opened), 1)                       # the second read used the cache only
+        np.testing.assert_array_equal(first[0], direct[0])
+        np.testing.assert_array_equal(second[0], direct[0])
+        self.assertEqual((first[1], second[1], second[2]), (1.0, 0.0, 20.0))
+        self.assertEqual(sorted(window["bands"]), ["HHHH", "HVHV"])   # HV is kept for the methods that need it
+
+    def test_a_granule_without_hh_is_cached_as_empty(self):
+        area = small_area()
+        g = {"url": "u", "name": "NISAR_G2.h5"}
+        opened = []
+        with tempfile.TemporaryDirectory() as cache:
+            for _ in range(2):
+                self.assertIsNone(granule_window(area, g, "t", open_remote=self.opener(
+                    {"u": self.gcov(area, with_hh=False)}, opened), cache_dir=cache))
+        self.assertEqual(opened, ["u"])
+
+    def test_without_a_cache_only_the_asked_bands_are_read(self):
+        area = small_area()
+        w = read_window(area, {"url": "u"}, "t", ("HHHH",), self.opener({"u": self.gcov(area, with_hv=True)}))
+        self.assertEqual(list(w["bands"]), ["HHHH"])
+
+    def test_cache_files_depend_on_the_area_and_the_granule(self):
+        a, b = small_area(), small_area(bbox=[-64.81, -3.44, -64.74, -3.40])
+        g = {"url": "https://x/NISAR_G3.h5", "name": "NISAR_G3.h5"}
+        self.assertNotEqual(window_cache_path(a, g, "/c"), window_cache_path(b, g, "/c"))
+        self.assertTrue(window_cache_path(a, g, "/c").endswith("NISAR_G3.npz"))
 
     def test_reads_the_area_and_resamples_it_to_the_grid(self):
         area = small_area(speckle_m=60)
@@ -144,6 +283,24 @@ class TestReadPass(unittest.TestCase):
         self.assertAlmostEqual(float(np.nanmedian(db[:, :100])), -20.0, places=3)
         self.assertAlmostEqual(float(np.nanmedian(db[:, -100:])), -5.0, places=3)
         self.assertEqual((read_mb, spacing), (1.0, 20.0))
+
+    def test_swath_edge_fill_is_no_data_and_does_not_leak_into_the_filter(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "a"}]}
+        db, _, _ = read_pass(area, ps, "token", open_remote=self.opener({"a": self.gcov(area, fill_rows=60)}))
+        self.assertTrue(np.isnan(db[:5]).all())                 # the north rows fall in the fill
+        valid = db[np.isfinite(db)]
+        self.assertGreater(valid.min(), -21.0)                  # nothing darker than the real water came through
+        self.assertTrue(np.isfinite(db[-50:]).all())
+
+    def test_hv_is_read_with_hh_and_is_none_on_single_polarisation_passes(self):
+        area = small_area(speckle_m=60)
+        ps = {"granules": [{"url": "a"}]}
+        dual, _, _ = read_pass_bands(area, ps, "t", ("HHHH", "HVHV"), self.opener({"a": self.gcov(area, with_hv=True)}))
+        single, _, _ = read_pass_bands(area, ps, "t", ("HHHH", "HVHV"), self.opener({"a": self.gcov(area)}))
+        self.assertAlmostEqual(float(np.nanmedian(dual["HVHV"])), -12.0, places=3)
+        self.assertIsNone(single["HVHV"])
+        np.testing.assert_array_equal(dual["HHHH"], single["HHHH"])
 
     def test_frames_without_hh_are_skipped(self):
         area = small_area()

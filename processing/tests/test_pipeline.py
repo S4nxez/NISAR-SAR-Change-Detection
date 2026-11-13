@@ -6,11 +6,14 @@ import numpy as np
 
 from lifeline import pipeline
 from lifeline.output.catalog import catalog_path, pass_dir
+from lifeline.output.layers import load_backscatter, load_sentinel1, load_vegetated
+from lifeline.sources.occurrence import NO_DATA, save_occurrence
 from lifeline.sources.places import communities_collection, save_communities
 
 from .helpers import TempDirTest, river_scene, scene_db, small_area
 
 LON0, LAT1, STEP = -64.80, -3.40, 0.0002
+READ_LAYERS = pipeline.read_layers   # the real one: the tests below patch it
 
 
 def lonlat(row, col):
@@ -59,7 +62,7 @@ class TestPipeline(TempDirTest):
         water, _ = river_scene(channel_px=2)
         self.db = scene_db(water)
         self.read = mock.Mock(return_value=(self.db.copy(), 12.34, 20.0))
-        self.patch_read = mock.patch("lifeline.pipeline.read_pass", self.read)
+        self.patch_read = mock.patch("lifeline.pipeline.read_layers", self.read)
         self.patch_read.start()
         self.addCleanup(self.patch_read.stop)
         self.patch_gauge = mock.patch("lifeline.pipeline.refresh_gauge")
@@ -76,8 +79,46 @@ class TestPipeline(TempDirTest):
         self.assertEqual(sorted(os.listdir(pdir)), ["radar.webp", "water.npz", "water.png"])
         self.assertEqual((entry["read_mb"], entry["spacing_m"], entry["track"]), (12.3, 20.0, 161))
         self.assertEqual(entry["files"], {"radar": "radar.webp", "water": "water.png"})
+        self.assertEqual(entry["threshold"], {"source": "fixed", "strong_db": -15.0, "weak_db": None})
         self.assertTrue(entry["evaluated"])
         self.assertNotIn("granules", entry)
+
+    def test_the_band_along_the_swath_edge_is_no_data(self, *_):
+        db = self.db.copy()
+        db[:, 280:] = np.nan                                  # the swath ends at column 280
+        area = {**self.area, "edge_margin_m": 100}
+        pipeline.process_pass(area, [], found_pass(), self.tmp, "tok", read=lambda *a: (db, 1.0, 20.0))
+        from lifeline.output.layers import load_mask
+        _, valid = load_mask(os.path.join(pass_dir(area, "2026-10-23_t161A", self.tmp), "water.npz"))
+        self.assertFalse(valid[:, 275:].any())                # 5 px = 100 m trimmed
+        self.assertTrue(valid[:, 260:275].all())
+
+    def test_the_backscatter_is_stored_only_when_asked(self, *_):
+        with mock.patch.dict(os.environ, {"MONITOR_KEEP_BACKSCATTER": "1"}):
+            pipeline.process_pass(self.area, [], found_pass(), self.tmp, "tok", read=self.read)
+        hh, hv = load_backscatter(os.path.join(pass_dir(self.area, "2026-10-23_t161A", self.tmp), "backscatter.npz"))
+        np.testing.assert_allclose(hh, self.db, atol=0.02)
+        self.assertIsNone(hv)
+
+    def test_water_under_vegetation_is_mapped_but_does_not_change_the_routes(self, *_):
+        area = {**self.area, "vegetated_water": {"hh_min_db": -4.0, "ratio_min_db": 7.0, "near_water_m": 1000}}
+        hh = self.db.copy()
+        hv = np.where(hh < -15, -30.0, -12.5).astype(np.float32)
+        hh[40:80, 30:60], hv[40:80, 30:60] = -1.0, -9.5          # flooded vegetation beside the river
+        plain = pipeline.process_pass(self.area, [], found_pass(), self.tmp, "tok", read=self.read)
+        entry = pipeline.process_pass(area, [], found_pass("2026-10-24_t161A", "2026-10-24"), self.tmp, "tok",
+                                      read=lambda *a: ({"HHHH": hh, "HVHV": hv}, 1.0, 20.0))
+        self.assertGreater(entry["vegetated_km2"], 0)
+        self.assertIsNone(plain["vegetated_km2"])
+        self.assertEqual(entry["water_km2"], plain["water_km2"])
+        stored = load_vegetated(os.path.join(pass_dir(area, "2026-10-24_t161A", self.tmp), "water.npz"))
+        self.assertTrue(stored[40:80, 30:60].all())
+
+    def test_the_reader_asks_for_hv_only_when_the_area_needs_it(self, *_):
+        with mock.patch("lifeline.pipeline.read_pass_bands", return_value=({}, 0, None)) as rpb:
+            READ_LAYERS(self.area, {"granules": []}, "t")
+            READ_LAYERS({**self.area, "vegetated_water": {"hh_min_db": -4}}, {"granules": []}, "t")
+        self.assertEqual([c.args[3] for c in rpb.call_args_list], [("HHHH",), ("HHHH", "HVHV")])
 
     def test_update_processes_new_passes_and_classifies_the_record(self, *_):
         cat = self.update({"2026-10-23_t161A": found_pass()})
@@ -109,6 +150,125 @@ class TestPipeline(TempDirTest):
         cat = self.update({"2026-10-11_t161A": found_pass("2026-10-11_t161A", "2026-10-11"),
                            "2026-10-23_t161A": found_pass()})
         self.assertEqual([p["id"] for p in cat["passes"]], ["2026-10-23_t161A"])
+
+    LAKE = np.s_[60:140, 200:260]
+
+    def low_water_area(self, with_sentinel1=True):
+        """The scene with the low-water rule: the lake (and only it) is seasonal ground."""
+        area = dict(self.area, low_water={"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60,
+                                          "veto_radius_m": 20})
+        if with_sentinel1:
+            area["sentinel1"] = {"max_days": 4, "level_tolerance_cm": 30, "water_db": -18.0, "weak_db": -16.0,
+                                 "land_db": -16.0}
+        occ = np.full((area["ny"], area["nx"]), 98, np.uint8)
+        occ[self.LAKE] = 60
+        occ[0, 0] = NO_DATA
+        save_occurrence(area, occ, self.tmp)
+        return area
+
+    def sentinel1_sees(self, lake):
+        """Patch the Sentinel-1 reader: everything seen, the river water, the lake `lake` ("mud" or "water")."""
+        water, _ = river_scene(channel_px=2)
+        land = ~water
+        if lake == "mud":
+            land[self.LAKE], water[self.LAKE] = True, False
+        view = {"dates": ["2026-10-25"], "water": water, "land": land, "seen": np.ones_like(water)}
+        p = mock.patch("lifeline.pipeline.sentinel1.pass_view", return_value=view)
+        self.addCleanup(p.stop)
+        return p.start()
+
+    def set_level(self, cm):
+        self.gauge.side_effect = lambda area, cat, **k: cat.update(gauge={"series": [["2026-10-23", cm]]})
+
+    def run_update(self, area, **kw):
+        return pipeline.update(area, out_root=self.tmp, areas_dir=self.tmp, executor=SyncExecutor, token=lambda: "tok",
+                               search=lambda a: {"2026-10-23_t161A": found_pass()}, **kw)
+
+    def test_a_lake_sentinel1_sees_as_mud_is_cut_off_at_low_water(self, *_):
+        area = self.low_water_area()
+        self.set_level(800.0)
+        view = self.sentinel1_sees("mud")
+        p = self.run_update(area)["passes"][0]
+        self.assertEqual((p["river_level_cm"], p["low_water"]), (800.0, True))
+        self.assertEqual({k: v[0] for k, v in p["status"].items()}, {"osm1": 1, "osm2": 3})
+        self.assertEqual(p["sentinel1"]["dates"], ["2026-10-25"])
+        self.assertEqual(p["sentinel1"]["mud_km2"], round(80 * 60 * 0.0004, 2))
+        self.assertLess(p["sentinel1"]["agreement"], 1.0)
+        self.assertEqual(view.call_args.args[4], [["2026-10-23", 800.0]])   # the gauge gates the scenes
+        self.assertEqual(self.gauge.call_args.kwargs["dates"], ["2026-10-23"])
+        pdir = pass_dir(area, "2026-10-23_t161A", self.tmp)
+        self.assertTrue(load_sentinel1(os.path.join(pdir, pipeline.SENTINEL1_FILE))["land"][self.LAKE].all())
+
+    def test_a_seasonal_lake_that_still_holds_water_keeps_its_route(self, *_):
+        area = self.low_water_area()
+        self.set_level(800.0)
+        self.sentinel1_sees("water")
+        p = self.run_update(area)["passes"][0]
+        self.assertEqual(p["status"]["osm2"][0], 2)
+        self.assertEqual((p["sentinel1"]["agreement"], p["sentinel1"]["mud_km2"]), (1.0, 0.0))
+        self.assertNotIn("unverified_route", p)
+
+    def test_without_sentinel1_a_route_over_a_seasonal_bed_is_only_at_risk(self, *_):
+        for area in (self.low_water_area(with_sentinel1=False), self.low_water_area()):
+            self.set_level(800.0)
+            with mock.patch("lifeline.pipeline.sentinel1.pass_view", side_effect=OSError("HTTP 503")):
+                p = self.run_update(area, redo=True)["passes"][0]
+            self.assertTrue(p["low_water"])
+            self.assertEqual(p["status"]["osm2"][0], 2)
+            self.assertEqual(p["unverified_route"], ["osm2"])
+            self.assertNotIn("sentinel1", p)
+
+    def test_a_reprocessed_pass_without_sentinel1_drops_the_old_scenes(self, *_):
+        area = self.low_water_area()
+        self.set_level(800.0)
+        self.sentinel1_sees("mud")
+        self.run_update(area)
+        mock.patch.stopall()
+        self.patch_read.start()
+        self.gauge = self.patch_gauge.start()
+        self.set_level(800.0)
+        with mock.patch("lifeline.pipeline.sentinel1.pass_view", return_value=None):
+            p = self.run_update(area, redo=True)["passes"][0]
+        self.assertFalse(os.path.exists(os.path.join(pass_dir(area, "2026-10-23_t161A", self.tmp),
+                                                     pipeline.SENTINEL1_FILE)))
+        self.assertEqual(p["status"]["osm2"][0], 2)
+
+    def test_high_water_or_unknown_level_keeps_every_route(self, *_):
+        area = self.low_water_area()
+        view = self.sentinel1_sees("mud")
+        for level in (None, 1500.0):   # no level first: a stored series would be kept
+            if level is None:
+                self.gauge.side_effect = None
+            else:
+                self.set_level(level)
+            p = self.run_update(area, redo=True)["passes"][0]
+            self.assertEqual((p["river_level_cm"], p["low_water"]), (level, False))
+            self.assertEqual(p["status"]["osm2"][0], 2)
+            self.assertIn("sentinel1", p)   # the two radars are compared on every pass
+        self.assertEqual(view.call_count, 2)
+
+    def test_areas_without_the_rule_or_sentinel1_record_neither(self, *_):
+        self.set_level(800.0)
+        with mock.patch("lifeline.pipeline.sentinel1.pass_view") as view:
+            p = self.update({"2026-10-23_t161A": found_pass()})["passes"][0]
+        view.assert_not_called()
+        for k in ("river_level_cm", "low_water", "sentinel1", "unverified_route"):
+            self.assertNotIn(k, p)
+        self.assertIsNone(pipeline.river_state(self.area, {}, "2026-10-23"))
+
+    def test_reevaluate_applies_the_rule_with_the_stored_gauge_and_sentinel1(self, *_):
+        area = self.low_water_area()
+        self.sentinel1_sees("mud")
+        self.run_update(area)   # first without a level: the lake keeps its route
+        cat = pipeline.load_catalog(area, [], self.tmp)
+        self.assertEqual(cat["passes"][0]["status"]["osm2"][0], 2)
+        cat["gauge"] = {"series": [["2026-10-23", 790.0]]}
+        pipeline.save_catalog(area, cat, self.tmp)
+        with mock.patch("lifeline.pipeline.sentinel1.pass_view") as view:
+            cat = pipeline.reevaluate(area, out_root=self.tmp, areas_dir=self.tmp)
+        view.assert_not_called()
+        self.assertTrue(cat["passes"][0]["low_water"])
+        self.assertEqual(cat["passes"][0]["status"]["osm2"][0], 3)
 
     def test_reevaluate_rebuilds_the_record_from_stored_masks(self, *_):
         self.update({"2026-10-11_t161A": found_pass("2026-10-11_t161A", "2026-10-11"),
@@ -146,6 +306,13 @@ class TestCommunitiesAndWatch(TempDirTest):
         self.assertEqual(fc["features"][0]["properties"]["access_source"], "pier")
         self.assertEqual(self.read_json("test_communities.geojson")["features"][0]["properties"]["name"], "Alpha")
 
+    def test_occurrence_saves_the_layer_next_to_the_area_file(self, _log):
+        area = small_area()
+        layer = np.full((area["ny"], area["nx"]), 42, np.uint8)
+        path = pipeline.occurrence(area, self.tmp, fetch=lambda a: layer)
+        self.assertEqual(path, os.path.join(self.tmp, "test_occurrence.png"))
+        self.assertTrue(os.path.exists(path))
+
     def test_watch_keeps_going_after_a_failed_round(self, _log):
         run = mock.Mock(side_effect=[RuntimeError("ASF down"), None])
         sleep = mock.Mock()
@@ -158,7 +325,7 @@ class TestCommunitiesAndWatch(TempDirTest):
 class TestProcessJob(unittest.TestCase):
     def test_errors_become_text_so_the_batch_keeps_running(self):
         with mock.patch("lifeline.pipeline.process_pass", side_effect=ValueError("bad product")):
-            pid, entry, err = pipeline._process_job(({}, [], {"id": "p"}, "/tmp", "tok"))
+            pid, entry, err = pipeline._process_job(({}, [], {"id": "p"}, "/tmp", "tok", None))
         self.assertEqual((pid, entry), ("p", None))
         self.assertIn("bad product", err)
 

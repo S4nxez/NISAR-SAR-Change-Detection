@@ -71,6 +71,14 @@ describe("plate, map key and tooltips", () => {
     assert.equal(all, "WaterChannel &lt; 60 mWater lostWater gainedConnectedAt riskIsolated");
   });
 
+  test("map key explains water under vegetation when the area maps it", () => {
+    const { record } = setup();
+    record.cat.area.vegetated_water = { hh_min_db: -4, ratio_min_db: 7, near_water_m: 1000 };
+    assert.equal(strip(panels.mapKey(record, { water: true, change: false })),
+      "WaterChannel &lt; 60 mWater under vegetation · not a routeConnectedAt riskIsolated");
+    assert.equal(strip(panels.mapKey(record, { water: false, change: false })), "ConnectedAt riskIsolated");
+  });
+
   test("marker tooltips", () => {
     const { record, byId, com } = setup();
     assert.equal(panels.markerTooltip(record, byId["2026-07-19_t161A"], com.a),
@@ -128,6 +136,8 @@ describe("dossier", () => {
     const { record, byId, com } = setup();
     assert.match(panels.dossier(record, byId["2026-07-07_t161A"], com.c), /No water within 1000 m on any pass/);
     assert.match(panels.dossier(record, byId["2026-07-07_t161A"], com.d), /streams here are too narrow/);
+    assert.ok(!panels.dossier(record, byId["2026-07-07_t161A"], com.c).includes("did not see"));
+    assert.match(panels.dossier(record, byId["2026-08-19_t097D"], com.c), /No data on this pass: the radar did not see/);
   });
 
   test("monitored community: facts, confirmation note and route history", () => {

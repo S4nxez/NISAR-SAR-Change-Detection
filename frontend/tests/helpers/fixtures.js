@@ -29,9 +29,9 @@ export function catalog() {
     ],
     passes: [
       pass("2025-11-02_t060A", { shown: false, evaluated: false, coverage: 0 }),
-      pass("2026-07-07_t161A", { status: { a: [1, 200, 20], b: [1, 100, 30] },
+      pass("2026-07-07_t161A", { status: { a: [1, 200, 20], b: [1, 100, 30], c: [3, null, 1500], d: [3, null, 300] },
         counts: { no_data: 0, connected: 2, at_risk: 0, isolated: 0 }, hub_link: [1, 400, 0] }),
-      pass("2026-07-19_t161A", { status: { a: [1, 100, 20], b: [2, 0, 30] },
+      pass("2026-07-19_t161A", { status: { a: [1, 100, 20], b: [2, 0, 30], c: [3, null, 1500], d: [3, null, 300] },
         counts: { no_data: 0, connected: 1, at_risk: 1, isolated: 0 }, hub_link: [1, 400, 0],
         change: { since: "2026-07-07_t161A", lost_km2: 12.34, gained_km2: 0 }, files: { radar: "radar.webp",
           water: "water.png", change: "change.png" } }),

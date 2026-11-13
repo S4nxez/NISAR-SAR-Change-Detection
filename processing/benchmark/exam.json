@@ -1,0 +1,36 @@
+{
+ "version": 3,
+ "description": "Accuracy exam of the river lifeline monitor over Tefé. Change any value below only together with the version: results of different versions are not comparable. Version 3 leaves OPERA DSWx-S1 out of the references: the method uses Sentinel-1 since ADR-007, and a source cannot grade itself.",
+ "passes": [
+  "2025-11-02_t060A", "2025-11-04_t097D", "2026-01-08_t169D",
+  "2026-06-25_t161A", "2026-06-25_t169D", "2026-06-30_t060A",
+  "2026-07-07_t161A", "2026-07-07_t169D", "2026-07-12_t060A", "2026-07-19_t161A", "2026-07-24_t060A",
+  "2026-08-12_t169D", "2026-08-17_t060A", "2026-08-19_t097D", "2026-08-24_t161A", "2026-08-24_t169D",
+  "2026-08-29_t060A", "2026-08-31_t097D",
+  "2026-09-05_t161A", "2026-09-05_t169D", "2026-09-10_t060A", "2026-09-12_t097D", "2026-09-17_t161A",
+  "2026-09-22_t060A", "2026-09-24_t097D", "2026-09-29_t161A", "2026-09-29_t169D",
+  "2026-10-04_t060A", "2026-10-06_t097D", "2026-10-11_t161A", "2026-10-11_t169D", "2026-10-16_t060A",
+  "2026-10-23_t161A"
+ ],
+ "optical": {
+  "max_days": 2,
+  "min_clear": 0.3
+ },
+ "references": {
+  "dswx_hls": {"max_days": 2}
+ },
+ "causes": {
+  "cloud_near_m": 500,
+  "level_change_cm": 20,
+  "seasonal_occurrence": [5, 90],
+  "permanent_occurrence": 90,
+  "swath_edge_m": 1000,
+  "mixed_px": 1,
+  "threshold_margin_db": 1.0,
+  "max_bridge_px": 250
+ },
+ "synthetic": {
+  "looks": 9,
+  "seeds": [1, 2, 3, 4, 5]
+ }
+}

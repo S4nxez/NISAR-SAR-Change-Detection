@@ -1,7 +1,7 @@
 // The backend's river lifeline API (server: MonitorController), the page's only data source:
 //   GET api/monitor/areas/<area>                          catalog.json: area, communities, river gauge, one entry per pass
 //   GET api/monitor/areas/<area>/passes/<id>/radar.webp   HH backscatter preview
-//   GET api/monitor/areas/<area>/passes/<id>/water.png    water mask (narrow channels in amber)
+//   GET api/monitor/areas/<area>/passes/<id>/water.png    water mask (narrow channels in amber, water under vegetation in green)
 //   GET api/monitor/areas/<area>/passes/<id>/change.png   water lost / gained since the previous pass of the same track
 // URLs are relative to the page, so the app works under any path prefix (production, develop and PR previews).
 

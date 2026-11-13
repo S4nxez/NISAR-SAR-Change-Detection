@@ -5,6 +5,7 @@ import numpy as np
 from scipy import ndimage
 
 from lifeline.config import STATUS
+from lifeline.sources.occurrence import NO_DATA as OCCURRENCE_NO_DATA
 
 MIN_WATER_PX = 25      # 1 ha at 20 m
 MIN_HOLE_PX = 50       # 2 ha at 20 m
@@ -37,6 +38,103 @@ def water_mask(db, water_db, weak_db=None):
         small[0] = False
         water |= small[holes]
     return water, valid
+
+
+KI_RANGE_DB = (-35.0, 5.0)
+KI_BINS = 400
+MIXED_SHARE = (0.2, 0.8)   # a tile is mixed when this share of its pixels is below the prior threshold
+MIN_TILE_VALID = 0.9
+MAX_POOLED = 2_000_000
+
+
+def ki_threshold(values, lo=KI_RANGE_DB[0], hi=KI_RANGE_DB[1], bins=KI_BINS):
+    """Kittler-Illingworth minimum-error threshold of `values` (dB): each class is modelled as a Gaussian and the cut
+    minimises J(t) = 1 + 2 (P1 ln s1 + P2 ln s2) - 2 (P1 ln P1 + P2 ln P2). NaN when no cut leaves two classes."""
+    v = values[np.isfinite(values)]
+    if v.size < 2:
+        return float("nan")
+    hist, edges = np.histogram(v, bins=bins, range=(lo, hi))
+    x = (edges[:-1] + edges[1:]) / 2
+    p = hist / max(1, hist.sum())
+    p1 = np.cumsum(p)
+    p2 = 1.0 - p1
+    m1 = np.cumsum(p * x)
+    s1_sq = np.cumsum(p * x * x)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mu1, mu2 = m1 / p1, (m1[-1] - m1) / p2
+        var1 = s1_sq / p1 - mu1 ** 2
+        var2 = (s1_sq[-1] - s1_sq) / p2 - mu2 ** 2
+        j = 1 + p1 * np.log(var1) + p2 * np.log(var2) - 2 * (p1 * np.log(p1) + p2 * np.log(p2))
+    j[~np.isfinite(j) | (var1 <= 0) | (var2 <= 0)] = np.inf
+    if not np.isfinite(j).any():
+        return float("nan")
+    # an empty gap between the classes gives a plateau of equal J: take its middle, not the edge next to the water
+    best = np.flatnonzero(j <= j.min() + 1e-9 * max(1.0, abs(j.min())))
+    return float((edges[best[0] + 1] + edges[best[-1] + 1]) / 2)
+
+
+def mixed_tiles(db, tile_px, prior_db):
+    """Slices of the tiles that hold both water and land: valid on at least MIN_TILE_VALID of their pixels and with
+    MIXED_SHARE of them below prior_db (their histogram is bimodal, so a threshold can be measured there)."""
+    out = []
+    for a in range(0, db.shape[0] - tile_px + 1, tile_px):
+        for b in range(0, db.shape[1] - tile_px + 1, tile_px):
+            t = db[a:a + tile_px, b:b + tile_px]
+            ok = np.isfinite(t)
+            if ok.mean() < MIN_TILE_VALID:
+                continue
+            share = float((t[ok] < prior_db).mean())
+            if MIXED_SHARE[0] <= share <= MIXED_SHARE[1]:
+                out.append((slice(a, a + tile_px), slice(b, b + tile_px)))
+    return out
+
+
+def pass_thresholds(area, db):
+    """(strong_db, weak_db, info) of one pass. Fixed (water_db, water_db_weak) unless the area has
+    "water_db_adaptive" {range_db, tile_m, min_tiles}: then the Kittler-Illingworth threshold of the pixels of the
+    mixed tiles (split-based selection, Martinis et al. 2009), clamped to range_db, with the weak threshold kept at
+    the same offset. Too few mixed tiles: the fixed threshold."""
+    strong, weak = area["water_db"], area.get("water_db_weak")
+    cfg = area.get("water_db_adaptive")
+    if not cfg:
+        return strong, weak, {"source": "fixed", "strong_db": strong, "weak_db": weak}
+    tiles = mixed_tiles(db, max(8, int(round(cfg["tile_m"] / area["px_m"]))), strong)
+    info = {"source": "fixed", "tiles": len(tiles)}
+    if len(tiles) >= cfg["min_tiles"]:
+        pooled = np.concatenate([db[t][np.isfinite(db[t])] for t in tiles])
+        if pooled.size > MAX_POOLED:
+            pooled = pooled[:: pooled.size // MAX_POOLED + 1]
+        t = ki_threshold(pooled)
+        if np.isfinite(t):
+            lo, hi = cfg["range_db"]
+            info.update(source="adaptive", measured_db=round(t, 2))
+            offset = None if weak is None else weak - strong
+            strong = float(np.clip(t, lo, hi))
+            weak = None if offset is None else strong + offset
+    info.update(strong_db=round(strong, 2), weak_db=None if weak is None else round(weak, 2))
+    return strong, weak, info
+
+
+def vegetated_water(hh, hv, water, cfg, px_m):
+    """
+    Water under vegetation (floating meadows, flooded forest): the double bounce water -> stem -> radar makes HH
+    brighter than dry forest and raises HH much more than HV. Flagged where HH > hh_min_db and HH - HV >=
+    ratio_min_db, outside open water, within near_water_m of it, specks under MIN_WATER_PX dropped.
+    Returns None without HV (single-polarisation pass) or without the area setting. It is shown on the map and is
+    NOT a navigable route: routes use open water only (ADR-004).
+    """
+    if hv is None or not cfg:
+        return None
+    with np.errstate(invalid="ignore"):
+        flagged = (hh > cfg["hh_min_db"]) & ((hh - hv) >= cfg["ratio_min_db"]) & ~water
+    if water.any():
+        flagged &= ndimage.distance_transform_edt(~water) * px_m <= cfg["near_water_m"]
+    else:
+        flagged[:] = False
+    lab, n = ndimage.label(flagged)
+    if n:
+        flagged &= np.bincount(lab.ravel())[lab] >= MIN_WATER_PX
+    return flagged
 
 
 def disk(radius_px):
@@ -153,3 +251,37 @@ def wide_water(water, inside_m, safe_m, px_m):
     """Water pixels that belong to channels at least safe_m wide."""
     core = inside_m >= (safe_m + px_m) / 2.0
     return water & ndimage.binary_dilation(core, structure=disk(safe_m / 2.0 / px_m + 1))
+
+
+def seasonal_ground(occurrence, low_pct, high_pct):
+    """Pixels whose water occurrence (sources.occurrence) is known and in [low_pct, high_pct): ground that is water
+    only part of the year, such as the bed of a lake or side channel that drains at low water. Ground below low_pct
+    was rarely water in 1984-2021: water there now is usually a channel the river has cut since (meanders move), not
+    a drained bed, so it is not seasonal ground."""
+    return (occurrence != OCCURRENCE_NO_DATA) & (occurrence >= low_pct) & (occurrence < high_pct)
+
+
+def low_water_route(water, occurrence, level_cm, rule, px_m, sentinel1=None):
+    """(route, unverified, applied): the water a route may use on a pass, the water a route may only use at risk,
+    and whether the low-water rule applied (ADR-007).
+
+    At low water (river level at the gauge at most rule["gauge_max_cm"]) NISAR reads the wet, smooth bed of a
+    drained lake, bay or side channel as dark as open water, and the water occurrence of 1984-2021 cannot tell such
+    a bed from a lake that still holds water (both were water 70-85 % of the months). Sentinel-1 can: at its shorter
+    wavelength the mud is rough and bright (sources.sentinel1). So, on seasonal ground (rule["seasonal_pct"], see
+    seasonal_ground) only:
+      - water that Sentinel-1 sees as land leaves the routes where it forms patches that hold a disc of
+        rule["veto_radius_m"] (a speck or a one-pixel bank of disagreement is not a drained bed);
+      - broad patches (holding a disc of rule["patch_radius_m"]) that no usable Sentinel-1 scene judged are
+        unverified: a route through them is kept, but only as at risk, never as safe (output.catalog.evaluate).
+    Without Sentinel-1 every broad seasonal patch is unverified. Without a rule, a layer or a level the water is used
+    as it is and nothing is unverified."""
+    if not rule or occurrence is None or level_cm is None or level_cm > rule["gauge_max_cm"]:
+        return water, None, False
+    low, high = rule["seasonal_pct"]
+    seasonal = water & seasonal_ground(occurrence, low, high)
+    beds = ndimage.binary_opening(seasonal, structure=disk(rule["patch_radius_m"] / px_m))
+    if sentinel1 is None:
+        return water, beds, True
+    mud = ndimage.binary_opening(seasonal & sentinel1["land"], structure=disk(rule["veto_radius_m"] / px_m))
+    return water & ~mud, beds & ~sentinel1["seen"] & ~mud, True

@@ -1,0 +1,2753 @@
+{
+ "exam_version": 2,
+ "label": "v2-swath-edge-margin",
+ "created_utc": "2026-11-12T14:08:15Z",
+ "commit": "99bfc68",
+ "dirty": false,
+ "method": {
+  "id": "tefe",
+  "name": "Lake Tefé and the Middle Solimões",
+  "country": "Brazil (Amazonas)",
+  "circle": {
+   "lon": -64.75,
+   "lat": -3.4,
+   "radius_km": 55
+  },
+  "step_deg": 0.00018,
+  "gauge": {
+   "name": "Tefé-Missões (Solimões)",
+   "ana_code": "12900001"
+  },
+  "access_radius_m": 1000,
+  "access_snap_m": {
+   "city": 3000,
+   "town": 3000,
+   "village": 500,
+   "hamlet": 500,
+   "default": 300
+  },
+  "min_coverage": 0.8,
+  "min_coverage_shown": 0.05,
+  "valid_floor_db": -40.0,
+  "edge_margin_m": 1000,
+  "water_db": -16.0,
+  "water_db_weak": -14.0,
+  "vegetated_water": {
+   "hh_min_db": -4.0,
+   "ratio_min_db": 7.0,
+   "near_water_m": 1000
+  },
+  "speckle_filter": "refined_lee",
+  "speckle_looks": 9,
+  "speckle_m": 60,
+  "widths_m": [
+   40,
+   60,
+   100,
+   200,
+   400
+  ],
+  "safe_width_m": 60,
+  "communities": "tefe_communities.geojson"
+ },
+ "synthetic": {
+  "looks": 9,
+  "seeds": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "surfaces_db": {
+   "forest": [
+    -7.0,
+    -12.5
+   ],
+   "water": [
+    -23.0,
+    -30.0
+   ],
+   "wind": [
+    -13.0,
+    -26.0
+   ],
+   "flooded_vegetation": [
+    -1.0,
+    -9.5
+   ],
+   "mud": [
+    -17.0,
+    -27.0
+   ]
+  },
+  "lanes": {
+   "channel_20m": {
+    "expected": "narrow",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_40m": {
+    "expected": "narrow",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_60m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_100m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "channel_200m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "zigzag_100m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "vegetation_block": {
+    "expected": "isolated",
+    "grades": {
+     "correct": 5
+    }
+   },
+   "mud_bar": {
+    "expected": "isolated",
+    "grades": {
+     "dangerous": 5
+    }
+   },
+   "wind_stretch": {
+    "expected": "connected",
+    "grades": {
+     "conservative": 5
+    }
+   },
+   "channel_400m": {
+    "expected": "connected",
+    "grades": {
+     "correct": 5
+    }
+   }
+  },
+  "totals": {
+   "correct": 40,
+   "conservative": 5,
+   "dangerous": 5,
+   "no_data": 0
+  },
+  "correct_share": 0.8,
+  "surfaces": {
+   "forest": {
+    "as_water": 0.012,
+    "as_vegetated_water": 0.0
+   },
+   "water": {
+    "as_water": 0.9988,
+    "as_vegetated_water": 0.0
+   },
+   "wind": {
+    "as_water": 0.016,
+    "as_vegetated_water": 0.0
+   },
+   "flooded_vegetation": {
+    "as_water": 0.0,
+    "as_vegetated_water": 0.972
+   },
+   "mud": {
+    "as_water": 0.996,
+    "as_vegetated_water": 0.0
+   }
+  }
+ },
+ "reference": {
+  "rules": {
+   "optical": {
+    "max_days": 2,
+    "min_clear": 0.3
+   },
+   "references": {
+    "dswx_hls": {
+     "max_days": 2
+    },
+    "dswx_s1": {
+     "max_days": 3
+    }
+   },
+   "causes": {
+    "cloud_near_m": 500,
+    "level_change_cm": 20,
+    "seasonal_occurrence": [
+     5,
+     90
+    ],
+    "permanent_occurrence": 90,
+    "swath_edge_m": 1000,
+    "mixed_px": 1,
+    "threshold_margin_db": 1.0,
+    "max_bridge_px": 250
+   }
+  },
+  "summary": {
+   "passes": 7,
+   "px_m": 20.019957421089654,
+   "iou": 0.9315,
+   "f1": 0.9645,
+   "precision": 0.9608,
+   "recall": 0.9683,
+   "s2_only": {
+    "iou": 0.9223,
+    "f1": 0.9596,
+    "precision": 0.9426,
+    "recall": 0.9771
+   },
+   "recall_by_width": {
+    "narrow_lt60m": 0.4096,
+    "medium_60_200m": 0.8588,
+    "wide_ge200m": 0.9881
+   },
+   "false_water": {
+    "shore": 0.0821,
+    "far": 0.0017
+   },
+   "status_pairs": 740,
+   "status_agreement": 0.9554,
+   "status_kappa_mean": 0.8979,
+   "false_route": 6,
+   "overconfident": 12,
+   "false_isolated": 14,
+   "undecided": 85,
+   "sources": {
+    "sentinel2": {
+     "family": "optical",
+     "passes": 7,
+     "voted_px": 106997695,
+     "agree_px": 106540914,
+     "agrees_share": 0.9957
+    },
+    "dswx_hls": {
+     "family": "optical",
+     "passes": 7,
+     "voted_px": 91424957,
+     "agree_px": 90877494,
+     "agrees_share": 0.994
+    },
+    "dswx_s1": {
+     "family": "sar",
+     "passes": 3,
+     "voted_px": 47663077,
+     "agree_px": 47352291,
+     "agrees_share": 0.9935
+    }
+   },
+   "pixel_causes": {
+    "commission": {
+     "cloud_edge": 294887,
+     "swath_edge": 12009,
+     "shore_mixed_pixel": 66779,
+     "threshold": 91019,
+     "smooth_ground": 15993,
+     "unexplained": 8760,
+     "river_level_change": 31232
+    },
+    "omission": {
+     "cloud_edge": 159193,
+     "swath_edge": 361,
+     "narrow_channel": 45532,
+     "shore_mixed_pixel": 101722,
+     "vegetation": 32820,
+     "threshold": 9770,
+     "wind_roughness": 1545,
+     "unexplained": 4952,
+     "river_level_change": 62111
+    }
+   },
+   "pixel_families": {
+    "commission": {
+     "reference": 294887,
+     "processing": 103028,
+     "resolution": 66779,
+     "radar_physics": 15993,
+     "unexplained": 8760,
+     "timing": 31232
+    },
+    "omission": {
+     "reference": 159193,
+     "processing": 10131,
+     "resolution": 147254,
+     "radar_physics": 34365,
+     "unexplained": 4952,
+     "timing": 62111
+    }
+   },
+   "case_causes": {
+    "cloud_edge": 16,
+    "narrow_channel": 14,
+    "shore_mixed_pixel": 2,
+    "river_level_change": 1
+   },
+   "case_families": {
+    "reference": 16,
+    "resolution": 16,
+    "timing": 1
+   },
+   "reviews": {
+    "false_route": {
+     "cases": 6,
+     "confirmed": 0,
+     "rejected": 0,
+     "undecidable": 0,
+     "pending": 6
+    },
+    "false_isolated": {
+     "cases": 14,
+     "confirmed": 0,
+     "rejected": 0,
+     "undecidable": 0,
+     "pending": 14
+    },
+    "overconfident": {
+     "cases": 12,
+     "confirmed": 0,
+     "rejected": 0,
+     "undecidable": 0,
+     "pending": 12
+    },
+    "underconfident": {
+     "cases": 1,
+     "confirmed": 0,
+     "rejected": 0,
+     "undecidable": 0,
+     "pending": 1
+    }
+   },
+   "review_needed": 16,
+   "sites": 12,
+   "sites_to_review": 6
+  },
+  "passes": [
+   {
+    "pass": "2025-11-04_t097D",
+    "s2_date": "2025-11-05",
+    "days_apart": 1,
+    "clear_share": 0.3845,
+    "sources": {
+     "dswx_hls": {
+      "date": "2025-11-06",
+      "days_apart": 2,
+      "coverage": 0.3765
+     },
+     "dswx_s1": {
+      "date": "2025-11-04",
+      "days_apart": 0,
+      "coverage": 0.6432
+     }
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 9094786,
+      "agrees_share": 0.996
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 8692877,
+      "agrees_share": 0.9883
+     },
+     "dswx_s1": {
+      "family": "sar",
+      "voted_px": 15354424,
+      "agrees_share": 0.9927
+     }
+    },
+    "consensus": {
+     "known_km2": 8406.9,
+     "disputed_km2": 45.525,
+     "two_families_share": 0.4383
+    },
+    "level_change_cm": -7.0,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 1816994,
+      "fp": 84901,
+      "fn": 47411,
+      "tn": 18685860
+     },
+     "iou": 0.9321,
+     "f1": 0.9649,
+     "precision": 0.9554,
+     "recall": 0.9746,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 20464,
+       "recall": 0.5093
+      },
+      "medium_60_200m": {
+       "pixels": 200467,
+       "recall": 0.872
+      },
+      "wide_ge200m": {
+       "pixels": 1643474,
+       "recall": 0.9929
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 565396,
+       "rate": 0.1043
+      },
+      "far": {
+       "pixels": 18205365,
+       "rate": 0.0014
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.9389,
+     "precision": 0.9502,
+     "recall": 0.9875
+    },
+    "status": {
+     "n": 122,
+     "agreement": 0.9754,
+     "kappa": 0.9343,
+     "false_route": 3,
+     "overconfident": 0,
+     "false_isolated": 0,
+     "isolated_recall": 0.8966,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 92,
+       "at_risk": 0,
+       "isolated": 1
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 2
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 26
+      }
+     }
+    },
+    "undecided": [
+     "osm3924302370",
+     "osm3984711996",
+     "osm3984833616",
+     "osm3984833626",
+     "osm3924302381",
+     "osm3924302382",
+     "osm3986860584",
+     "osm3986860595",
+     "osm3986860612",
+     "osm3924302387",
+     "osm3984833648",
+     "osm3986860646"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 65814,
+      "swath_edge": 6170,
+      "shore_mixed_pixel": 4663,
+      "threshold": 5632,
+      "smooth_ground": 1954,
+      "unexplained": 668
+     },
+     "omission": {
+      "cloud_edge": 40084,
+      "swath_edge": 8,
+      "narrow_channel": 1764,
+      "shore_mixed_pixel": 4747,
+      "vegetation": 354,
+      "threshold": 213,
+      "wind_roughness": 119,
+      "unexplained": 122
+     }
+    },
+    "cases": 3
+   },
+   {
+    "pass": "2026-07-07_t161A",
+    "s2_date": "2026-07-06",
+    "days_apart": 1,
+    "clear_share": 0.5961,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-07-06",
+      "days_apart": 1,
+      "coverage": 0.4608
+     },
+     "dswx_s1": null
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 14187756,
+      "agrees_share": 0.9919
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 10536280,
+      "agrees_share": 0.9892
+     }
+    },
+    "consensus": {
+     "known_km2": 5894.3,
+     "disputed_km2": 45.798,
+     "two_families_share": 0.0
+    },
+    "level_change_cm": -2.0,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 1774827,
+      "fp": 21621,
+      "fn": 59805,
+      "tn": 10172097
+     },
+     "iou": 0.9561,
+     "f1": 0.9776,
+     "precision": 0.988,
+     "recall": 0.9674,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 23913,
+       "recall": 0.4187
+      },
+      "medium_60_200m": {
+       "pixels": 187274,
+       "recall": 0.8693
+      },
+      "wide_ge200m": {
+       "pixels": 1623445,
+       "recall": 0.9868
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 457579,
+       "rate": 0.0427
+      },
+      "far": {
+       "pixels": 9736139,
+       "rate": 0.0002
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.9346,
+     "precision": 0.9556,
+     "recall": 0.977
+    },
+    "status": {
+     "n": 26,
+     "agreement": 1.0,
+     "kappa": 1.0,
+     "false_route": 0,
+     "overconfident": 0,
+     "false_isolated": 0,
+     "isolated_recall": 1.0,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 23,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 3
+      }
+     }
+    },
+    "undecided": [
+     "osm3984833620",
+     "osm3984833626",
+     "osm3986860581",
+     "osm3986860611",
+     "osm3986860633",
+     "osm3984833652",
+     "osm3984833654",
+     "osm3986860646",
+     "osm3984835462"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 10346,
+      "swath_edge": 46,
+      "shore_mixed_pixel": 7564,
+      "threshold": 3417,
+      "smooth_ground": 187,
+      "unexplained": 61
+     },
+     "omission": {
+      "cloud_edge": 24381,
+      "swath_edge": 221,
+      "narrow_channel": 7898,
+      "shore_mixed_pixel": 17296,
+      "vegetation": 2255,
+      "threshold": 5845,
+      "wind_roughness": 383,
+      "unexplained": 1526
+     }
+    },
+    "cases": 0
+   },
+   {
+    "pass": "2026-08-19_t097D",
+    "s2_date": "2026-08-20",
+    "days_apart": 1,
+    "clear_share": 0.7319,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-08-20",
+      "days_apart": 1,
+      "coverage": 0.5643
+     },
+     "dswx_s1": null
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 17388457,
+      "agrees_share": 0.9972
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 13062230,
+      "agrees_share": 0.9963
+     }
+    },
+    "consensus": {
+     "known_km2": 7047.4,
+     "disputed_km2": 19.625,
+     "two_families_share": 0.0
+    },
+    "level_change_cm": 17.5,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 1885300,
+      "fp": 40668,
+      "fn": 63143,
+      "tn": 15285795
+     },
+     "iou": 0.9478,
+     "f1": 0.9732,
+     "precision": 0.9789,
+     "recall": 0.9676,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 23764,
+       "recall": 0.3954
+      },
+      "medium_60_200m": {
+       "pixels": 187275,
+       "recall": 0.8527
+      },
+      "wide_ge200m": {
+       "pixels": 1737404,
+       "recall": 0.9878
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 552113,
+       "rate": 0.0639
+      },
+      "far": {
+       "pixels": 14774350,
+       "rate": 0.0004
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.945,
+     "precision": 0.9638,
+     "recall": 0.9797
+    },
+    "status": {
+     "n": 91,
+     "agreement": 0.8681,
+     "kappa": 0.7063,
+     "false_route": 0,
+     "overconfident": 0,
+     "false_isolated": 12,
+     "isolated_recall": 1.0,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 65,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 12,
+       "isolated": 13
+      }
+     }
+    },
+    "undecided": [
+     "osm3984711996"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 14033,
+      "swath_edge": 1329,
+      "shore_mixed_pixel": 17830,
+      "threshold": 6557,
+      "smooth_ground": 549,
+      "unexplained": 370
+     },
+     "omission": {
+      "cloud_edge": 13634,
+      "swath_edge": 126,
+      "narrow_channel": 10682,
+      "shore_mixed_pixel": 24925,
+      "vegetation": 11387,
+      "threshold": 1052,
+      "wind_roughness": 400,
+      "unexplained": 937
+     }
+    },
+    "cases": 12
+   },
+   {
+    "pass": "2026-08-24_t161A",
+    "s2_date": "2026-08-25",
+    "days_apart": 1,
+    "clear_share": 0.7953,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-08-25",
+      "days_apart": 1,
+      "coverage": 0.7084
+     },
+     "dswx_s1": null
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 18883790,
+      "agrees_share": 0.9966
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 16476603,
+      "agrees_share": 0.9961
+     }
+    },
+    "consensus": {
+     "known_km2": 7962.3,
+     "disputed_km2": 25.978,
+     "two_families_share": 0.0
+    },
+    "level_change_cm": 14.5,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 2106080,
+      "fp": 31939,
+      "fn": 96217,
+      "tn": 17567082
+     },
+     "iou": 0.9426,
+     "f1": 0.9705,
+     "precision": 0.9851,
+     "recall": 0.9563,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 28780,
+       "recall": 0.2494
+      },
+      "medium_60_200m": {
+       "pixels": 233564,
+       "recall": 0.8158
+      },
+      "wide_ge200m": {
+       "pixels": 1939953,
+       "recall": 0.9837
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 670029,
+       "rate": 0.0389
+      },
+      "far": {
+       "pixels": 16928992,
+       "rate": 0.0003
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.9412,
+     "precision": 0.9681,
+     "recall": 0.9713
+    },
+    "status": {
+     "n": 101,
+     "agreement": 0.9901,
+     "kappa": 0.9681,
+     "false_route": 0,
+     "overconfident": 0,
+     "false_isolated": 1,
+     "isolated_recall": 1.0,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 82,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 17
+      }
+     }
+    },
+    "undecided": [
+     "osm3986858839",
+     "osm3984711996",
+     "osm3986858847",
+     "osm3986860558",
+     "osm3986860560",
+     "osm3986860570",
+     "osm3986860574",
+     "osm3986860575",
+     "osm3986860578",
+     "osm3986860579",
+     "osm3986860588",
+     "osm3986860591",
+     "osm3675578818",
+     "osm3984833652",
+     "osm3986860646",
+     "osm3986860648"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 8552,
+      "shore_mixed_pixel": 14651,
+      "threshold": 6480,
+      "smooth_ground": 1588,
+      "unexplained": 668
+     },
+     "omission": {
+      "cloud_edge": 16842,
+      "narrow_channel": 17627,
+      "shore_mixed_pixel": 39270,
+      "vegetation": 18375,
+      "threshold": 1886,
+      "wind_roughness": 347,
+      "unexplained": 1870
+     }
+    },
+    "cases": 1
+   },
+   {
+    "pass": "2026-08-31_t097D",
+    "s2_date": "2026-08-30",
+    "days_apart": 1,
+    "clear_share": 0.9969,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-08-30",
+      "days_apart": 1,
+      "coverage": 0.9924
+     },
+     "dswx_s1": null
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 23670084,
+      "agrees_share": 0.9969
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 23149272,
+      "agrees_share": 0.9969
+     }
+    },
+    "consensus": {
+     "known_km2": 9516.7,
+     "disputed_km2": 29.106,
+     "two_families_share": 0.0
+    },
+    "level_change_cm": -23.0,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 2073515,
+      "fp": 64336,
+      "fn": 79877,
+      "tn": 21203237
+     },
+     "iou": 0.935,
+     "f1": 0.9664,
+     "precision": 0.9699,
+     "recall": 0.9629,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 28693,
+       "recall": 0.3558
+      },
+      "medium_60_200m": {
+       "pixels": 205920,
+       "recall": 0.8277
+      },
+      "wide_ge200m": {
+       "pixels": 1918779,
+       "recall": 0.9865
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 662937,
+       "rate": 0.0672
+      },
+      "far": {
+       "pixels": 20604636,
+       "rate": 0.001
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.9244,
+     "precision": 0.9449,
+     "recall": 0.9771
+    },
+    "status": {
+     "n": 162,
+     "agreement": 0.9753,
+     "kappa": 0.9368,
+     "false_route": 0,
+     "overconfident": 2,
+     "false_isolated": 1,
+     "isolated_recall": 1.0,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 120,
+       "at_risk": 2,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 1,
+       "at_risk": 4,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 1,
+       "isolated": 34
+      }
+     }
+    },
+    "undecided": [
+     "osm3986858839",
+     "osm3986858847",
+     "osm3986860558",
+     "osm3986860560",
+     "osm3986860570",
+     "osm3984833620",
+     "osm3986860574",
+     "osm3986860578",
+     "osm3986860579",
+     "osm3986860588",
+     "osm3986860591",
+     "osm3675578818",
+     "osm3986860648"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 4070,
+      "river_level_change": 31232,
+      "swath_edge": 4464,
+      "shore_mixed_pixel": 9498,
+      "threshold": 12524,
+      "unexplained": 2548
+     },
+     "omission": {
+      "cloud_edge": 5749,
+      "river_level_change": 62111,
+      "swath_edge": 6,
+      "narrow_channel": 2043,
+      "shore_mixed_pixel": 9082,
+      "vegetation": 326,
+      "threshold": 298,
+      "wind_roughness": 178,
+      "unexplained": 84
+     }
+    },
+    "cases": 4
+   },
+   {
+    "pass": "2026-10-11_t161A",
+    "s2_date": "2026-10-11",
+    "days_apart": 0,
+    "clear_share": 0.5587,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-10-09",
+      "days_apart": 2,
+      "coverage": 0.5217
+     },
+     "dswx_s1": {
+      "date": "2026-10-08",
+      "days_apart": 3,
+      "coverage": 0.6766
+     }
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 13264068,
+      "agrees_share": 0.9964
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 12155212,
+      "agrees_share": 0.9933
+     },
+     "dswx_s1": {
+      "family": "sar",
+      "voted_px": 16152304,
+      "agrees_share": 0.994
+     }
+    },
+    "consensus": {
+     "known_km2": 8857.1,
+     "disputed_km2": 39.169,
+     "two_families_share": 0.6247
+    },
+    "level_change_cm": 0.0,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 1678041,
+      "fp": 133753,
+      "fn": 45842,
+      "tn": 20143179
+     },
+     "iou": 0.9033,
+     "f1": 0.9492,
+     "precision": 0.9262,
+     "recall": 0.9734,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 19426,
+       "recall": 0.5012
+      },
+      "medium_60_200m": {
+       "pixels": 171314,
+       "recall": 0.8905
+      },
+      "wide_ge200m": {
+       "pixels": 1533143,
+       "recall": 0.9887
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 552059,
+       "rate": 0.1223
+      },
+      "far": {
+       "pixels": 19724873,
+       "rate": 0.0034
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.827,
+     "precision": 0.8497,
+     "recall": 0.9686
+    },
+    "status": {
+     "n": 119,
+     "agreement": 1.0,
+     "kappa": 1.0,
+     "false_route": 0,
+     "overconfident": 0,
+     "false_isolated": 0,
+     "isolated_recall": 1.0,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 96,
+       "at_risk": 0,
+       "isolated": 0
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 3,
+       "isolated": 0
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 20
+      }
+     }
+    },
+    "undecided": [
+     "osm3924302370",
+     "osm3924302371",
+     "osm3986858839",
+     "osm3986858847",
+     "osm3924302373",
+     "osm3986860558",
+     "osm3986860560",
+     "osm3924302377",
+     "osm3986860570",
+     "osm3924302378",
+     "osm3924302379",
+     "osm3986860574",
+     "osm3924302381",
+     "osm3986860578",
+     "osm3924302382",
+     "osm3986860579",
+     "osm3924302383",
+     "osm3986860591",
+     "osm416757398",
+     "osm8583554431",
+     "osm3675578818",
+     "osm3924302385",
+     "osm3924302387",
+     "osm3986860636",
+     "osm3986860648",
+     "osm3924302396"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 96676,
+      "shore_mixed_pixel": 7739,
+      "threshold": 22277,
+      "smooth_ground": 4875,
+      "unexplained": 2186
+     },
+     "omission": {
+      "cloud_edge": 37413,
+      "narrow_channel": 4070,
+      "shore_mixed_pixel": 3461,
+      "vegetation": 115,
+      "threshold": 401,
+      "wind_roughness": 95,
+      "unexplained": 287
+     }
+    },
+    "cases": 0
+   },
+   {
+    "pass": "2026-10-23_t161A",
+    "s2_date": "2026-10-21",
+    "days_apart": 2,
+    "clear_share": 0.4433,
+    "sources": {
+     "dswx_hls": {
+      "date": "2026-10-25",
+      "days_apart": 2,
+      "coverage": 0.3164
+     },
+     "dswx_s1": {
+      "date": "2026-10-20",
+      "days_apart": 3,
+      "coverage": 0.6768
+     }
+    },
+    "source_agreement": {
+     "sentinel2": {
+      "family": "optical",
+      "voted_px": 10508754,
+      "agrees_share": 0.9932
+     },
+     "dswx_hls": {
+      "family": "optical",
+      "voted_px": 7352483,
+      "agrees_share": 0.991
+     },
+     "dswx_s1": {
+      "family": "sar",
+      "voted_px": 16156349,
+      "agrees_share": 0.9937
+     }
+    },
+    "consensus": {
+     "known_km2": 7914.0,
+     "disputed_km2": 40.498,
+     "two_families_share": 0.5537
+    },
+    "level_change_cm": -14.0,
+    "backscatter": true,
+    "water": {
+     "counts": {
+      "tp": 1427629,
+      "fp": 143461,
+      "fn": 25711,
+      "tn": 18039920
+     },
+     "iou": 0.8941,
+     "f1": 0.9441,
+     "precision": 0.9087,
+     "recall": 0.9823,
+     "recall_by_width": {
+      "narrow_lt60m": {
+       "pixels": 12126,
+       "recall": 0.612
+      },
+      "medium_60_200m": {
+       "pixels": 127121,
+       "recall": 0.9182
+      },
+      "wide_ge200m": {
+       "pixels": 1314093,
+       "recall": 0.9919
+      }
+     },
+     "false_water": {
+      "shore": {
+       "pixels": 430528,
+       "rate": 0.1566
+      },
+      "far": {
+       "pixels": 17752853,
+       "rate": 0.0043
+      }
+     }
+    },
+    "water_s2_only": {
+     "iou": 0.7917,
+     "precision": 0.8057,
+     "recall": 0.9785
+    },
+    "status": {
+     "n": 119,
+     "agreement": 0.8908,
+     "kappa": 0.7398,
+     "false_route": 3,
+     "overconfident": 10,
+     "false_isolated": 0,
+     "isolated_recall": 0.8636,
+     "matrix_pred_by_ref": {
+      "connected": {
+       "connected": 82,
+       "at_risk": 10,
+       "isolated": 2
+      },
+      "at_risk": {
+       "connected": 0,
+       "at_risk": 5,
+       "isolated": 1
+      },
+      "isolated": {
+       "connected": 0,
+       "at_risk": 0,
+       "isolated": 19
+      }
+     }
+    },
+    "undecided": [
+     "osm3986858839",
+     "osm3986860570",
+     "osm3986860574",
+     "osm3986860578",
+     "osm3986860579",
+     "osm3986860591",
+     "osm3675578818",
+     "osm3986860648"
+    ],
+    "pixel_causes": {
+     "commission": {
+      "cloud_edge": 95396,
+      "shore_mixed_pixel": 4834,
+      "threshold": 34132,
+      "smooth_ground": 6840,
+      "unexplained": 2259
+     },
+     "omission": {
+      "cloud_edge": 21090,
+      "narrow_channel": 1448,
+      "shore_mixed_pixel": 2941,
+      "vegetation": 8,
+      "threshold": 75,
+      "wind_roughness": 23,
+      "unexplained": 126
+     }
+    },
+    "cases": 13
+   }
+  ],
+  "cases": [
+   {
+    "community_id": "osm3984711997",
+    "community": "Boca do Mamiraua",
+    "kind": "false_route",
+    "status": 2,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 3
+    },
+    "culprit_px": 3,
+    "lon": -64.77919,
+    "lat": -3.12731,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2025-11-05T00%3A00%3A00.000Z&toTime=2025-11-05T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.12731&mlon=-64.77919#map=15/-3.12731/-64.77919",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2025-11-04T00%3A00%3A00.000Z&toTime=2025-11-04T23%3A59%3A59.999Z"
+    },
+    "pass": "2025-11-04_t097D"
+   },
+   {
+    "community_id": "osm3984712031",
+    "community": "São Jose",
+    "kind": "false_route",
+    "status": 2,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 3
+    },
+    "culprit_px": 3,
+    "lon": -64.77919,
+    "lat": -3.12731,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2025-11-05T00%3A00%3A00.000Z&toTime=2025-11-05T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.12731&mlon=-64.77919#map=15/-3.12731/-64.77919",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2025-11-04T00%3A00%3A00.000Z&toTime=2025-11-04T23%3A59%3A59.999Z"
+    },
+    "pass": "2025-11-04_t097D"
+   },
+   {
+    "community_id": "osm3984833652",
+    "community": "São Jose do Tuiuca",
+    "kind": "false_route",
+    "status": 1,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 3
+    },
+    "culprit_px": 3,
+    "lon": -65.03623,
+    "lat": -3.66155,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.66155&lng=-65.03623&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2025-11-05T00%3A00%3A00.000Z&toTime=2025-11-05T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.66155&mlon=-65.03623#map=15/-3.66155/-65.03623",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.66155&lng=-65.03623&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2025-11-04T00%3A00%3A00.000Z&toTime=2025-11-04T23%3A59%3A59.999Z"
+    },
+    "pass": "2025-11-04_t097D"
+   },
+   {
+    "community_id": "osm3986858839",
+    "community": "Acapu",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986858847",
+    "community": "Barreirinha",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860558",
+    "community": "Cacai",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860560",
+    "community": "Cairara",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860570",
+    "community": "Feliciana",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm416757413",
+    "community": "Jaguarí",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "shore_mixed_pixel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 15,
+     "shore_mixed_pixel": 22
+    },
+    "culprit_px": 37,
+    "lon": -64.88107,
+    "lat": -3.09671,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09671&lng=-64.88107&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09671&mlon=-64.88107#map=15/-3.09671/-64.88107"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860578",
+    "community": "Macedo",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860579",
+    "community": "Marajo",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860588",
+    "community": "Miriti",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 2
+    },
+    "culprit_px": 7,
+    "lon": -64.43413,
+    "lat": -3.54239,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.54239&lng=-64.43413&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.54239&mlon=-64.43413#map=15/-3.54239/-64.43413"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860591",
+    "community": "Moura",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3984712031",
+    "community": "São Jose",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "shore_mixed_pixel",
+    "family": "resolution",
+    "causes": {
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 1,
+    "lon": -64.84111,
+    "lat": -3.05567,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.05567&lng=-64.84111&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.05567&mlon=-64.84111#map=15/-3.05567/-64.84111"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm3986860648",
+    "community": "Uirapuru",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 5,
+     "shore_mixed_pixel": 1
+    },
+    "culprit_px": 6,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+    },
+    "pass": "2026-08-19_t097D"
+   },
+   {
+    "community_id": "osm416757413",
+    "community": "Jaguarí",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 16,
+     "shore_mixed_pixel": 4
+    },
+    "culprit_px": 20,
+    "lon": -64.88233,
+    "lat": -3.09761,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09761&lng=-64.88233&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-25T00%3A00%3A00.000Z&toTime=2026-08-25T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09761&mlon=-64.88233#map=15/-3.09761/-64.88233"
+    },
+    "pass": "2026-08-24_t161A"
+   },
+   {
+    "community_id": "osm3984711996",
+    "community": "Alencar",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 6
+    },
+    "culprit_px": 6,
+    "lon": -64.79845,
+    "lat": -3.12803,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12803&lng=-64.79845&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.12803&mlon=-64.79845#map=15/-3.12803/-64.79845"
+    },
+    "pass": "2026-08-31_t097D"
+   },
+   {
+    "community_id": "osm3986860562",
+    "community": "Canaman",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 3
+    },
+    "culprit_px": 3,
+    "lon": -64.80745,
+    "lat": -3.41711,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41711&lng=-64.80745&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.41711&mlon=-64.80745#map=15/-3.41711/-64.80745"
+    },
+    "pass": "2026-08-31_t097D"
+   },
+   {
+    "community_id": "osm3984833616",
+    "community": "Caru",
+    "kind": "underconfident",
+    "status": 2,
+    "reference_status": 1,
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "causes": {
+     "narrow_channel": 2
+    },
+    "culprit_px": 2,
+    "lon": -64.98313,
+    "lat": -3.56543,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.56543&lng=-64.98313&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.56543&mlon=-64.98313#map=15/-3.56543/-64.98313"
+    },
+    "pass": "2026-08-31_t097D"
+   },
+   {
+    "community_id": "osm416757413",
+    "community": "Jaguarí",
+    "kind": "false_isolated",
+    "status": 3,
+    "reference_status": 2,
+    "cause": "river_level_change",
+    "family": "timing",
+    "causes": {
+     "river_level_change": 22,
+     "shore_mixed_pixel": 18
+    },
+    "culprit_px": 40,
+    "lon": -64.88071,
+    "lat": -3.09653,
+    "review": false,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09653&lng=-64.88071&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09653&mlon=-64.88071#map=15/-3.09653/-64.88071"
+    },
+    "pass": "2026-08-31_t097D"
+   },
+   {
+    "community_id": "osm3924302370",
+    "community": "Abacatal",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 21,
+    "lon": -64.53691,
+    "lat": -3.17987,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17987&lng=-64.53691&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17987&mlon=-64.53691#map=15/-3.17987/-64.53691",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17987&lng=-64.53691&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302373",
+    "community": "Boca do Atapi",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 13,
+    "lon": -64.56841,
+    "lat": -3.17807,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17807&lng=-64.56841&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17807&mlon=-64.56841#map=15/-3.17807/-64.56841",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17807&lng=-64.56841&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3986860562",
+    "community": "Canaman",
+    "kind": "false_route",
+    "status": 2,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 20
+    },
+    "culprit_px": 20,
+    "lon": -64.80673,
+    "lat": -3.41369,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41369&lng=-64.80673&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.41369&mlon=-64.80673#map=15/-3.41369/-64.80673",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41369&lng=-64.80673&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302377",
+    "community": "Cardoso",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 13,
+    "lon": -64.56841,
+    "lat": -3.17807,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17807&lng=-64.56841&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17807&mlon=-64.56841#map=15/-3.17807/-64.56841",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17807&lng=-64.56841&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302379",
+    "community": "Girassol",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 21,
+    "lon": -64.53691,
+    "lat": -3.17987,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17987&lng=-64.53691&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17987&mlon=-64.53691#map=15/-3.17987/-64.53691",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17987&lng=-64.53691&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302381",
+    "community": "Liocadio",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 17,
+    "lon": -64.55509,
+    "lat": -3.17447,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.55509&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17447&mlon=-64.55509#map=15/-3.17447/-64.55509",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.55509&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302382",
+    "community": "Mangueal",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 18,
+    "lon": -64.55023,
+    "lat": -3.17573,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17573&lng=-64.55023&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17573&mlon=-64.55023#map=15/-3.17573/-64.55023",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17573&lng=-64.55023&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302383",
+    "community": "Monte Sinai",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 11,
+    "lon": -64.57111,
+    "lat": -3.18059,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18059&lng=-64.57111&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.18059&mlon=-64.57111#map=15/-3.18059/-64.57111",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18059&lng=-64.57111&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm416757398",
+    "community": "Nazaré",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 15,
+    "lon": -64.56193,
+    "lat": -3.17447,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.56193&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17447&mlon=-64.56193#map=15/-3.17447/-64.56193",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.56193&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm8583554431",
+    "community": "Nova Esperança",
+    "kind": "false_route",
+    "status": 1,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 32
+    },
+    "culprit_px": 32,
+    "lon": -64.88359,
+    "lat": -3.47057,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.47057&lng=-64.88359&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.47057&mlon=-64.88359#map=15/-3.47057/-64.88359",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.47057&lng=-64.88359&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302387",
+    "community": "Renascer",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 22,
+    "lon": -64.53313,
+    "lat": -3.18167,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18167&lng=-64.53313&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.18167&mlon=-64.53313#map=15/-3.18167/-64.53313",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18167&lng=-64.53313&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3986860636",
+    "community": "São Jose do Madureira",
+    "kind": "false_route",
+    "status": 1,
+    "reference_status": 3,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 28,
+     "threshold": 1
+    },
+    "culprit_px": 29,
+    "lon": -64.80097,
+    "lat": -3.41243,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41243&lng=-64.80097&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.41243&mlon=-64.80097#map=15/-3.41243/-64.80097",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41243&lng=-64.80097&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   },
+   {
+    "community_id": "osm3924302396",
+    "community": "Urcui",
+    "kind": "overconfident",
+    "status": 1,
+    "reference_status": 2,
+    "cause": "cloud_edge",
+    "family": "reference",
+    "causes": {
+     "cloud_edge": 7
+    },
+    "culprit_px": 23,
+    "lon": -64.53025,
+    "lat": -3.18311,
+    "review": true,
+    "links": {
+     "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18311&lng=-64.53025&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+     "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.18311&mlon=-64.53025#map=15/-3.18311/-64.53025",
+     "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18311&lng=-64.53025&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+    },
+    "pass": "2026-10-23_t161A"
+   }
+  ],
+  "sites": [
+   {
+    "near": "Monte Sinai",
+    "distance_km": 1.4,
+    "lon": -64.56253,
+    "lat": -3.1769,
+    "side": "dangerous",
+    "kinds": [
+     "overconfident"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "Boca do Atapi",
+     "Cardoso",
+     "Liocadio",
+     "Mangueal",
+     "Monte Sinai",
+     "Nazaré"
+    ],
+    "community_ids": [
+     "osm3924302373",
+     "osm3924302377",
+     "osm3924302381",
+     "osm3924302382",
+     "osm3924302383",
+     "osm416757398"
+    ],
+    "passes": [
+     "2026-10-23_t161A"
+    ],
+    "links": {
+     "2026-10-23_t161A": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.56193&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.17447&mlon=-64.56193#map=15/-3.17447/-64.56193",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.17447&lng=-64.56193&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+     }
+    },
+    "cases": 6,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "Nazaré",
+    "distance_km": 0.9,
+    "lon": -64.5343,
+    "lat": -3.18113,
+    "side": "dangerous",
+    "kinds": [
+     "overconfident"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "Abacatal",
+     "Girassol",
+     "Renascer",
+     "Urcui"
+    ],
+    "community_ids": [
+     "osm3924302370",
+     "osm3924302379",
+     "osm3924302387",
+     "osm3924302396"
+    ],
+    "passes": [
+     "2026-10-23_t161A"
+    ],
+    "links": {
+     "2026-10-23_t161A": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18311&lng=-64.53025&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.18311&mlon=-64.53025#map=15/-3.18311/-64.53025",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.18311&lng=-64.53025&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+     }
+    },
+    "cases": 4,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "Nova Jerusalem",
+    "distance_km": 0.5,
+    "lon": -64.80505,
+    "lat": -3.41441,
+    "side": "dangerous",
+    "kinds": [
+     "false_route",
+     "overconfident"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "Canaman",
+     "São Jose do Madureira"
+    ],
+    "community_ids": [
+     "osm3986860562",
+     "osm3986860636"
+    ],
+    "passes": [
+     "2026-08-31_t097D",
+     "2026-10-23_t161A"
+    ],
+    "links": {
+     "2026-10-23_t161A": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41243&lng=-64.80097&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.41243&mlon=-64.80097#map=15/-3.41243/-64.80097",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41243&lng=-64.80097&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+     },
+     "2026-08-31_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.41711&lng=-64.80745&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.41711&mlon=-64.80745#map=15/-3.41711/-64.80745"
+     }
+    },
+    "cases": 3,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "Boca do Mamiraua",
+    "distance_km": 1.9,
+    "lon": -64.77919,
+    "lat": -3.12731,
+    "side": "dangerous",
+    "kinds": [
+     "false_route"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "Boca do Mamiraua",
+     "São Jose"
+    ],
+    "community_ids": [
+     "osm3984711997",
+     "osm3984712031"
+    ],
+    "passes": [
+     "2025-11-04_t097D"
+    ],
+    "links": {
+     "2025-11-04_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2025-11-05T00%3A00%3A00.000Z&toTime=2025-11-05T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.12731&mlon=-64.77919#map=15/-3.12731/-64.77919",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12731&lng=-64.77919&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2025-11-04T00%3A00%3A00.000Z&toTime=2025-11-04T23%3A59%3A59.999Z"
+     }
+    },
+    "cases": 2,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "São Jose do Tuiuca",
+    "distance_km": 1.2,
+    "lon": -65.03623,
+    "lat": -3.66155,
+    "side": "dangerous",
+    "kinds": [
+     "false_route"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "São Jose do Tuiuca"
+    ],
+    "community_ids": [
+     "osm3984833652"
+    ],
+    "passes": [
+     "2025-11-04_t097D"
+    ],
+    "links": {
+     "2025-11-04_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.66155&lng=-65.03623&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2025-11-05T00%3A00%3A00.000Z&toTime=2025-11-05T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.66155&mlon=-65.03623#map=15/-3.66155/-65.03623",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.66155&lng=-65.03623&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2025-11-04T00%3A00%3A00.000Z&toTime=2025-11-04T23%3A59%3A59.999Z"
+     }
+    },
+    "cases": 1,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "Nova Esperança",
+    "distance_km": 1.4,
+    "lon": -64.88359,
+    "lat": -3.47057,
+    "side": "dangerous",
+    "kinds": [
+     "false_route"
+    ],
+    "cause": "cloud_edge",
+    "family": "reference",
+    "communities": [
+     "Nova Esperança"
+    ],
+    "community_ids": [
+     "osm8583554431"
+    ],
+    "passes": [
+     "2026-10-23_t161A"
+    ],
+    "links": {
+     "2026-10-23_t161A": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.47057&lng=-64.88359&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-10-21T00%3A00%3A00.000Z&toTime=2026-10-21T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.47057&mlon=-64.88359#map=15/-3.47057/-64.88359",
+      "sentinel1": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.47057&lng=-64.88359&themeId=DEFAULT-THEME&datasetId=S1_CDAS_IW_VVVH&fromTime=2026-10-20T00%3A00%3A00.000Z&toTime=2026-10-20T23%3A59%3A59.999Z"
+     }
+    },
+    "cases": 1,
+    "review": true,
+    "verdicts": []
+   },
+   {
+    "near": "Boca do Mamiraua",
+    "distance_km": 1.3,
+    "lon": -64.79845,
+    "lat": -3.12803,
+    "side": "dangerous",
+    "kinds": [
+     "overconfident"
+    ],
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "communities": [
+     "Alencar"
+    ],
+    "community_ids": [
+     "osm3984711996"
+    ],
+    "passes": [
+     "2026-08-31_t097D"
+    ],
+    "links": {
+     "2026-08-31_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.12803&lng=-64.79845&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.12803&mlon=-64.79845#map=15/-3.12803/-64.79845"
+     }
+    },
+    "cases": 1,
+    "review": false,
+    "verdicts": []
+   },
+   {
+    "near": "Caiambé",
+    "distance_km": 0.9,
+    "lon": -64.41757,
+    "lat": -3.52583,
+    "side": "safe",
+    "kinds": [
+     "false_isolated"
+    ],
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "communities": [
+     "Acapu",
+     "Barreirinha",
+     "Cacai",
+     "Cairara",
+     "Feliciana",
+     "Macedo",
+     "Marajo",
+     "Moura",
+     "Uirapuru"
+    ],
+    "community_ids": [
+     "osm3986858839",
+     "osm3986858847",
+     "osm3986860558",
+     "osm3986860560",
+     "osm3986860570",
+     "osm3986860578",
+     "osm3986860579",
+     "osm3986860591",
+     "osm3986860648"
+    ],
+    "passes": [
+     "2026-08-19_t097D"
+    ],
+    "links": {
+     "2026-08-19_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.52583&lng=-64.41757&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.52583&mlon=-64.41757#map=15/-3.52583/-64.41757"
+     }
+    },
+    "cases": 9,
+    "review": false,
+    "verdicts": []
+   },
+   {
+    "near": "Jaquiri",
+    "distance_km": 0.4,
+    "lon": -64.88137,
+    "lat": -3.09695,
+    "side": "safe",
+    "kinds": [
+     "false_isolated"
+    ],
+    "cause": "river_level_change",
+    "family": "timing",
+    "communities": [
+     "Jaguarí"
+    ],
+    "community_ids": [
+     "osm416757413"
+    ],
+    "passes": [
+     "2026-08-19_t097D",
+     "2026-08-24_t161A",
+     "2026-08-31_t097D"
+    ],
+    "links": {
+     "2026-08-31_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09653&lng=-64.88071&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09653&mlon=-64.88071#map=15/-3.09653/-64.88071"
+     },
+     "2026-08-24_t161A": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09761&lng=-64.88233&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-25T00%3A00%3A00.000Z&toTime=2026-08-25T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09761&mlon=-64.88233#map=15/-3.09761/-64.88233"
+     },
+     "2026-08-19_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.09671&lng=-64.88107&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.09671&mlon=-64.88107#map=15/-3.09671/-64.88107"
+     }
+    },
+    "cases": 3,
+    "review": false,
+    "verdicts": []
+   },
+   {
+    "near": "Uirapuru",
+    "distance_km": 1.3,
+    "lon": -64.43413,
+    "lat": -3.54239,
+    "side": "safe",
+    "kinds": [
+     "false_isolated"
+    ],
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "communities": [
+     "Miriti"
+    ],
+    "community_ids": [
+     "osm3986860588"
+    ],
+    "passes": [
+     "2026-08-19_t097D"
+    ],
+    "links": {
+     "2026-08-19_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.54239&lng=-64.43413&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.54239&mlon=-64.43413#map=15/-3.54239/-64.43413"
+     }
+    },
+    "cases": 1,
+    "review": false,
+    "verdicts": []
+   },
+   {
+    "near": "São Jose",
+    "distance_km": 1.2,
+    "lon": -64.84111,
+    "lat": -3.05567,
+    "side": "safe",
+    "kinds": [
+     "false_isolated"
+    ],
+    "cause": "shore_mixed_pixel",
+    "family": "resolution",
+    "communities": [
+     "São Jose"
+    ],
+    "community_ids": [
+     "osm3984712031"
+    ],
+    "passes": [
+     "2026-08-19_t097D"
+    ],
+    "links": {
+     "2026-08-19_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.05567&lng=-64.84111&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-20T00%3A00%3A00.000Z&toTime=2026-08-20T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.05567&mlon=-64.84111#map=15/-3.05567/-64.84111"
+     }
+    },
+    "cases": 1,
+    "review": false,
+    "verdicts": []
+   },
+   {
+    "near": "São João do Mulato",
+    "distance_km": 1.5,
+    "lon": -64.98313,
+    "lat": -3.56543,
+    "side": "safe",
+    "kinds": [
+     "underconfident"
+    ],
+    "cause": "narrow_channel",
+    "family": "resolution",
+    "communities": [
+     "Caru"
+    ],
+    "community_ids": [
+     "osm3984833616"
+    ],
+    "passes": [
+     "2026-08-31_t097D"
+    ],
+    "links": {
+     "2026-08-31_t097D": {
+      "sentinel2": "https://browser.dataspace.copernicus.eu/?zoom=15&lat=-3.56543&lng=-64.98313&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-08-30T00%3A00%3A00.000Z&toTime=2026-08-30T23%3A59%3A59.999Z&layerId=1_TRUE_COLOR",
+      "openstreetmap": "https://www.openstreetmap.org/?mlat=-3.56543&mlon=-64.98313#map=15/-3.56543/-64.98313"
+     }
+    },
+    "cases": 1,
+    "review": false,
+    "verdicts": []
+   }
+  ]
+ },
+ "gauge": {
+  "available": true,
+  "source": "ANA telemetry, station 12900001",
+  "passes": [
+   {
+    "pass": "2025-11-04_t097D",
+    "level_cm": 1105.5,
+    "water_km2": 862.18,
+    "lost_route": 30
+   },
+   {
+    "pass": "2026-06-25_t161A",
+    "level_cm": 1869.0,
+    "water_km2": 947.01,
+    "lost_route": 13
+   },
+   {
+    "pass": "2026-07-07_t161A",
+    "level_cm": 1863.5,
+    "water_km2": 956.76,
+    "lost_route": 27
+   },
+   {
+    "pass": "2026-07-19_t161A",
+    "level_cm": 1821.0,
+    "water_km2": 928.14,
+    "lost_route": 12
+   },
+   {
+    "pass": "2026-08-19_t097D",
+    "level_cm": 1528.0,
+    "water_km2": 885.1,
+    "lost_route": 30
+   },
+   {
+    "pass": "2026-08-24_t161A",
+    "level_cm": 1454.5,
+    "water_km2": 899.17,
+    "lost_route": 27
+   },
+   {
+    "pass": "2026-08-31_t097D",
+    "level_cm": 1338.0,
+    "water_km2": 875.21,
+    "lost_route": 30
+   },
+   {
+    "pass": "2026-09-05_t161A",
+    "level_cm": 1254.0,
+    "water_km2": 868.67,
+    "lost_route": 38
+   },
+   {
+    "pass": "2026-09-12_t097D",
+    "level_cm": 1147.0,
+    "water_km2": 852.29,
+    "lost_route": 31
+   },
+   {
+    "pass": "2026-09-17_t161A",
+    "level_cm": 1056.0,
+    "water_km2": 861.43,
+    "lost_route": 34
+   },
+   {
+    "pass": "2026-09-24_t097D",
+    "level_cm": 946.0,
+    "water_km2": 841.67,
+    "lost_route": 31
+   },
+   {
+    "pass": "2026-09-29_t161A",
+    "level_cm": 932.5,
+    "water_km2": 847.41,
+    "lost_route": 37
+   },
+   {
+    "pass": "2026-10-06_t097D",
+    "level_cm": 951.0,
+    "water_km2": 837.88,
+    "lost_route": 30
+   },
+   {
+    "pass": "2026-10-11_t161A",
+    "level_cm": 929.5,
+    "water_km2": 837.5,
+    "lost_route": 35
+   },
+   {
+    "pass": "2026-10-23_t161A",
+    "level_cm": 797.0,
+    "water_km2": 831.24,
+    "lost_route": 35
+   }
+  ],
+  "water_vs_level": {
+   "rho": 0.9679,
+   "n": 15
+  },
+  "lost_route_vs_level": {
+   "rho": -0.7733,
+   "n": 15
+  }
+ },
+ "field": {
+  "checks": [
+   {
+    "community": "Caiambé",
+    "expected": "linked",
+    "kind": "sanity",
+    "source": "Team plausibility check (docs/river-monitor.md): settlement on the Solimões main channel, used as the boat landing in the 2023 and 2024 droughts. Not an observation of 2026.",
+    "found": true,
+    "passes": [
+     {
+      "pass": "2026-06-25_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-07_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-19_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-19_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-24_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-31_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-05_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-12_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-17_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-24_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-29_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-06_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-11_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-23_t161A",
+      "status": 1,
+      "correct": true
+     }
+    ]
+   },
+   {
+    "community": "Alvarães",
+    "expected": "linked",
+    "kind": "sanity",
+    "source": "Team plausibility check (docs/river-monitor.md): municipal seat reached through its port; no 2026 report of the town being cut off was found. Not an observation of 2026.",
+    "found": true,
+    "passes": [
+     {
+      "pass": "2026-06-25_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-07_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-07-19_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-19_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-24_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-08-31_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-05_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-12_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-17_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-24_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-09-29_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-06_t097D",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-11_t161A",
+      "status": 1,
+      "correct": true
+     },
+     {
+      "pass": "2026-10-23_t161A",
+      "status": 1,
+      "correct": true
+     }
+    ]
+   }
+  ],
+  "by_kind": {
+   "sanity": {
+    "checks": 2,
+    "judged": 28,
+    "correct": 28
+   }
+  },
+  "correct_share": 1.0
+ },
+ "classes": {
+  "monitored": 130,
+  "unresolved": 39,
+  "inland": 35,
+  "no_data": 0
+ },
+ "scorecard": {
+  "synthetic_correct_share": 0.8,
+  "synthetic_dangerous": 5,
+  "synthetic_conservative": 5,
+  "optical_iou": 0.9315,
+  "optical_recall_narrow": 0.4096,
+  "optical_false_water_shore": 0.0821,
+  "status_agreement": 0.9554,
+  "false_route": 6,
+  "false_isolated": 14,
+  "gauge_rho_lost_route": -0.7733,
+  "field_correct_share": 1.0,
+  "status_undecided": 85,
+  "review_needed": 16,
+  "false_route_confirmed": 0
+ }
+}
