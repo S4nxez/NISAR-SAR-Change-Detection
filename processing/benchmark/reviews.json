@@ -97,6 +97,19 @@
    "reviewer": "j-novillo",
    "date": "2026-11-12",
    "note": "Around -3.46931, -64.88287 and -3.48389, -64.90033: the river outline is visible on Sentinel-2 of 21 Oct but not as water, and Sentinel-1 (10 m) of 20 Oct shows no continuous water and a large bright (red) area. Low water, as at Nova Jerusalem the same day."
+  },
+  {
+   "passes": [
+    "2026-10-11_t161A"
+   ],
+   "community_ids": [
+    "osm8583554431"
+   ],
+   "verdict": "reference",
+   "cause": "sentinel1_mud",
+   "reviewer": "j-novillo",
+   "date": "2026-11-13",
+   "note": "Link clear on Sentinel-1 (10 m) of 13 Oct and on Sentinel-2 of 11 Oct; the point is a small bright patch next to the water. The scene of 13 Oct read the wind-roughened water around it as land; with the darkest of the two scenes the route is kept."
   }
  ]
 }

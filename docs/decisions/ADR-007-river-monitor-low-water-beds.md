@@ -37,10 +37,10 @@ terrain-corrected Sentinel-1 scenes at 10 m pixels without an account.
 
 ## Decision
 
-Every pass reads the Sentinel-1 VV scenes within `sentinel1.max_days` (4) of it, closest first, skipping a scene
-taken after the river fell more than `level_tolerance_cm` (30) below its level on the pass day. They are averaged to
-the 20 m grid, filtered (refined Lee, 6 looks) and classed as water (hysteresis −18 / −16 dB), land (≥ −16 dB) or
-undecided, and cached per date.
+Every pass reads the Sentinel-1 VV scenes within `sentinel1.max_days` (4) of it, skipping a scene taken when the
+river was more than `level_tolerance_cm` (30) off its level on the pass day. They are averaged to the 20 m grid,
+filtered (refined Lee, 6 looks) and cached per date; the darkest of them on each pixel is classed as water
+(hysteresis −18 / −16 dB), land (≥ −16 dB) or undecided (see "Manual review of exam 3").
 
 When the gauge on the day of the pass is at most `low_water.gauge_max_cm`, on seasonal ground:
 
@@ -82,6 +82,28 @@ NISAR and Sentinel-1 agree on 98.3 % of the 46 749 km² both judged over 6 passe
 statuses in 227 community-pass pairs at 67 places. The largest group is narrow channels (104 pairs), probably where
 Sentinel-1, about 20 m of real resolution, loses channels NISAR keeps; the published status follows NISAR in 200 of
 the 227. These places wait for verdicts.
+
+## Manual review of exam 3 (2026-11-13)
+
+The project lead checked the exam case and six crosscheck places on the 10 m Sentinel-1 and the Sentinel-2 images:
+
+- Nova Esperança on 2026-10-11 has a clear route: the mud veto was wrong. The culprit is a small bright patch next to
+  the water. The closest scene (13 Oct) read the water around it at −15 to −16 dB, as land; the scene of 8 Oct, 2.5
+  days farther but within the window, read the same water at −20 dB.
+- In all six crosscheck places NISAR was right: the channels are over 100 m wide on the 10 m Sentinel-1 image, and
+  Sentinel-2 clouds cut several of them. Our Sentinel-1 classes cut them for two reasons: wind (point 4 lies inside
+  Lake Tefé, far from the shore, and reads −15.4 dB VV on 4 Nov 2025; near Itapiranema the water reads −15.5 dB on
+  the closest scene and −20 dB on the other) and a scene edge (Santa Rosa do Repartimento).
+
+C band is much more sensitive to wind than L band: a breeze roughens open water up to the land threshold for a day or
+two, while a drained bed stays bright on every date. The view of a pass therefore keeps the darkest scene on each
+pixel instead of the closest, and the level tolerance now works both ways, so a scene taken while the river was much
+higher cannot hide a bed with its water. On the three low-water passes this keeps all the confirmed false routes cut,
+gives Nova Esperança its route back on 2026-10-11 and changes 6, 1 and 3 statuses against no rule (6, 4 and 3 with
+the closest scene).
+
+Lesson for the weights by zone type: Sentinel-1 alone is not more precise in narrow channels here; its "land" is
+trustworthy only on seasonal ground and when every scene agrees.
 
 ## Consequences
 

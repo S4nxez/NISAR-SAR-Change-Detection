@@ -123,8 +123,9 @@ For every pass (all frames of one track on one day):
    of a drained lake or side channel reads in NISAR's L band as dark as open water (about −17 dB in HH), and showed
    wide routes where only a creek was left. Sentinel-1 (C band, 5.6 cm) sees the same mud as rough, about 10 dB
    brighter than water. Every pass therefore also reads the Sentinel-1 scenes within 4 days (VV, radiometrically
-   terrain-corrected, from Microsoft Planetary Computer, no account), skipping a scene taken after the river fell
-   more than 30 cm below the level of the pass. When the river gauge on the day of the pass is at most 1200 cm
+   terrain-corrected, from Microsoft Planetary Computer, no account), skipping a scene taken when the river was
+   more than 30 cm off the level of the pass, and keeps the darkest of them on each pixel: wind roughens open water
+   in C band for a day or two, a drained bed stays bright on every date. When the river gauge on the day of the pass is at most 1200 cm
    (`low_water.gauge_max_cm`), on seasonal ground (water in 30 to 90 % of the months of 1984–2021, JRC Global
    Surface Water, `processing/areas/<area>_occurrence.png`):
    - NISAR water that Sentinel-1 sees as land (VV ≥ −16 dB, in patches at least 60 m across) carries no route;

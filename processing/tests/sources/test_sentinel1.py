@@ -44,8 +44,9 @@ class TestScenes(unittest.TestCase):
     def test_usable_dates_closest_first_within_the_window_and_the_river_level(self):
         series = [["2026-10-19", 836.0], ["2026-10-20", 827.0], ["2026-10-23", 797.0], ["2026-10-25", 783.5],
                   ["2026-10-26", 760.0], ["2026-10-27", 750.0]]
-        dates = ["2026-10-18", "2026-10-20", "2026-10-25", "2026-10-26", "2026-10-27"]
-        # 10-18 is 5 days away; 10-26 and 10-27: the river had fallen more than 30 cm below the pass level
+        dates = ["2026-10-18", "2026-10-19", "2026-10-20", "2026-10-25", "2026-10-26", "2026-10-27"]
+        # 10-18 is 5 days away; 10-26 and 10-27: the river had fallen more than 30 cm below the pass level; 10-19:
+        # it was more than 30 cm higher (10-20, exactly 30 cm higher, is kept)
         self.assertEqual(sentinel1.usable_dates(dates, "2026-10-23", series, 4, 30), ["2026-10-25", "2026-10-20"])
         # without a gauge the window alone decides; on a tie the earlier scene comes first
         self.assertEqual(sentinel1.usable_dates(["2026-10-25", "2026-10-21"], "2026-10-23", None, 4, 30),
@@ -125,15 +126,17 @@ class TestReading(TempDirTest):
         sentinel1.filtered_date(self.area, "2026-10-25", items, None, token, self.read)   # no cache: read again
         self.assertEqual(len(self.calls), 2)
 
-    def test_pass_view_the_closest_usable_scene_decides_each_pixel(self):
-        found = [item("2026-10-20", "https://b/b/vv.tiff"), item("2026-10-25", "https://b/a/vv.tiff")]
+    def test_pass_view_takes_the_darkest_scene_on_each_pixel(self):
+        # the closest scene (25th, wind) is bright everywhere; the 20th, calm, sees the water of the west
+        found = [item("2026-10-20", "https://b/a/vv.tiff"), item("2026-10-25", "https://b/b/vv.tiff")]
         post = mock.Mock(return_value=FakeResponse(json_data={"features": found}))
         get = mock.Mock(return_value=FakeResponse(json_data={"token": "tok"}))
         with mock.patch("lifeline.sources.sentinel1.log"):
             view = sentinel1.pass_view(self.area, "2026-10-23", CFG, self.tmp, None, post, get, self.read)
         self.assertEqual(view["dates"], ["2026-10-25", "2026-10-20"])
-        self.assertTrue(view["water"][:, :140].all())     # the 25th (closest) covers the west: water
-        self.assertTrue(view["land"][:, 160:].all())      # the 20th fills the east: land
+        self.assertTrue(view["water"][:, :140].all())     # water on the calm date wins over the windy one
+        self.assertTrue(view["land"][:, 160:].all())      # bright on every date it was seen: land
+        self.assertAlmostEqual(float(view["vv"][0, 299]), -5.0, delta=0.1)
         self.assertTrue(view["seen"].all())
         get.assert_called_once()                          # one token for every tile
 

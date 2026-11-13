@@ -114,10 +114,9 @@ def filtered_date(area, date, items, cache_dir, token, read=read_band, looks=LOO
 
 def usable_dates(dates, pass_date, series, max_days, level_tolerance_cm):
     """The scene dates that may judge a pass, closest first (ties: the earlier one). A scene is only used when the
-    river at the gauge was not lower than on the pass day by more than level_tolerance_cm: an older scene taken
-    while the river was higher sees at most as much mud as the pass, so its "land" holds for the pass; a scene
-    taken after the river fell further could show mud that was still water on the pass day. Without a gauge
-    level, the date window alone decides."""
+    river at the gauge was within level_tolerance_cm of its level on the pass day: a scene taken after the river
+    fell further could show mud that was still water on the pass day, and one taken while it was much higher could
+    show water over a bed that had drained by then. Without a gauge level, the date window alone decides."""
     day = dt.date.fromisoformat(pass_date)
     level = level_on(series, pass_date) if series else None
     out = []
@@ -126,7 +125,7 @@ def usable_dates(dates, pass_date, series, max_days, level_tolerance_cm):
         if abs(gap) > max_days:
             continue
         there = level_on(series, d) if series else None
-        if level is not None and there is not None and there < level - level_tolerance_cm:
+        if level is not None and there is not None and abs(there - level) > level_tolerance_cm:
             continue
         out.append((abs(gap), gap, d))
     return [d for _, _, d in sorted(out)]
@@ -141,9 +140,11 @@ def classify(vv, cfg):
 
 
 def pass_view(area, pass_date, cfg, cache_dir, series=None, post=None, get=None, read=read_band):
-    """What Sentinel-1 saw around a pass: {"dates": scene dates used, closest first, "vv": their filtered VV mosaic
-    (the closest scene that covers a pixel decides it), "water", "land", "seen"}; None when no usable scene
-    exists. cfg is the area's "sentinel1" block: max_days, level_tolerance_cm, water_db, weak_db, land_db."""
+    """What Sentinel-1 saw around a pass: {"dates": scene dates used, closest first, "vv": the darkest filtered VV
+    of those scenes on each pixel, "water", "land", "seen"}; None when no usable scene exists. Wind roughens open
+    water in C band (Lake Tefe reads about -15.5 dB on a windy day, -20 dB on a calm one) for a day or two, while a
+    drained bed stays bright on every date: so a pixel is land only when every scene that saw it is bright. cfg is
+    the area's "sentinel1" block: max_days, level_tolerance_cm, water_db, weak_db, land_db."""
     import requests
     post, get = post or requests.post, get or requests.get
     day = dt.date.fromisoformat(pass_date)
@@ -160,8 +161,7 @@ def pass_view(area, pass_date, cfg, cache_dir, series=None, post=None, get=None,
     vv = np.full((area["ny"], area["nx"]), np.nan, np.float32)
     for d in dates:
         f = filtered_date(area, d, scenes[d], cache_dir, token, read)
-        take = np.isnan(vv) & np.isfinite(f)
-        vv[take] = f[take]
+        vv = np.fmin(vv, f)                                   # NaN only where no scene saw the pixel
     log(f"Sentinel-1 for {pass_date}: {', '.join(dates)}")
     return {"dates": dates, "vv": vv, **classify(vv, cfg)}
 
