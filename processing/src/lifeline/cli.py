@@ -23,10 +23,13 @@ area of interest is read from each remote product with HTTP range requests, neve
 whole ~2 GB file.
 
 Method, for every pass (all frames of one track on one day, mosaicked):
-  1. HH backscatter is speckle-filtered (speckle_m window) and resampled to a fixed lon/lat
-     grid (~20 m) shared by all passes.
+  1. HH backscatter below valid_floor_db (swath-edge fill) and within edge_margin_m of the edge of
+     the data is no data. The rest is speckle-filtered (speckle_filter: refined Lee, or a box of
+     speckle_m) and resampled to a fixed lon/lat grid (~20 m) shared by all passes.
   2. Water = filtered HH below water_db, plus pixels below water_db_weak touching that water.
-     Specks under 1 ha are dropped and holes under 2 ha inside water are filled.
+     Specks under 1 ha are dropped and holes under 2 ha inside water are filled. Water under
+     vegetation (vegetated_water: bright HH, high HH - HV, near open water) is its own class and
+     never a route.
   3. For every channel width W in widths_m, the water mask is reduced to the pixels at
      least W/2 from the shore; a community is connected at width W when, within
      access_radius_m of it, one of those pixels belongs to the same component as the

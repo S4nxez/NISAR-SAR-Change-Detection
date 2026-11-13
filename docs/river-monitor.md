@@ -79,8 +79,11 @@ example after changing the rules in the area file or the community list. In the 
 
 `processing/areas/<area>.json` defines the area, either as a `circle` (centre and radius in km;
 Tefé uses 55 km) or as a `bbox`, the grid (~20 m), the hub town, a
-point on the main river (to report the hub ↔ main river link), the water threshold and the
-rules below. `processing/areas/<area>_communities.geojson` holds the places (OpenStreetMap,
+point on the main river (to report the hub ↔ main river link), the river gauge, and the
+parameters of the method below: speckle filter, swath edge, water thresholds, water under vegetation,
+route widths, the low-water rule and the Sentinel-1 classes (`speckle_filter`, `edge_margin_m`, `water_db`,
+`vegetated_water`, `widths_m`, `low_water`, `sentinel1`...). `processing/areas/<area>_occurrence.png` is the JRC
+water occurrence layer written by `river-monitor occurrence`. `processing/areas/<area>_communities.geojson` holds the places (OpenStreetMap,
 ODbL). Add an area by writing a new pair of files and passing `--area <id>`; the web page
 takes `index.html?area=<id>`.
 
@@ -154,17 +157,25 @@ circle.
 Passes that cover less than 80 % of the area are kept as images but not evaluated, and
 passes under 5 % are hidden.
 
-The thresholds were tuned on two passes over Tefé: 7 July 2026 (high water) and 23 October 2026
-(low water). With the final settings, places without a route drop from 44 to 18 at high water
-(the rest are mostly streams too narrow to resolve) while 30 remain at low water.
+The first thresholds (−15 / −12 dB on the 60 m box filter) were tuned on two passes over Tefé: 7 July 2026 (high
+water) and 23 October 2026 (low water). With them, places without a route dropped from 44 to 18 at high water (the
+rest were mostly streams too narrow to resolve) while 30 remained at low water. Those figures date from 10 November
+2026 and the original method; every change since was measured with the accuracy benchmark, whose results are in
+`processing/benchmark/history/`.
 
 ## Accuracy benchmark
 
 `river-monitor benchmark --label <name>` scores the method of the current checkout against synthetic scenes,
 Sentinel-2 water, the river gauge and field checks, and keeps every result in `processing/benchmark/history/`.
 Run it before and after any change to the method; see [river-monitor-benchmark.md](river-monitor-benchmark.md).
+The review that started this work, with the options considered and what became of each, is
+[river-monitor-accuracy-review.md](river-monitor-accuracy-review.md).
 
 ## Validation so far (Tefé, November 2026)
+
+The river level figures below were measured on 10 November 2026 with the original method (box filter, −15 / −12 dB,
+no swath edge margin, no low-water rule). For the current method see the gauge correlation of the latest result in
+`processing/benchmark/history/`.
 
 - **River level**: against the official ANA gauge Tefé-Missões (station 12900001, Solimões),
   across the 15 evaluated passes, monitored communities without a water route follow the river
@@ -203,7 +214,8 @@ so the radar result can be read against the river.
 `<MONITOR_DATA_DIR>/<area>/catalog.json` plus, per pass (`passes/<pass>/`), `radar.webp`, `water.png`
 (channels narrower than the safe width in amber, water under vegetation in green), `change.png`, `water.npz` (packed water
 mask used for the change layer and `reevaluate`, never served) and `sentinel1.npz` (the Sentinel-1 classes the pass
-used, for `reevaluate`, never served). The record is data, not code: it
+used, for `reevaluate`, never served). With `MONITOR_KEEP_BACKSCATTER=1` (set by the benchmark) each pass also
+keeps its filtered backscatter in `backscatter.npz`, never served. The record is data, not code: it
 lives in the volume (or `processing/output/` locally, ignored by git), never in the repository.
 
 ## Code and tests
@@ -213,12 +225,13 @@ responsibility, and `tests/` mirrors it:
 
 | Package / module | What |
 |---|---|
-| `config.py` | paths (`MONITOR_DATA_DIR`, `MONITOR_AREAS_DIR`), remote services, `SCHEMA_VERSION`, status codes |
+| `config.py` | paths and switches (`MONITOR_DATA_DIR`, `MONITOR_AREAS_DIR`, `MONITOR_CACHE_DIR`, `MONITOR_KEEP_BACKSCATTER`), remote services, `SCHEMA_VERSION`, status codes |
 | `geometry/` | `geo.py` distances and place-name folding; `area.py` area files, the lon/lat grid, the circular area mask |
 | `sources/` | external data: `asf.py` NISAR GCOV search; `remote.py` Earthdata token and ranged reads; `places.py` communities and landings from OpenStreetMap; `gauge.py` river level from ANA; `occurrence.py` JRC water occurrence layer; `sentinel1.py` Sentinel-1 water and land around a pass |
-| `analysis/` | `radar.py` speckle filter and the read of one pass onto the area grid; `water.py` water mask (hysteresis), channel widths and the route of every community to the hub |
+| `analysis/` | `radar.py` fill mask, speckle filters (refined Lee, box), swath edge margin and the read of one pass onto the area grid; `water.py` water mask (hysteresis), water under vegetation, the per-pass threshold (off), channel widths, the low-water rule and the route of every community to the hub |
 | `output/` | `layers.py` `radar.webp`, `water.png`, `change.png` and the stored water mask; `catalog.py` evaluation of a pass, whole-record classification, `catalog.json` |
-| `pipeline.py` | the commands (`communities`, `update`, `reevaluate`, `watch`) |
+| `benchmark/` | the accuracy exam (`river-monitor benchmark`): synthetic scenes, Sentinel-2 and OPERA references and their consensus, causes, manual reviews, NISAR–Sentinel-1 crosscheck, scores and report; see [river-monitor-benchmark.md](river-monitor-benchmark.md) |
+| `pipeline.py` | the commands (`communities`, `occurrence`, `update`, `reevaluate`, `watch`) |
 | `cli.py`, `__main__.py` | the command line: `river-monitor` or `python -m lifeline` |
 
 ```bash
