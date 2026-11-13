@@ -102,6 +102,11 @@ higher cannot hide a bed with its water. On the three low-water passes this keep
 gives Nova Esperança its route back on 2026-10-11 and changes 6, 1 and 3 statuses against no rule (6, 4 and 3 with
 the closest scene).
 
+Exam 3 rerun with the fix (`v3-darkest-sentinel1` against `v3-sentinel1-mud-veto`): false isolated 15 → 14,
+false routes 0 → 1 (Canaman on 2026-10-11, at risk while the cloud-edged reference cuts it off; to review), status
+agreement 0.961 → 0.957. Nova Esperança on 2026-10-11 is at risk instead of isolated. In the crosscheck, agreement
+0.983 → 0.985 and status cases 227 → 170 (40 → 5 on 2026-10-11, 33 → 11 on 2026-10-23).
+
 Lesson for the weights by zone type: Sentinel-1 alone is not more precise in narrow channels here; its "land" is
 trustworthy only on seasonal ground and when every scene agrees.
 

@@ -15,6 +15,7 @@ One row per run of `river-monitor benchmark` (see docs/river-monitor-benchmark.m
 | [v2-swath-edge-margin](20261112T140815Z_v2-swath-edge-margin.md) | 2026-11-12 | 2 | `99bfc68` | 0.800 | 5 | 0.931 | 0.410 | 0.082 | 0.955 | 6 | 14 | -0.773 | 1.000 | 85 | 16 | 0 | – | – |
 | [low-water-seasonal-beds](20261112T231749Z_low-water-seasonal-beds.md) | 2026-11-12 | 2 | `21a1e94` | 0.800 | 5 | 0.931 | 0.410 | 0.082 | 0.936 | 0 | 28 | -0.889 | 1.000 | 85 | 0 | – | – | – |
 | [v3-sentinel1-mud-veto](20261113T100324Z_v3-sentinel1-mud-veto.md) | 2026-11-13 | 3 | `21a1e94`* | 0.800 | 5 | 0.929 | 0.388 | 0.074 | 0.961 | 0 | 15 | -0.759 | 1.000 | 47 | 1 | – | 0.983 | 67 |
+| [v3-darkest-sentinel1](20261113T192855Z_v3-darkest-sentinel1.md) | 2026-11-13 | 3 | `7a3d95e` | 0.800 | 5 | 0.929 | 0.388 | 0.074 | 0.957 | 1 | 14 | -0.757 | 1.000 | 47 | 2 | 0 | 0.985 | 62 |
 
 Columns:
 
