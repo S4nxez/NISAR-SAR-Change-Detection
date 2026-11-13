@@ -70,6 +70,10 @@ assumptions of the exam, not measurements of NISAR over Tefé:
 Speckle is gamma distributed with the exam's number of looks (`synthetic.looks`). It is set to the equivalent number
 of looks (ENL = (mean / standard deviation)² over homogeneous open water) measured on the real GCOV windows.
 
+The scenes simulate NISAR only: the synthetic area drops the `sentinel1` block (and has no gauge, so the low-water
+rule is off). The `mud_bar` lane therefore measures the bare L-band method, which ADR-007 completes with Sentinel-1
+on the real record.
+
 ### Real passes against Sentinel-2 (exam 1, and the anchor of exam 2)
 
 For every evaluated pass, the Sentinel-2 L2A date within `max_days` (2) with the largest clear share of the area is
@@ -204,12 +208,16 @@ The section "NISAR and Sentinel-1 (not scored)" of the report takes the place of
   ground, narrow channel, vegetation, wind...), which radar the published status followed, and links. Each place ends
   with a verdict to paste into `processing/benchmark/crosscheck_reviews.json`: `nisar`, `sentinel1` or
   `undecidable`.
-- **Verdicts per zone type**: how often each radar was right in each kind of place. This is the evidence for the next
-  step of ADR-007: trusting NISAR under vegetation and on wind-roughened water, Sentinel-1 on mud and in narrow
-  channels, with weights measured from these verdicts instead of guessed.
+- **Verdicts per zone type**: how often each radar was right in each kind of place, the evidence for weighing the
+  two radars by zone type with measured weights instead of guessed ones. The first verdicts (2026-11-13) went to
+  NISAR in every zone checked: narrow channels, mixed shore pixels and wind-roughened water, where C band reads open
+  water as land.
 
 In the scored part, a case caused by the low-water rule has the cause `sentinel1_mud` (NISAR water left out of the
 routes because Sentinel-1 saw mud there) and is always sent to review.
+
+Results of the latest run, what the synthetic scenes and the manual review saw:
+[river-monitor-exam-3-results.md](river-monitor-exam-3-results.md).
 
 ### River gauge
 

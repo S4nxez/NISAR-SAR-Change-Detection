@@ -108,7 +108,8 @@ def speckled(mean_db, looks, rng):
 def scene_area(base_area, origin_lonlat):
     """The synthetic area: the method parameters of base_area (thresholds, widths, filter, any rule the checkout
     reads from the area file) on a box that covers the scene, with its own hub, river and a short access radius
-    (lanes are only LANE_M apart)."""
+    (lanes are only LANE_M apart). Sentinel-1 is left out: real scenes of the place would say nothing about the
+    simulated lanes, and the scenes have no gauge, so the low-water rule is off anyway."""
     from pyproj import Transformer
     to_ll = Transformer.from_crs(EPSG, 4326, always_xy=True)
     to_xy = Transformer.from_crs(4326, EPSG, always_xy=True)
@@ -118,7 +119,8 @@ def scene_area(base_area, origin_lonlat):
     lon1, _ = to_ll.transform(x0 + w, y0)
     _, lat0 = to_ll.transform(x0, y0 - h)
     hub_lon, hub_lat = to_ll.transform(x0 + sum(RIVER) / 2, y0 - h / 2)
-    keep = {k: v for k, v in base_area.items() if k not in ("circle", "gauge", "nx", "ny", "px_m", "bbox")}
+    drop = ("circle", "gauge", "sentinel1", "nx", "ny", "px_m", "bbox")
+    keep = {k: v for k, v in base_area.items() if k not in drop}
     keep.update(id="synthetic", name="Synthetic lanes", bbox=[lon0, round(lat0, 6), round(lon1, 6), lat1],
                 hub={"name": "Hub", "lon": hub_lon, "lat": hub_lat, "radius_m": 250},
                 river={"name": "River", "lon": hub_lon, "lat": hub_lat, "radius_m": 250},

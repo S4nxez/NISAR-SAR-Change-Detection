@@ -45,11 +45,12 @@ class TestScene(unittest.TestCase):
     def test_the_scene_area_keeps_the_method_parameters(self):
         base = {"id": "tefe", "water_db": -14.0, "speckle_m": 60, "widths_m": [40, 60], "safe_width_m": 60,
                 "circle": {"lon": 0, "lat": 0, "radius_km": 1}, "gauge": {"ana_code": "1"}, "step_deg": 0.00018,
-                "new_rule": 3}
+                "new_rule": 3, "sentinel1": {"max_days": 4}}
         area, _ = synthetic.scene_area(base, (-64.80, -3.40))
         self.assertEqual((area["water_db"], area["new_rule"], area["id"]), (-14.0, 3, "synthetic"))
         self.assertNotIn("circle", area)
         self.assertNotIn("gauge", area)
+        self.assertNotIn("sentinel1", area)      # no real scenes over simulated lanes (and no network in tests)
 
 
 class TestRun(unittest.TestCase):
