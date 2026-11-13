@@ -9,7 +9,7 @@ Two levels:
   fewest disputed pixels a route has to cross (`bridge_pixels`): for a route the reference does not have, the NISAR
   water pixels the reference calls land that the cheapest route between the hub and the community uses; for a route
   NISAR misses, the reference water pixels NISAR calls land. The case takes the most common cause of those pixels,
-  a location (their centre) and links to look at it in the Copernicus Browser.
+  a location (the culprit pixel closest to their centre) and links to look at it in the Copernicus Browser.
 
 The rules are evidence, not proof: the cases flagged `review` are the ones a person has to check (docs/
 river-monitor-benchmark.md, "Manual review").
@@ -38,6 +38,8 @@ FAMILIES = {
 
 # (cause, family, needs a person, applies to commission, applies to omission, meaning); the order is the priority
 CAUSES = [
+    ("sentinel1_mud", "radar_physics", True, False, True,
+     "NISAR water left out of the routes at low water because Sentinel-1 saw mud there (ADR-007)"),
     ("cloud_edge", "reference", True, True, True,
      "near a cloud or cloud shadow of the Sentinel-2 scene: the optical reference may be wrong"),
     ("river_level_change", "timing", False, True, True,
@@ -100,8 +102,10 @@ def conditions(ctx, rules, px_m):
             veg |= ctx[k]
     if ctx.get("worldcover") is not None:
         veg |= optical_blind(ctx["worldcover"])
+    mud = ctx.get("sentinel1_mud")
     with np.errstate(invalid="ignore"):
         return {
+            "sentinel1_mud": none if mud is None else mud,
             "cloud_edge": none if cloudy is None else _distance_m(cloudy, px_m) <= rules["cloud_near_m"],
             "river_level_change": none if level is None or abs(level) < rules["level_change_cm"] else seasonal,
             "swath_edge": _distance_m(gaps, px_m) <= rules["swath_edge_m"],
@@ -262,6 +266,14 @@ def case_masks(kind, nisar, ref, px_m, safe_m):
     return wide_r, wide_r & wide_n, FOUR_NEIGHBOURS, "omission"
 
 
+def central_pixel(mask):
+    """(row, col) of the pixel of mask closest to the centre of its pixels: the centre itself can fall on the bank
+    between two stretches of culprit pixels, where a person checking the link would see nothing wrong."""
+    rr, cc = np.nonzero(mask)
+    k = int(np.argmin((rr - rr.mean()) ** 2 + (cc - cc.mean()) ** 2))
+    return int(rr[k]), int(cc[k])
+
+
 def pixel_lonlat(area, row, col):
     lon0, _, _, lat1 = area["bbox"]
     return lon0 + (col + 0.5) * area["step_deg"], lat1 - (row + 0.5) * area["step_deg"]
@@ -375,8 +387,7 @@ def cases(area, communities, pred, ref_status, nisar, ref_water, cond, targets, 
         culprits = bridge_pixels(path, free, starts, disk_mask(nisar.shape, row, col, access_px), st, max_px)
         cause, counts = explain_case(kind, culprits, nisar, ref_water, cond)
         if culprits is not None and culprits.any():
-            rr, cc = np.nonzero(culprits)
-            lon, lat = pixel_lonlat(area, int(round(rr.mean())), int(round(cc.mean())))
+            lon, lat = pixel_lonlat(area, *central_pixel(culprits))
         else:
             lon, lat = c.get("access") or (c["lon"], c["lat"])
         out.append({"community_id": c["id"], "community": c.get("name", c["id"]), "kind": kind,

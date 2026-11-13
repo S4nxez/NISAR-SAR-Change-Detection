@@ -92,6 +92,26 @@ def load_mask(path):
                 np.unpackbits(z["valid"])[:n].reshape(shape).astype(bool))
 
 
+def save_sentinel1(view, path):
+    """The Sentinel-1 classes a pass used (sources.sentinel1.pass_view): water, land and seen, packed, with the
+    scene dates, so reevaluate applies the same rules without reading Sentinel-1 again."""
+    shape = view["water"].shape
+    np.savez_compressed(path, shape=np.array(shape), dates=np.array(view["dates"]),
+                        **{k: np.packbits(view[k]) for k in ("water", "land", "seen")})
+
+
+def load_sentinel1(path):
+    """{"dates", "water", "land", "seen"} stored by save_sentinel1, or None when the pass has none."""
+    if not os.path.exists(path):
+        return None
+    with np.load(path) as z:
+        shape = tuple(z["shape"])
+        n = shape[0] * shape[1]
+        out = {k: np.unpackbits(z[k])[:n].reshape(shape).astype(bool) for k in ("water", "land", "seen")}
+        out["dates"] = [str(d) for d in z["dates"]]
+    return out
+
+
 def load_vegetated(path):
     """The water-under-vegetation mask stored by save_mask, or None (single-polarisation pass, older record)."""
     with np.load(path) as z:

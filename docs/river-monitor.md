@@ -48,6 +48,7 @@ instead of repeating them. Change `schema_version` on both sides whenever a read
 ```bash
 python -m pip install -e processing        # the lifeline package, its pinned dependencies and the river-monitor command
 river-monitor communities                  # once: places from OpenStreetMap
+river-monitor occurrence                   # once: JRC water occurrence layer
 river-monitor update                       # all passes not processed yet, into processing/output/
 ```
 
@@ -118,6 +119,22 @@ For every pass (all frames of one track on one day):
    or harbour within 3 km (villages and hamlets within 500 m) from OpenStreetMap. Without
    this, a town whose centre is a kilometre inland (Alvarães) looked isolated while its port
    stayed connected.
+   **Low water and Sentinel-1** ([ADR-007](decisions/ADR-007-river-monitor-low-water-beds.md)): the wet, smooth bed
+   of a drained lake or side channel reads in NISAR's L band as dark as open water (about −17 dB in HH), and showed
+   wide routes where only a creek was left. Sentinel-1 (C band, 5.6 cm) sees the same mud as rough, about 10 dB
+   brighter than water. Every pass therefore also reads the Sentinel-1 scenes within 4 days (VV, radiometrically
+   terrain-corrected, from Microsoft Planetary Computer, no account), skipping a scene taken after the river fell
+   more than 30 cm below the level of the pass. When the river gauge on the day of the pass is at most 1200 cm
+   (`low_water.gauge_max_cm`), on seasonal ground (water in 30 to 90 % of the months of 1984–2021, JRC Global
+   Surface Water, `processing/areas/<area>_occurrence.png`):
+   - NISAR water that Sentinel-1 sees as land (VV ≥ −16 dB, in patches at least 60 m across) carries no route;
+   - a broad seasonal patch (holding a 60 m disc) that no usable Sentinel-1 scene covers is *unverified*: a route
+     through it is at most *at risk*, never *connected*, and the community is listed in the pass's
+     `unverified_route`.
+
+   A seasonal lake that still holds water keeps its route: the historical occurrence alone cannot tell it from a
+   drained bed. Every pass records its river level (`river_level_cm`), whether the rule applied (`low_water`) and how
+   the two radars agree (`sentinel1`: scene dates, agreement, water each one alone sees, mud left out).
 4. **Status**: *connected* (route ≥ 60 m), *at risk* (route narrower), *isolated* (no water
    route, or no water within 1 km), *no data* (not covered by the pass, or a route could run
    through a gap in the pass).
@@ -183,8 +200,9 @@ in the area file as `gauge`), refreshed on every `update`: the page draws it beh
 so the radar result can be read against the river.
 
 `<MONITOR_DATA_DIR>/<area>/catalog.json` plus, per pass (`passes/<pass>/`), `radar.webp`, `water.png`
-(channels narrower than the safe width in amber, water under vegetation in green), `change.png` and `water.npz` (packed water
-mask used for the change layer and `reevaluate`, never served). The record is data, not code: it
+(channels narrower than the safe width in amber, water under vegetation in green), `change.png`, `water.npz` (packed water
+mask used for the change layer and `reevaluate`, never served) and `sentinel1.npz` (the Sentinel-1 classes the pass
+used, for `reevaluate`, never served). The record is data, not code: it
 lives in the volume (or `processing/output/` locally, ignored by git), never in the repository.
 
 ## Code and tests
@@ -196,7 +214,7 @@ responsibility, and `tests/` mirrors it:
 |---|---|
 | `config.py` | paths (`MONITOR_DATA_DIR`, `MONITOR_AREAS_DIR`), remote services, `SCHEMA_VERSION`, status codes |
 | `geometry/` | `geo.py` distances and place-name folding; `area.py` area files, the lon/lat grid, the circular area mask |
-| `sources/` | external data: `asf.py` NISAR GCOV search; `remote.py` Earthdata token and ranged reads; `places.py` communities and landings from OpenStreetMap; `gauge.py` river level from ANA |
+| `sources/` | external data: `asf.py` NISAR GCOV search; `remote.py` Earthdata token and ranged reads; `places.py` communities and landings from OpenStreetMap; `gauge.py` river level from ANA; `occurrence.py` JRC water occurrence layer; `sentinel1.py` Sentinel-1 water and land around a pass |
 | `analysis/` | `radar.py` speckle filter and the read of one pass onto the area grid; `water.py` water mask (hysteresis), channel widths and the route of every community to the hub |
 | `output/` | `layers.py` `radar.webp`, `water.png`, `change.png` and the stored water mask; `catalog.py` evaluation of a pass, whole-record classification, `catalog.json` |
 | `pipeline.py` | the commands (`communities`, `update`, `reevaluate`, `watch`) |

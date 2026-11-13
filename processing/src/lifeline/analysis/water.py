@@ -261,19 +261,27 @@ def seasonal_ground(occurrence, low_pct, high_pct):
     return (occurrence != OCCURRENCE_NO_DATA) & (occurrence >= low_pct) & (occurrence < high_pct)
 
 
-def low_water_route(water, occurrence, level_cm, rule, px_m):
-    """The water a route may use on a pass, and whether the low-water rule applied.
+def low_water_route(water, occurrence, level_cm, rule, px_m, sentinel1=None):
+    """(route, unverified, applied): the water a route may use on a pass, the water a route may only use at risk,
+    and whether the low-water rule applied (ADR-007).
 
-    At low water (river level at the gauge at most rule["gauge_max_cm"]) the radar reads the wet, smooth bed of a
-    drained lake, bay or side channel as dark as open water, so a pass can show a wide route over mud. Then the water
-    on seasonal ground (rule["seasonal_pct"], see seasonal_ground) is left out of the routes where it forms broad
-    patches, those that hold a disc of rule["patch_radius_m"]: a drained bed is hundreds of metres across, while the
-    one or two mixed pixels along the banks of a permanent river are not removed. A community whose route crosses
-    such a bed gets the status of the permanent water (a narrower route or none). Without a rule, a layer or a level,
-    the water is used as it is."""
+    At low water (river level at the gauge at most rule["gauge_max_cm"]) NISAR reads the wet, smooth bed of a
+    drained lake, bay or side channel as dark as open water, and the water occurrence of 1984-2021 cannot tell such
+    a bed from a lake that still holds water (both were water 70-85 % of the months). Sentinel-1 can: at its shorter
+    wavelength the mud is rough and bright (sources.sentinel1). So, on seasonal ground (rule["seasonal_pct"], see
+    seasonal_ground) only:
+      - water that Sentinel-1 sees as land leaves the routes where it forms patches that hold a disc of
+        rule["veto_radius_m"] (a speck or a one-pixel bank of disagreement is not a drained bed);
+      - broad patches (holding a disc of rule["patch_radius_m"]) that no usable Sentinel-1 scene judged are
+        unverified: a route through them is kept, but only as at risk, never as safe (output.catalog.evaluate).
+    Without Sentinel-1 every broad seasonal patch is unverified. Without a rule, a layer or a level the water is used
+    as it is and nothing is unverified."""
     if not rule or occurrence is None or level_cm is None or level_cm > rule["gauge_max_cm"]:
-        return water, False
+        return water, None, False
     low, high = rule["seasonal_pct"]
     seasonal = water & seasonal_ground(occurrence, low, high)
     beds = ndimage.binary_opening(seasonal, structure=disk(rule["patch_radius_m"] / px_m))
-    return water & ~beds, True
+    if sentinel1 is None:
+        return water, beds, True
+    mud = ndimage.binary_opening(seasonal & sentinel1["land"], structure=disk(rule["veto_radius_m"] / px_m))
+    return water & ~mud, beds & ~sentinel1["seen"] & ~mud, True

@@ -5,6 +5,7 @@ import numpy as np
 
 from lifeline.config import SCHEMA_VERSION, STATUS
 from lifeline.output.catalog import (
+    hold_unverified,
     catalog_path,
     classify_communities,
     community_class,
@@ -117,6 +118,32 @@ class TestEvaluate(unittest.TestCase):
         self.assertAlmostEqual(entry["water_km2"], round(self.water.sum() * 0.0004, 2))
         self.assertEqual(entry["status"]["lake"][0], STATUS["isolated"])
         self.assertEqual(entry["status"]["river"][0], STATUS["connected"])
+
+    def test_a_route_that_needs_unverified_water_is_at_risk_never_connected(self):
+        water = self.water.copy()
+        water[95:105, 30:200] = True     # a 200 m channel: the lake is connected
+        unverified = np.zeros_like(water)
+        unverified[95:105, 100:120] = True   # a stretch of it on a seasonal bed no Sentinel-1 scene judged
+        entry = {"unverified_route": ["stale"]}
+        evaluate(self.area, self.communities, water, self.valid, wide_water_of(self.area, water), entry, water,
+                 unverified)
+        plain = {}
+        evaluate(self.area, self.communities, water, self.valid, wide_water_of(self.area, water), plain, water,
+                 np.zeros_like(water))
+        self.assertEqual(plain["status"]["lake"][0], STATUS["connected"])
+        # status capped at at risk; the width the route has is kept
+        self.assertEqual(entry["status"]["lake"], [STATUS["at_risk"], *plain["status"]["lake"][1:]])
+        self.assertEqual(entry["status"]["river"][0], STATUS["connected"])
+        self.assertEqual(entry["unverified_route"], ["lake"])
+        self.assertNotIn("unverified_route", plain)
+
+    def test_hold_unverified_rules(self):
+        c, r, i, n = (STATUS[k] for k in ("connected", "at_risk", "isolated", "no_data"))
+        results = [[c, 100, 0], [c, 100, 0], [r, 0, 0], [r, 0, 0], [i, None, 900], [c, 100, 0]]
+        strict = [[c, 100, 0], [i, None, 0], [i, None, 0], [r, 0, 0], [i, None, 900], [n, None, None]]
+        out, held = hold_unverified(results, strict)
+        self.assertEqual([o[0] for o in out], [c, r, r, r, i, r])
+        self.assertEqual(held, [1, 2, 5])
 
     def test_partial_pass_is_shown_but_not_evaluated(self):
         valid = self.valid.copy()

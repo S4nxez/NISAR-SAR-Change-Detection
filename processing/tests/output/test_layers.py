@@ -14,10 +14,12 @@ from lifeline.output.layers import (
     WATER_WIDE,
     change_index,
     load_mask,
+    load_sentinel1,
     load_vegetated,
     save_change,
     save_mask,
     save_radar,
+    save_sentinel1,
     save_water,
 )
 
@@ -44,6 +46,18 @@ class TestLayers(TempDirTest):
         save_backscatter(hh, hh - 7, path)
         self.assertEqual(load_backscatter(path)[1].dtype, np.float32)
         self.assertEqual(load_backscatter(os.path.join(self.tmp, "none.npz")), (None, None))
+
+    def test_sentinel1_round_trip_and_missing_file(self):
+        rng = np.random.default_rng(5)
+        view = {k: rng.random((9, 11)) > 0.5 for k in ("water", "land", "seen")}
+        view["dates"] = ["2026-10-25", "2026-10-20"]
+        path = os.path.join(self.tmp, "sentinel1.npz")
+        save_sentinel1(view, path)
+        got = load_sentinel1(path)
+        for k in ("water", "land", "seen"):
+            np.testing.assert_array_equal(got[k], view[k])
+        self.assertEqual(got["dates"], ["2026-10-25", "2026-10-20"])
+        self.assertIsNone(load_sentinel1(os.path.join(self.tmp, "none.npz")))
 
     def test_water_png_marks_wide_water_and_narrow_channels(self):
         water = np.zeros((4, 4), bool)

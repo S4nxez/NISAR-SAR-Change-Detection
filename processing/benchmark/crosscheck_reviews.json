@@ -1,0 +1,4 @@
+{
+ "description": "Verdicts of people who checked a place where NISAR and Sentinel-1 give a community different statuses (exam report, section NISAR and Sentinel-1). verdict: nisar (NISAR was right), sentinel1 (Sentinel-1 was right), undecidable. cause: optional, the zone type if the report got it wrong.",
+ "reviews": []
+}

@@ -7,8 +7,9 @@ import numpy as np
 import requests
 
 from lifeline.benchmark import exam, report
-from lifeline.output.catalog import pass_dir
-from lifeline.output.layers import save_backscatter, save_mask
+from lifeline.output.catalog import catalog_path, pass_dir
+from lifeline.output.layers import save_backscatter, save_mask, save_sentinel1
+from lifeline.sources.occurrence import save_occurrence
 
 from ..helpers import TempDirTest, river_scene, small_area
 
@@ -85,6 +86,18 @@ class TestPasses(TempDirTest):
         exam.run_record({"id": "a"}, {"p": {}}, "/cache", run_dir, 2, update=update)
         self.assertEqual(seen, {"cache": "/cache", "passes": {"p": {}}, "old": False})
 
+    def test_run_record_starts_from_the_cached_gauge_series(self):
+        run_dir = os.path.join(self.tmp, "run")
+        area = small_area()
+        self.write_json("gauge_test.json", {"source": "ANA", "series": [["2026-10-23", 797.0]]})
+        seen = {}
+
+        def update(area, workers, out_root, areas_dir, search, token):
+            seen["gauge"] = exam.load_json(catalog_path(area, out_root))["gauge"]
+            return {"passes": []}
+        exam.run_record(area, {}, self.tmp, run_dir, 1, update=update)
+        self.assertEqual(seen["gauge"]["series"], [["2026-10-23", 797.0]])
+
 
 class TestOptical(TempDirTest):
     def test_passes_with_a_reference_are_scored_and_pooled(self):
@@ -150,10 +163,61 @@ class TestReference(TempDirTest):
                     "land": ~s1_water, "vegetated": np.zeros_like(s1_water)}
         return ref
 
-    def section(self, s1_water, review_list=()):
-        return exam.reference_section(self.area, self.cat, self.communities, self.tmp, self.tmp, EXAM2,
+    def section(self, s1_water, review_list=(), crosscheck_reviews=(), area=None):
+        return exam.reference_section(area or self.area, self.cat, self.communities, self.tmp, self.tmp, EXAM2,
                                       gauge=None, statics=self.statics, review_list=review_list, token="t",
-                                      reference=self.s2, opera_ref=self.opera(s1_water))
+                                      reference=self.s2, opera_ref=self.opera(s1_water),
+                                      crosscheck_reviews=crosscheck_reviews, areas_dir=self.tmp)
+
+    def save_s1(self, pid, water):
+        """The Sentinel-1 classes the pipeline stored for a pass: `water`, land elsewhere."""
+        save_sentinel1({"dates": ["2026-08-25"], "water": water, "land": ~water, "seen": np.ones_like(water)},
+                       os.path.join(pass_dir(self.area, pid, self.tmp), "sentinel1.npz"))
+
+    def test_nisar_and_sentinel1_disagreements_are_listed_not_scored(self, _log):
+        self.save_s1("2026-08-24_t1", self.gap)            # Sentinel-1 sees the channel cut where NISAR sees water
+        out = self.section(self.water)                      # the scored references see the channel
+        self.assertEqual(out["summary"]["false_route"], 0)  # the crosscheck is not part of the score
+        xc = out["crosscheck"]
+        self.assertEqual((xc["summary"]["passes"], xc["summary"]["status_cases"], xc["summary"]["sites"]), (1, 1, 1))
+        self.assertEqual(xc["summary"]["agreement"], round(1 - 15 / 60000, 4))
+        self.assertEqual((xc["passes"][0]["nisar_only_km2"], xc["passes"][0]["mud_km2"]), (0.01, 0.0))
+        case = xc["cases"][0]
+        self.assertEqual((case["pass"], case["community_id"], case["kind"], case["followed"], case["culprit_px"]),
+                         ("2026-08-24_t1", "a", "false_route", "nisar", 5))
+        self.assertIn("fromTime=2026-08-25", case["links"]["sentinel1"])
+        self.assertEqual(xc["summary"]["by_zone"][case["cause"]]["pending"], 1)
+        self.assertEqual(xc["passes"][0]["status_cases"], 1)
+        verdict = [{"pass": "2026-08-24_t1", "community_id": "a", "verdict": "sentinel1"}]
+        reviewed = self.section(self.water, crosscheck_reviews=verdict)["crosscheck"]
+        self.assertEqual(reviewed["summary"]["by_zone"][case["cause"]]["sentinel1"], 1)
+        self.assertFalse(reviewed["sites"][0]["review"])
+
+    def test_a_route_cut_by_sentinel1_mud_is_explained_as_such(self, _log):
+        area = dict(self.area, low_water={"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60,
+                                          "veto_radius_m": 20})
+        occ = np.full(self.water.shape, 98, np.uint8)
+        occ[90:110, 100:150] = 60                           # the channel crosses a seasonal bed there
+        save_occurrence(area, occ, self.tmp)
+        self.save_s1("2026-08-24_t1", self.gap)            # and Sentinel-1 sees mud on it
+        self.cat["gauge"] = {"series": [["2026-08-24", 800.0]]}
+        self.cat["passes"][0]["status"] = {"a": [ISO, None, 0]}   # the published status: cut off
+        self.gap[:] = self.water                            # the optical reference sees the channel
+        out = self.section(self.water, area=area)
+        case = out["cases"][0]
+        self.assertEqual((case["kind"], case["cause"], case["review"]), ("false_isolated", "sentinel1_mud", True))
+        self.assertEqual(case["culprit_px"], 3)              # the opening keeps the gap's corner pixels as water
+
+    def test_the_crosscheck_report_lists_places_with_a_verdict_to_paste(self, _log):
+        self.save_s1("2026-08-24_t1", self.gap)
+        xc = self.section(self.water)["crosscheck"]
+        text = "\n".join(report.crosscheck_markdown(xc))
+        for part in ("## NISAR and Sentinel-1 (not scored)", "### Places to check (1)",
+                     "Near A: NISAR links it, Sentinel-1 does not", "crosscheck_reviews.json",
+                     '"verdict": "nisar | sentinel1 | undecidable"', "| 2026-08-24_t1 | 2026-08-25 | 1.000 |"):
+            self.assertIn(part, text)
+        empty = report.crosscheck_markdown({"summary": {"passes": 0}})
+        self.assertIn("No pass had a Sentinel-1 scene.", empty)
 
     def test_a_route_both_families_deny_is_a_false_route_to_review(self, _log):
         out = self.section(self.gap)

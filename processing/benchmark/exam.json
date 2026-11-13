@@ -1,6 +1,6 @@
 {
- "version": 2,
- "description": "Accuracy exam of the river lifeline monitor over Tefé. Change any value below only together with the version: results of different versions are not comparable.",
+ "version": 3,
+ "description": "Accuracy exam of the river lifeline monitor over Tefé. Change any value below only together with the version: results of different versions are not comparable. Version 3 leaves OPERA DSWx-S1 out of the references: the method uses Sentinel-1 since ADR-007, and a source cannot grade itself.",
  "passes": [
   "2025-11-02_t060A", "2025-11-04_t097D", "2026-01-08_t169D",
   "2026-06-25_t161A", "2026-06-25_t169D", "2026-06-30_t060A",
@@ -17,8 +17,7 @@
   "min_clear": 0.3
  },
  "references": {
-  "dswx_hls": {"max_days": 2},
-  "dswx_s1": {"max_days": 3}
+  "dswx_hls": {"max_days": 2}
  },
  "causes": {
   "cloud_near_m": 500,

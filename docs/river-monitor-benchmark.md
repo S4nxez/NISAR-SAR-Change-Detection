@@ -8,20 +8,20 @@ change helped. Every run is kept in `processing/benchmark/history/`, with an ind
 ## Run it
 
 ```bash
-python -m pip install -e "processing[benchmark]"      # adds rasterio, to read Sentinel-2
+python -m pip install -e processing                  # includes rasterio, to read the COGs
 export MONITOR_CACHE_DIR=/path/with/space              # ~250 MB per granule; ~15 GB for the Tefé exam
 export EARTHDATA_TOKEN=...                             # while the cache still misses NISAR windows or OPERA tiles
 river-monitor benchmark --label develop-baseline       # synthetic + real; --skip-real for synthetic only
 ```
 
-The first run downloads the area window of every exam pass (HH and HV), the Sentinel-2 scenes, the OPERA DSWx tiles
-and the static maps into the cache. Later runs read only the cache, the Earth Search and CMR catalogues and the ANA
+The first run downloads the area window of every exam pass (HH and HV), the Sentinel-1 and Sentinel-2 scenes, the
+OPERA DSWx tiles and the static maps into the cache. Later runs read only the cache, the Earth Search and CMR catalogues and the ANA
 gauge (whose last series is cached too). Without a token the exam still runs: OPERA files missing from the cache are
 skipped and the report says which references each pass had. Commit the two files a run writes to
 `processing/benchmark/history/` together with the change they measure.
 
-All sources are free. Sentinel-2, WorldCover and JRC Global Surface Water need no account; OPERA needs the free NASA
-Earthdata account the monitor already uses.
+All sources are free. Sentinel-1 (Planetary Computer), Sentinel-2, WorldCover and JRC Global Surface Water need no
+account; OPERA needs the free NASA Earthdata account the monitor already uses.
 
 ## What is fixed and what is measured
 
@@ -31,7 +31,8 @@ comparable only when they share the exam `version`; change any value of that fil
 | Part | Question | Reference |
 |---|---|---|
 | Synthetic scenes | Does the method give the right answer where the answer is known? | Scenes built with known channels and obstacles |
-| Real passes vs references | Is the water mask right, and does it lead to the right community status? | Exam 1: MNDWI of a clear Sentinel-2 date within 2 days. Exam 2: consensus of Sentinel-2, OPERA DSWx-HLS and OPERA DSWx-S1 |
+| Real passes vs references | Is the water mask right, and does it lead to the right community status? | Exam 1: MNDWI of a clear Sentinel-2 date within 2 days. Exam 2: consensus of Sentinel-2, OPERA DSWx-HLS and OPERA DSWx-S1. Exam 3: Sentinel-2 and DSWx-HLS (Sentinel-1 is part of the method) |
+| NISAR vs Sentinel-1 (exam 3, not scored) | Where do the two radars agree, and where should a person look? | Status each radar alone gives every community; verdicts in `processing/benchmark/crosscheck_reviews.json` |
 | Disagreements (exam 2) | What went wrong, why, and which cases must a person check? | Probable cause of every disagreeing pixel and community; verdicts in `processing/benchmark/reviews.json` |
 | River gauge | Does the record follow the river? | ANA telemetry, Tefé-Missões (12900001) |
 | Field checks | Are named communities right? | `processing/benchmark/ground_truth.json` |
@@ -185,6 +186,30 @@ the place; the next exam attaches it to each case and counts confirmed and rejec
 `verdict`: `nisar` (the method was right), `reference` (the reference was right: a confirmed error) or `undecidable`.
 `cause` is optional and replaces the cause the rules found. A single case can also be reviewed with `pass` and
 `community_id`.
+
+### Exam 3: Sentinel-1 leaves the references, NISAR and Sentinel-1 check each other
+
+Since [ADR-007](decisions/ADR-007-river-monitor-low-water-beds.md) the monitor itself uses Sentinel-1 to tell drained
+beds from water at low water. A source cannot grade a method built on it, so exam 3 drops OPERA DSWx-S1 from the
+references: the consensus is Sentinel-2 and DSWx-HLS, both optical. Under clouds more pairs are undecided than in exam
+2; that is the price of a fair score, not a worse method. Do not compare exam 3 numbers with exam 2.
+
+The section "NISAR and Sentinel-1 (not scored)" of the report takes the place of that reference:
+
+- **Agreement**: share of the pixels both radars judged (Sentinel-1 water or land, NISAR valid) on which they agree,
+  per pass and pooled, and the area each one alone calls water. Where they agree, the result is confirmed by two
+  satellites with different wavelengths.
+- **Places to check**: every community to which NISAR alone and Sentinel-1 alone give a different status, with the
+  culprit pixels, the zone type (the cause rules of exam 2 with Sentinel-1 in the role of the reference: seasonal
+  ground, narrow channel, vegetation, wind...), which radar the published status followed, and links. Each place ends
+  with a verdict to paste into `processing/benchmark/crosscheck_reviews.json`: `nisar`, `sentinel1` or
+  `undecidable`.
+- **Verdicts per zone type**: how often each radar was right in each kind of place. This is the evidence for the next
+  step of ADR-007: trusting NISAR under vegetation and on wind-roughened water, Sentinel-1 on mud and in narrow
+  channels, with weights measured from these verdicts instead of guessed.
+
+In the scored part, a case caused by the low-water rule has the cause `sentinel1_mud` (NISAR water left out of the
+routes because Sentinel-1 saw mud there) and is always sent to review.
 
 ### River gauge
 

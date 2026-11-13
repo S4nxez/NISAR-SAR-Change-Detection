@@ -16,8 +16,8 @@ from lifeline.benchmark.causes import FAMILY
 VERDICTS = ("nisar", "reference", "undecidable")
 
 
-def load(path):
-    """The reviews of the file (missing file: none). Raises ValueError on an unknown verdict."""
+def load(path, verdicts=VERDICTS):
+    """The reviews of the file (missing file: none). Raises ValueError on a verdict not in `verdicts`."""
     if not os.path.exists(path):
         return []
     with open(path, encoding="utf-8") as f:
@@ -25,9 +25,9 @@ def load(path):
     for r in reviews:
         if not pairs(r):
             raise ValueError(f"review {r}: give pass and community_id, or passes and community_ids")
-        if r.get("verdict") not in VERDICTS:
+        if r.get("verdict") not in verdicts:
             raise ValueError(f"review of {r.get('pass')} / {r.get('community_id')}: verdict must be one of "
-                             f"{VERDICTS}, not {r.get('verdict')!r}")
+                             f"{verdicts}, not {r.get('verdict')!r}")
     return reviews
 
 

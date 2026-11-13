@@ -15,13 +15,11 @@ dependencies = [
     "numpy==2.2.6",
     "pillow==11.2.1",
     "pyproj==3.7.1",
+    # reads the Sentinel-1 scenes of every pass (ADR-007), and the COGs of the occurrence layer and the benchmark
+    "rasterio==1.4.3",
     "requests==2.32.3",
     "scipy==1.15.3",
 ]
-
-[project.optional-dependencies]
-# the accuracy benchmark reads Sentinel-2, OPERA DSWx and static-map COGs (python -m pip install -e "processing[benchmark]")
-benchmark = ["rasterio==1.4.3"]
 
 [project.scripts]
 river-monitor = "lifeline.cli:main"

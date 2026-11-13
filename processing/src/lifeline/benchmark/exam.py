@@ -5,9 +5,11 @@ The exam definition (processing/benchmark/exam.json) fixes the passes, the refer
 settings, so two results of the same exam version are comparable: only the method changed between them.
 
 Exam version 1 scores against Sentinel-2 alone (`optical_section`). From version 2 (`reference_section`) the
-reference is the consensus of Sentinel-2, OPERA DSWx-HLS and OPERA DSWx-S1, each trusted only where it can see
+reference is the consensus of the references of exam["references"], each trusted only where it can see
 (benchmark.consensus); every disagreement gets a probable cause, the cases a person has to check are listed with
-links (benchmark.causes), and the verdicts of those checks (processing/benchmark/reviews.json) are counted.
+links (benchmark.causes), and the verdicts of those checks (processing/benchmark/reviews.json) are counted. Version 2
+used Sentinel-2, OPERA DSWx-HLS and OPERA DSWx-S1; version 3 leaves DSWx-S1 out, because the method itself uses
+Sentinel-1 since ADR-007, and compares NISAR with Sentinel-1 in a section that is not scored (benchmark.crosscheck).
 """
 import datetime as dt
 import json
@@ -20,7 +22,17 @@ import requests
 
 from lifeline import pipeline
 from lifeline.analysis.water import connectivity
-from lifeline.benchmark import causes, consensus, opera, optical, report, reviews, static_layers, synthetic
+from lifeline.benchmark import (
+    causes,
+    consensus,
+    crosscheck,
+    opera,
+    optical,
+    report,
+    reviews,
+    static_layers,
+    synthetic,
+)
 from lifeline.benchmark.scoring import (
     LINKED,
     add_counts,
@@ -32,11 +44,11 @@ from lifeline.benchmark.scoring import (
     water_scores,
 )
 from lifeline.config import AREAS_DIR, PROCESSING_DIR, STATUS, log
-from lifeline.output.layers import load_backscatter
+from lifeline.output.layers import load_backscatter, load_sentinel1
 from lifeline.geometry.area import area_mask, to_px
 from lifeline.geometry.geo import fold
-from lifeline.output.catalog import hub_target, pass_dir
-from lifeline.sources import asf, places
+from lifeline.output.catalog import catalog_path, hub_target, pass_dir
+from lifeline.sources import asf, places, sentinel1
 from lifeline.sources.gauge import level_on
 from lifeline.sources.remote import earthdata_token
 
@@ -89,6 +101,11 @@ def run_record(area, passes, cache_dir, run_dir, workers, areas_dir=AREAS_DIR, u
     """Process the exam's passes with the current method into run_dir (emptied first) and return the catalog.
     Windows come from the cache; the Earthdata token is only needed for the ones still missing."""
     shutil.rmtree(run_dir, ignore_errors=True)
+    # the gauge series of the last run, so the river level of every pass (low-water rule, Sentinel-1 scenes) is
+    # known even when the ANA service does not answer; update extends it when it does
+    cached = os.path.join(cache_dir, f"gauge_{area['id']}.json")
+    if os.path.exists(cached):
+        save_json(catalog_path(area, run_dir), {"passes": [], "gauge": load_json(cached)})
     # the backscatter of every pass is kept to explain the disagreements (benchmark.causes)
     with synthetic.environment(MONITOR_CACHE_DIR=cache_dir, MONITOR_KEEP_BACKSCATTER="1"):
         return update(area, workers=workers, out_root=run_dir, areas_dir=areas_dir, search=lambda a: passes,
@@ -218,9 +235,21 @@ def _pool(dst, counts):
     return dst
 
 
+def crosscheck_conditions(area, s1, nisar_valid, in_mask, hh, strong, weak, statics, vegetated, crules):
+    """Zone rules for the NISAR / Sentinel-1 cases: the causes of the exam with Sentinel-1 in the role of the
+    reference, and without the rules about the optical scene (clouds, river change since its date)."""
+    ctx = {"ref_water": s1["water"], "ref_known": s1["seen"], "nisar_valid": nisar_valid, "in_area": in_mask,
+           "hh": hh, "strong_db": strong, "weak_db": weak,
+           "occurrence": None if statics is None else statics["occurrence"],
+           "worldcover": None if statics is None else statics["worldcover"], "vegetated": vegetated}
+    return causes.conditions(ctx, crules, area["px_m"])
+
+
 def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=None, statics=None, review_list=(),
-                      token=None, post=requests.post, get=requests.get, reference=None, opera_ref=None):
-    """Every evaluated pass against the consensus of the references of exam["references"] (exam version 2)."""
+                      token=None, post=requests.post, get=requests.get, reference=None, opera_ref=None,
+                      crosscheck_reviews=(), areas_dir=AREAS_DIR):
+    """Every evaluated pass against the consensus of the references of exam["references"] (exam version 2 on), and
+    NISAR against Sentinel-1 where the pass has Sentinel-1 scenes (not scored)."""
     reference = reference or optical.reference_for_pass
     opera_ref = opera_ref or opera.reference_for_pass
     rules, crules = exam["optical"], exam["causes"]
@@ -233,6 +262,7 @@ def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=No
     width_pooled, false_pooled, source_pooled = {}, {}, {}
     cause_pooled = {"commission": {}, "omission": {}}
     rows, all_cases, status_pooled, undecided_total = [], [], [], 0
+    x_rows, x_cases = [], []
     for p in sorted(cat["passes"], key=lambda p: p["date"]):
         if not p.get("evaluated"):
             continue
@@ -246,6 +276,9 @@ def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=No
         layers = unpack_layers(os.path.join(pdir, "water.npz"))
         nisar, nvalid = layers["water"], layers["valid"]
         hh, _ = load_backscatter(os.path.join(pdir, "backscatter.npz"))
+        s1v = load_sentinel1(os.path.join(pdir, pipeline.SENTINEL1_FILE))
+        # the water the routes used: NISAR water less what Sentinel-1 showed to be mud (low-water rule)
+        route, _, _ = pipeline.route_water_of(area, nisar, pipeline.river_state(area, cat, p["date"], areas_dir), s1v)
         common = nvalid & (cons["water"] | cons["land"]) & in_mask
         w = water_scores(nisar, cons["water"], common, px)
         w_s2 = water_scores(nisar, s2["water"], nvalid & s2["valid"] & in_mask, px)
@@ -265,17 +298,31 @@ def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=No
                "occurrence": None if statics is None else statics["occurrence"],
                "worldcover": None if statics is None else statics["worldcover"],
                "vegetated": layers.get("vegetated"), "s1_vegetated": None if s1 is None else s1["vegetated"],
-               "level_change_cm": level_change_cm(gauge, p["date"], s2["date"])}
+               "level_change_cm": level_change_cm(gauge, p["date"], s2["date"]),
+               "sentinel1_mud": nisar & ~route}
         cond = causes.conditions(ctx, crules, px)
         pix = {kind: causes.cause_counts(causes.pixel_causes(kind, mask, cond)) for kind, mask in
                (("commission", nisar & cons["land"] & common), ("omission", cons["water"] & ~nisar & common))}
-        found = causes.cases(area, communities, pred, ref_st, nisar, cons["water"], cond, targets, hub, s2["date"],
-                             None if s1 is None else s1["date"], crules["max_bridge_px"])
+        s1_date = s1["date"] if s1 is not None else (s1v["dates"][0] if s1v is not None else None)
+        found = causes.cases(area, communities, pred, ref_st, route, cons["water"], cond, targets, hub, s2["date"],
+                             s1_date, crules["max_bridge_px"])
         reviews.attach(p["id"], found, review_list)
         for c in found:
             c["pass"] = p["id"]
         all_cases += found
         undecided_total += len(undecided)
+        if s1v is not None:
+            xcond = crosscheck_conditions(area, s1v, nvalid, in_mask, hh, strong, weak, statics,
+                                          layers.get("vegetated"), crules)
+            xfound = crosscheck.pass_cases(area, communities, pred, status_of(nisar, nvalid),
+                                           status_of(s1v["water"], s1v["seen"]), nisar, s1v["water"], xcond,
+                                           targets, hub, s2["date"], s1v["dates"][0], crules["max_bridge_px"])
+            reviews.attach(p["id"], xfound, crosscheck_reviews)
+            for c in xfound:
+                c["pass"] = p["id"]
+            x_cases += xfound
+            x_rows.append({"pass": p["id"], **sentinel1.agreement(nisar, nvalid, s1v, px),
+                           "mud_km2": round(float((nisar & ~route).sum()) * km2, 2), "status_cases": len(xfound)})
         agree = consensus.agreement_by_source(votes, cons)
         for name, a in agree.items():
             sp = source_pooled.setdefault(name, {"family": a["family"], "passes": 0, "voted_px": 0, "agree_px": 0})
@@ -330,8 +377,11 @@ def reference_section(area, cat, communities, run_dir, cache_dir, exam, gauge=No
     found_sites = causes.sites(all_cases, communities)
     summary["sites"] = len(found_sites)
     summary["sites_to_review"] = sum(1 for s in found_sites if s["review"])
+    x_sites = causes.sites(x_cases, communities)
     return {"rules": {"optical": rules, "references": exam.get("references", {}), "causes": crules},
-            "summary": summary, "passes": rows, "cases": all_cases, "sites": found_sites}
+            "summary": summary, "passes": rows, "cases": all_cases, "sites": found_sites,
+            "crosscheck": {"summary": crosscheck.summary(x_rows, x_cases, x_sites), "passes": x_rows,
+                           "cases": x_cases, "sites": x_sites}}
 
 
 def load_gauge(area, cat, cache_dir):
@@ -400,6 +450,7 @@ def scorecard(result):
     syn = result["synthetic"]
     opt = (result.get("reference") or result.get("optical") or {}).get("summary", {})
     gauge, field = result.get("gauge", {}), result.get("field", {})
+    xc = ((result.get("reference") or {}).get("crosscheck") or {}).get("summary", {})
     return {
         "synthetic_correct_share": syn["correct_share"],
         "synthetic_dangerous": syn["totals"]["dangerous"],
@@ -415,11 +466,13 @@ def scorecard(result):
         "status_undecided": opt.get("undecided"),
         "review_needed": opt.get("review_needed"),
         "false_route_confirmed": ((opt.get("reviews") or {}).get("false_route") or {}).get("confirmed"),
+        "sentinel1_agreement": xc.get("agreement"),
+        "crosscheck_sites": xc.get("sites"),
     }
 
 
 def run_reference(area, cat, communities, run_dir, cache_dir, exam, reviews_path=None, token=earthdata_token,
-                  load_statics=static_layers.load):
+                  load_statics=static_layers.load, crosscheck_path=None):
     """reference_section with its inputs: static maps (skipped if they cannot be read), the gauge, the reviews and
     the Earthdata token (None: OPERA files not cached yet are skipped)."""
     statics = None
@@ -431,7 +484,9 @@ def run_reference(area, cat, communities, run_dir, cache_dir, exam, reviews_path
     if tok is None:
         log("benchmark: no EARTHDATA_TOKEN: OPERA files missing from the cache are skipped")
     return reference_section(area, cat, communities, run_dir, cache_dir, exam, load_gauge(area, cat, cache_dir),
-                             statics, reviews.load(reviews_path or os.path.join(BENCHMARK_DIR, "reviews.json")), tok)
+                             statics, reviews.load(reviews_path or os.path.join(BENCHMARK_DIR, "reviews.json")), tok,
+                             crosscheck_reviews=crosscheck.load_reviews(
+                                 crosscheck_path or crosscheck.default_reviews_path(BENCHMARK_DIR)))
 
 
 def run(area, label, cache_dir, workers=2, exam_path=None, truth_path=None, history_dir=HISTORY_DIR,

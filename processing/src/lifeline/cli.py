@@ -6,7 +6,7 @@ town, using NISAR L2 GCOV radar backscatter. Radar sees water through clouds and
 and L-band reaches water under the forest canopy.
 
   river-monitor communities [--area tefe]   fetch places from OpenStreetMap
-  river-monitor occurrence [--area tefe]    save the JRC water occurrence layer (once; needs the benchmark extra)
+  river-monitor occurrence [--area tefe]    save the JRC water occurrence layer (once)
   river-monitor update [--area tefe] [--workers 2] [--limit N] [--redo]
   river-monitor reevaluate [--area tefe]    recompute status from stored masks
   river-monitor watch [--area tefe] [--hours 6]
@@ -31,13 +31,15 @@ Method, for every pass (all frames of one track on one day, mosaicked):
      least W/2 from the shore; a community is connected at width W when, within
      access_radius_m of it, one of those pixels belongs to the same component as the
      water around the hub. Its bottleneck is the widest W that still connects it.
-  4. At low water (river gauge at most low_water.gauge_max_cm), broad patches of water on seasonal ground (JRC
-     occurrence in low_water.seasonal_pct) carry no route: the radar reads a drained bed as dark as open water.
+  4. Sentinel-1 (C band) scenes within sentinel1.max_days are read too. At low water (river gauge at most
+     low_water.gauge_max_cm), NISAR water on seasonal ground (JRC occurrence in low_water.seasonal_pct) that
+     Sentinel-1 sees as land carries no route: L band reads a drained bed as dark as open water, C band sees the
+     mud. A route through a broad seasonal patch no Sentinel-1 scene covers is at most at risk.
   5. Status: connected (bottleneck >= safe_width_m), at_risk (connected, narrower),
      isolated (no water path, or no water within access_radius_m), no_data.
 
 Output (MONITOR_DATA_DIR/<area>/, processing/output/<area>/ by default): catalog.json and,
-per pass, radar.webp, water.png, change.png and water.npz. In the stack the folder is the
+per pass, radar.webp, water.png, change.png, water.npz and sentinel1.npz. In the stack the folder is the
 monitor_data volume and the backend serves it under api/monitor; see docs/river-monitor.md.
 """
 import argparse

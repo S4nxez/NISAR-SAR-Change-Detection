@@ -1,4 +1,4 @@
-"""The monitor's commands: communities, update, reevaluate and watch."""
+"""The monitor's commands: communities, occurrence, update, reevaluate and watch."""
 import concurrent.futures as cf
 import datetime as dt
 import os
@@ -9,7 +9,7 @@ import numpy as np
 
 from lifeline.analysis.radar import read_pass_bands, trim_swath_edge
 from lifeline.analysis.water import low_water_route, pass_thresholds, vegetated_water, water_mask
-from lifeline.config import AREAS_DIR, OUT_ROOT, keep_backscatter, log
+from lifeline.config import AREAS_DIR, OUT_ROOT, cache_dir, keep_backscatter, log
 from lifeline.geometry.area import area_mask
 from lifeline.output.catalog import (
     catalog_path,
@@ -21,8 +21,17 @@ from lifeline.output.catalog import (
     save_catalog,
     wide_water_of,
 )
-from lifeline.output.layers import load_mask, load_vegetated, save_backscatter, save_mask, save_radar, save_water
-from lifeline.sources import asf, places
+from lifeline.output.layers import (
+    load_mask,
+    load_sentinel1,
+    load_vegetated,
+    save_backscatter,
+    save_mask,
+    save_radar,
+    save_sentinel1,
+    save_water,
+)
+from lifeline.sources import asf, places, sentinel1
 from lifeline.sources.gauge import level_on, refresh_gauge
 from lifeline.sources.occurrence import fetch_occurrence, load_occurrence, save_occurrence
 from lifeline.sources.remote import earthdata_token
@@ -36,20 +45,41 @@ def read_layers(area, ps, token):
     return read_pass_bands(area, ps, token, bands)
 
 
+SENTINEL1_FILE = "sentinel1.npz"
+
+
 def river_state(area, cat, date, areas_dir=AREAS_DIR):
-    """What the low-water rule needs for a pass: {"level_cm": gauge level that day or None, "areas_dir": where the
-    occurrence layer is}. None when the area has no low-water rule."""
-    if not area.get("low_water"):
+    """What the low-water rule and Sentinel-1 need for a pass: {"level_cm": gauge level that day or None, "series":
+    the gauge series, "areas_dir": where the occurrence layer is}. None when the area uses neither."""
+    if not area.get("low_water") and not area.get("sentinel1"):
         return None
-    return {"level_cm": level_on((cat.get("gauge") or {}).get("series"), date), "areas_dir": areas_dir}
+    series = (cat.get("gauge") or {}).get("series")
+    return {"level_cm": level_on(series, date), "series": series, "areas_dir": areas_dir}
 
 
-def route_water_of(area, water, river):
-    """(water that may carry a route, True when the low-water rule applied); the layer is read only when needed."""
+def sentinel1_of(area, date, river, view=None):
+    """What Sentinel-1 saw around a pass (sources.sentinel1.pass_view), or None: area without Sentinel-1, no usable
+    scene, or the scenes could not be read (logged; the pass goes on with NISAR alone)."""
+    cfg = area.get("sentinel1")
+    if not cfg:
+        return None
+    try:
+        return (view or sentinel1.pass_view)(area, date, cfg, cache_dir(), (river or {}).get("series"))
+    except Exception as e:   # network, token, GDAL: never lose the NISAR pass for it
+        log(f"Sentinel-1 for {date} skipped: {e}")
+        return None
+
+
+def route_water_of(area, water, river, s1=None):
+    """(water that may carry a route, water a route may only use at risk or None, True/False whether the low-water
+    rule applied or None without a rule); the occurrence layer is read only when needed."""
     rule = area.get("low_water")
-    if not river or not rule or river["level_cm"] is None or river["level_cm"] > rule["gauge_max_cm"]:
-        return water, False
-    return low_water_route(water, load_occurrence(area, river["areas_dir"]), river["level_cm"], rule, area["px_m"])
+    if not rule:
+        return water, None, None
+    if not river or river["level_cm"] is None or river["level_cm"] > rule["gauge_max_cm"]:
+        return water, None, False
+    return low_water_route(water, load_occurrence(area, river["areas_dir"]), river["level_cm"], rule, area["px_m"],
+                           s1)
 
 
 def describe_river(entry, river, applied):
@@ -58,7 +88,25 @@ def describe_river(entry, river, applied):
     entry.pop("low_water", None)
     if river:
         entry["river_level_cm"] = river["level_cm"]
+    if applied is not None:
         entry["low_water"] = applied
+
+
+def describe_sentinel1(area, entry, water, valid, route, s1):
+    """Record how NISAR and Sentinel-1 agree on the pass and how much NISAR water Sentinel-1 showed to be mud."""
+    entry.pop("sentinel1", None)
+    if s1 is None:
+        return
+    entry["sentinel1"] = sentinel1.agreement(water, valid, s1, area["px_m"])
+    entry["sentinel1"]["mud_km2"] = round(float((water & ~route).sum()) * (area["px_m"] / 1000.0) ** 2, 2)
+
+
+def judge(area, communities, entry, water, valid, wide, river, s1):
+    """Routes and status of a pass with the low-water rule and Sentinel-1 (fills `entry`)."""
+    route, unverified, applied = route_water_of(area, water, river, s1)
+    evaluate(area, communities, water, valid, wide, entry, route, unverified)
+    describe_river(entry, river, applied)
+    describe_sentinel1(area, entry, water, valid, route, s1)
 
 
 def process_pass(area, communities, ps, out_root, token, read=None, river=None):
@@ -90,9 +138,13 @@ def process_pass(area, communities, ps, out_root, token, read=None, river=None):
     entry.update(read_mb=round(read_mb, 1), spacing_m=spacing, files={"radar": "radar.webp", "water": "water.png"},
                  threshold=threshold,
                  vegetated_km2=None if vegetated is None else round(float(vegetated.sum()) * pix_km2, 2))
-    route, applied = route_water_of(area, water, river)
-    evaluate(area, communities, water, valid, wide, entry, route)
-    describe_river(entry, river, applied)
+    s1 = sentinel1_of(area, ps["date"], river)
+    s1_path = os.path.join(pdir, SENTINEL1_FILE)
+    if s1 is not None:
+        save_sentinel1(s1, s1_path)
+    elif os.path.exists(s1_path):
+        os.remove(s1_path)   # a reprocessed pass without Sentinel-1: reevaluate must not use the old scenes
+    judge(area, communities, entry, water, valid, wide, river, s1)
     entry["seconds"] = round(time.time() - t0, 1)
     return entry
 
@@ -171,10 +223,8 @@ def reevaluate(area, out_root=OUT_ROOT, areas_dir=AREAS_DIR):
         water, valid = load_mask(path)
         wide = wide_water_of(area, water)
         save_water(water, wide, os.path.join(pdir, "water.png"), load_vegetated(path))
-        river = river_state(area, cat, entry["date"], areas_dir)
-        route, applied = route_water_of(area, water, river)
-        evaluate(area, communities, water, valid, wide, entry, route)
-        describe_river(entry, river, applied)
+        judge(area, communities, entry, water, valid, wide, river_state(area, cat, entry["date"], areas_dir),
+              load_sentinel1(os.path.join(pdir, SENTINEL1_FILE)))
         log(f"{entry['id']}: re-evaluated")
     refresh_changes(area, cat, out_root)
     classify_communities(area, cat)

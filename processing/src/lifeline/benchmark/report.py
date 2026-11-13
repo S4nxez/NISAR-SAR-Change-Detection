@@ -3,6 +3,7 @@ import glob
 import json
 import os
 
+from lifeline.benchmark import crosscheck
 from lifeline.benchmark.causes import FAMILIES, FAMILY, MEANING
 from lifeline.config import STATUS_NAME
 
@@ -24,6 +25,10 @@ INDEX_COLUMNS = [
     ("review_needed", "To review", "disagreements a person has to check (exam 2; see Manual review in the report)"),
     ("false_route_confirmed", "Confirmed false routes",
      "false routes a person confirmed in processing/benchmark/reviews.json (exam 2)"),
+    ("sentinel1_agreement", "NISAR-S1 agreement",
+     "share of the pixels both radars judged on which NISAR and Sentinel-1 agree (exam 3, not scored)"),
+    ("crosscheck_sites", "NISAR-S1 places",
+     "places where the two radars give a community different statuses, to check by hand (exam 3)"),
 ]
 
 
@@ -61,6 +66,63 @@ def site_block(i, s):
               "cause": s["cause"], "reviewer": "", "date": "", "note": ""}
     lines += ["- Verdict to add to `processing/benchmark/reviews.json`:", "", "```json",
               json.dumps(review, ensure_ascii=False), "```", ""]
+    return lines
+
+
+CROSSCHECK_KIND_TEXT = {"false_route": "NISAR links it, Sentinel-1 does not",
+                        "false_isolated": "Sentinel-1 links it, NISAR does not",
+                        "overconfident": "NISAR's route is wider", "underconfident": "Sentinel-1's route is wider"}
+
+
+def crosscheck_markdown(xc):
+    """The NISAR / Sentinel-1 section of a result (exam version 3 on): agreement per pass, verdicts per zone type and
+    the places where the two radars give a community different statuses."""
+    sm = xc["summary"]
+    if not sm["passes"]:
+        return ["## NISAR and Sentinel-1", "", "No pass had a Sentinel-1 scene.", ""]
+    lines = ["## NISAR and Sentinel-1 (not scored)", "",
+             "Sentinel-1 is part of the method (ADR-007), so it is not a reference of the exam. Here the two radars "
+             "check each other: where both see water or both see land the result is confirmed by two satellites; the "
+             "places where they give a community different statuses are listed for a person to check. The verdicts "
+             "(processing/benchmark/crosscheck_reviews.json) count per zone type and tell which radar to trust "
+             "where.", "",
+             table(["Passes", "Judged km²", "Agreement", "NISAR-only water km²", "Sentinel-1-only water km²",
+                    "Mud left out of routes km²", "Status cases", "Places"],
+                   [(sm["passes"], sm["judged_km2"], sm["agreement"], sm["nisar_only_km2"], sm["sentinel1_only_km2"],
+                     sm["mud_km2"], sm["status_cases"], sm["sites"])]), "",
+             table(["Pass", "Sentinel-1 dates", "Agreement", "Both water km²", "NISAR only km²", "Sentinel-1 only km²",
+                    "Mud km²", "Status cases"],
+                   [(r["pass"], ", ".join(r.get("dates") or []), r.get("agreement"), r.get("both_water_km2"),
+                     r.get("nisar_only_km2"), r.get("sentinel1_only_km2"), r.get("mud_km2"), r["status_cases"])
+                    for r in xc["passes"]]), ""]
+    if sm["by_zone"]:
+        lines += ["Verdicts per zone type (the probable cause of each case):", "",
+                  table(["Zone", "Cases", "NISAR right", "Sentinel-1 right", "Undecidable", "Pending"],
+                        [(k, v["cases"], v["nisar"], v["sentinel1"], v["undecidable"], v["pending"])
+                         for k, v in sorted(sm["by_zone"].items(), key=lambda kv: -kv[1]["cases"])]), "",
+                  "Which radar the published status follows in those cases: "
+                  + ", ".join(f"{k} {v}" for k, v in sorted(sm["followed"].items())) + ".", ""]
+    todo = [s for s in xc["sites"] if s["review"]]
+    lines += [f"### Places to check ({len(todo)})", "",
+              "Open both links of a pass: the Sentinel-1 image (10 m, VV/VH) and the Sentinel-2 image of the nearest "
+              "clear day. A verdict covers every community and pass of the place.", ""]
+    for i, s in enumerate(todo, 1):
+        kinds = "; ".join(CROSSCHECK_KIND_TEXT.get(k, k) for k in s["kinds"])
+        near = f"{s['distance_km']} km from {s['near']}" if s["distance_km"] else f"at {s['near']}"
+        lines += [f"#### {i}. Near {s['near']}: {kinds}", "",
+                  f"- Where: {near} ({s['lon']}, {s['lat']})",
+                  f"- Zone: `{s['cause']}`: {MEANING.get(s['cause'], '')}",
+                  f"- Communities: {', '.join(s['communities'])}",
+                  f"- Passes ({s['cases']} cases): {', '.join(s['passes'])}"]
+        lines += [f"  - {p}: {link_list(links)}" for p, links in s["links"].items()]
+        lines += ["- Verdict to add to `processing/benchmark/crosscheck_reviews.json`:", "", "```json",
+                  crosscheck.review_template(s), "```", ""]
+    done = [s for s in xc["sites"] if not s["review"]]
+    if done:
+        lines += ["Places already checked:", "",
+                  table(["Near", "Kinds", "Zone", "Verdicts", "Passes"],
+                        [(s["near"], ", ".join(s["kinds"]), s["cause"], ", ".join(s["verdicts"]),
+                          ", ".join(s["passes"])) for s in done]), ""]
     return lines
 
 
@@ -179,6 +241,8 @@ def markdown(result):
                       v.get("as_vegetated_water")) for name, v in syn["surfaces"].items()]), ""]
     if result.get("reference"):
         lines += reference_markdown(result["reference"])
+        if result["reference"].get("crosscheck"):
+            lines += crosscheck_markdown(result["reference"]["crosscheck"])
     opt = result.get("optical")
     if opt:
         sm = opt["summary"]

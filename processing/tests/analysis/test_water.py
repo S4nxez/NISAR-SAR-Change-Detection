@@ -291,42 +291,85 @@ class TestWideWater(unittest.TestCase):
 
 
 class TestLowWaterRoute(unittest.TestCase):
-    RULE = {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60}
+    RULE = {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60, "veto_radius_m": 20}
+    LAKE = np.s_[60:140, 200:260]
 
     def setUp(self):
-        # the river and a lake joined by a channel; the lake is a bed that drains at low water (60 % of the months)
+        # the river and a lake joined by a channel; the lake is seasonal ground (water 60 % of the months)
         self.water, _ = river_scene(channel_px=3)
         self.occ = np.full(self.water.shape, 98, np.uint8)
-        self.occ[60:140, 200:260] = 60
+        self.occ[self.LAKE] = 60
+
+    def sentinel1(self, land=None, seen=None):
+        """Sentinel-1 classes: everything seen, water where NISAR has water, land on `land` (a mask)."""
+        land = np.zeros_like(self.water) if land is None else land
+        seen = np.ones_like(self.water) if seen is None else seen
+        return {"water": self.water & ~land & seen, "land": land & seen, "seen": seen}
 
     def test_seasonal_ground_is_the_band_between_rarely_and_always_water(self):
         occ = np.array([[0, 29, 30, 60, 89, 90, 100, 255]], np.uint8)
         np.testing.assert_array_equal(seasonal_ground(occ, 30, 90),
                                       [[False, False, True, True, True, False, False, False]])
 
-    def test_a_drained_bed_leaves_the_routes_at_low_water(self):
-        route, applied = low_water_route(self.water, self.occ, 800.0, self.RULE, PX)
+    def test_a_bed_sentinel1_sees_as_mud_leaves_the_routes(self):
+        land = np.zeros_like(self.water)
+        land[self.LAKE] = True
+        route, unverified, applied = low_water_route(self.water, self.occ, 800.0, self.RULE, PX, self.sentinel1(land))
         self.assertTrue(applied)
-        self.assertFalse(route[63:137, 203:257].any())   # an opening may leave a few corner pixels of the bed
-        self.assertLess(route[60:140, 200:260].sum(), 0.02 * 80 * 60)
+        self.assertLessEqual(route[self.LAKE].sum(), 4)   # the opening may keep the four corner pixels
         np.testing.assert_array_equal(route[:, :200], self.water[:, :200])   # river and channel kept
+        self.assertFalse(unverified.any())
+
+    def test_a_seasonal_lake_that_still_holds_water_keeps_its_route(self):
+        route, unverified, applied = low_water_route(self.water, self.occ, 800.0, self.RULE, PX, self.sentinel1())
+        self.assertTrue(applied)
+        np.testing.assert_array_equal(route, self.water)
+        self.assertFalse(unverified.any())
+
+    def test_mud_is_only_judged_on_seasonal_ground_and_in_patches(self):
+        land = np.zeros_like(self.water)
+        land[:, 12:18] = True        # Sentinel-1 "land" on the permanent river (wind, a ship): NISAR is kept
+        land[100, 205:255] = True    # a one-pixel line of disagreement across the lake: not a drained bed
+        land[70:72, 210:212] = True  # a speck of 40 m: too small as well (a patch must hold a disc of 20 m)
+        route, _, _ = low_water_route(self.water, self.occ, 800.0, self.RULE, PX, self.sentinel1(land))
+        np.testing.assert_array_equal(route, self.water)
+
+    def test_without_sentinel1_a_broad_seasonal_bed_is_unverified_not_removed(self):
+        route, unverified, applied = low_water_route(self.water, self.occ, 800.0, self.RULE, PX)
+        self.assertTrue(applied)
+        np.testing.assert_array_equal(route, self.water)
+        self.assertTrue(unverified[63:137, 203:257].all())   # an opening may leave out a few corner pixels
+        self.assertFalse(unverified[:, :200].any())
+
+    def test_the_part_of_a_bed_sentinel1_did_not_see_is_unverified(self):
+        seen = np.ones_like(self.water)
+        seen[:, 230:] = False        # the Sentinel-1 scene ends in the middle of the lake
+        land = np.zeros_like(self.water)
+        land[60:140, 200:230] = True
+        route, unverified, _ = low_water_route(self.water, self.occ, 800.0, self.RULE, PX, self.sentinel1(land, seen))
+        self.assertFalse(route[62:138, 202:228].any())
+        self.assertTrue(route[62:138, 232:258].all())
+        self.assertTrue(unverified[63:137, 232:257].all())
+        self.assertFalse(unverified[:, :229].any())
 
     def test_nothing_changes_at_high_water_or_without_a_rule_layer_or_level(self):
         for occ, level, rule in ((self.occ, 1500.0, self.RULE), (self.occ, 1200.0 + 0.1, self.RULE),
                                  (None, 800.0, self.RULE), (self.occ, None, self.RULE), (self.occ, 800.0, None)):
-            route, applied = low_water_route(self.water, occ, level, rule, PX)
+            route, unverified, applied = low_water_route(self.water, occ, level, rule, PX)
             self.assertFalse(applied)
             self.assertIs(route, self.water)
-        self.assertTrue(low_water_route(self.water, self.occ, 1200.0, self.RULE, PX)[1])   # the limit is included
+            self.assertIsNone(unverified)
+        self.assertTrue(low_water_route(self.water, self.occ, 1200.0, self.RULE, PX)[2])   # the limit is included
 
-    def test_thin_seasonal_banks_new_channels_and_unknown_ground_are_kept(self):
+    def test_thin_seasonal_banks_new_channels_and_unknown_ground_are_never_unverified(self):
         occ = np.full(self.water.shape, 98, np.uint8)
         occ[:, 10:12] = 60      # a 40 m seasonal fringe along the river bank: not a broad bed
         occ[:, 15:25] = 10      # the river now runs over ground that was rarely water: a new channel
-        occ[60:140, 200:260] = 255   # no occurrence data on the lake
-        route, applied = low_water_route(self.water, occ, 800.0, self.RULE, PX)
+        occ[self.LAKE] = 255    # no occurrence data on the lake
+        route, unverified, applied = low_water_route(self.water, occ, 800.0, self.RULE, PX)
         self.assertTrue(applied)
         np.testing.assert_array_equal(route, self.water)
+        self.assertFalse(unverified.any())
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@
   "widths_m": [40, 60, 100, 200, 400],
   "safe_width_m": 60,
   "occurrence": "tefe_occurrence.png",
-  "low_water": {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60},
+  "low_water": {"gauge_max_cm": 1200, "seasonal_pct": [30, 90], "patch_radius_m": 60, "veto_radius_m": 20},
+  "sentinel1": {"max_days": 4, "level_tolerance_cm": 30, "water_db": -18.0, "weak_db": -16.0, "land_db": -16.0},
   "communities": "tefe_communities.geojson"
 }

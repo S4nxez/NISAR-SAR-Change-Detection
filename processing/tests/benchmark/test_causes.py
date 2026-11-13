@@ -146,6 +146,24 @@ class TestCases(unittest.TestCase):
         self.assertIn("fromTime=2026-08-25", c["links"]["sentinel1"])
         self.assertIn("openstreetmap.org", c["links"]["openstreetmap"])
 
+    def test_the_case_points_at_a_culprit_pixel_not_at_the_bank_between_them(self):
+        mask = np.zeros((20, 20), bool)
+        mask[5, 2:5] = True
+        mask[5, 15:18] = True      # two stretches: their centre (5, 9.5) is on neither
+        self.assertIn(causes.central_pixel(mask), [(5, 4), (5, 15)])
+        self.assertEqual(causes.central_pixel(mask[:, :10]), (5, 3))
+
+    def test_sentinel1_mud_explains_a_missing_route_first(self):
+        nisar, valid, ref = scene()
+        mud = np.zeros_like(nisar)
+        mud[GAP] = True
+        route = nisar & ~mud
+        cond = causes.conditions(ctx(route, valid, nisar, sentinel1_mud=mud), RULES, 20.0)
+        counts = causes.cause_counts(causes.pixel_causes("omission", nisar & ~route, cond))
+        self.assertEqual(counts, {"sentinel1_mud": 15})
+        cond = causes.conditions(ctx(route, valid, nisar), RULES, 20.0)   # no Sentinel-1: another cause
+        self.assertNotIn("sentinel1_mud", causes.cause_counts(causes.pixel_causes("omission", nisar & ~route, cond)))
+
     def test_explain_case_without_culprits(self):
         nisar, valid, ref = scene()
         cond = causes.conditions(ctx(nisar, valid, ref), RULES, 20.0)
